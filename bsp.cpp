@@ -10,7 +10,6 @@ struct SOccluderPlane
 	float4 normal;
 };
 
-
 struct SOccluderEdgeIndex
 {
 	uint8 	nEdge;//[0-3] edge idx
@@ -63,41 +62,42 @@ void BspAddOccluderRecursive(SOccluderBsp* pBsp, SOccluderPlane* pOccluder, uint
 
 	for(int i = 0; i < 4; ++i)
 		inside[i] = WVectorDot4(vPlane, pOccluder.p[i]) < 0.f;
-	uint32 nNewMask[2] ={0,0};
+	uint32 nNewMaskIn = 0, nNewMaskOut = 0;
 	int x = 1;
 	for(int i = 0; i < 4; ++i)
 	{
 		if(x&nEdgeMask)
 		{
 			if(inside[(i-1)%4] || inside[i])
-				nNewMask[0] |= x;
+				nNewMaskIn |= x;
 			if((!inside[(i-1)%4]) || (!inside[i]))
-				nNewMask[1] |= x;
+				nNewMaskOut |= x;
 		}
 		x <<= 1;
 	}
-	if(Node.nInside&0x8000)
+	if(nNewMaskIn)
 	{
-		//empty, just insert
-		//insert nNewMask[0]
-		Node.nInside = BspAddInternal(pBsp, nOccluderIndex, nNewMask[0]);
-	}
-	else
-	{
-		BspAddOccluderRecursive(pBsp, pOccluder, nOccluderIndex, Node.nInside, nNewMask[0]);
-	}
-
-	if(Node.nOutside&0x8000)
-	{
-		//empty, just insert
-		//insert nNewMask[1]
-		Node.nOutside = BspAddInternal(pBsp, nOccluderIndex, nNewMask[1]);
-	}
-	else
-	{
-		BspAddOccluderRecursive(pBsp, pOccluder, nOccluderIndex, Node.nInside, nNewMask[1]);
+		if(Node.nInside&0x8000)
+		{
+			Node.nInside = BspAddInternal(pBsp, nOccluderIndex, nNewMaskIn);
+		}
+		else
+		{
+			BspAddOccluderRecursive(pBsp, pOccluder, nOccluderIndex, Node.nInside, nNewMaskIn);
+		}
 	}
 
+	if(nNewMaskOut)
+	{
+		if(Node.nOutside&0x8000)
+		{
+			Node.nOutside = BspAddInternal(pBsp, nOccluderIndex, nNewMaskOut);
+		}
+		else
+		{
+			BspAddOccluderRecursive(pBsp, pOccluder, nOccluderIndex, Node.nInside, nNewMaskOut);
+		}
+	}
 }
 
 
