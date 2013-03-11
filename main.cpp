@@ -5,6 +5,10 @@
 #include <SDL.h>
 #include <string>
 #include "base.h"
+#include "input.h"
+#include "glinc.h"
+#include "text.h"
+
 
 SDL_Surface* g_Surface;
 uint32_t g_BaseWidth =  1280;
@@ -12,6 +16,17 @@ uint32_t g_BaseHeight =  720;
 uint32_t g_Width = g_BaseWidth;
 uint32_t g_Height =  g_BaseHeight;
 uint32_t g_nQuit = 0;
+
+SPadState g_PadState[MAX_PADS];
+SDL_Joystick* g_pJoyStick[MAX_PADS];
+SMouseState g_MouseState;
+SKeyboardState g_KeyboardState;
+uint32_t g_nNumJoysticks = 0;
+
+uint32_t g_lShowDebug = 1;
+uint32_t g_lShowDebugText = 1;
+void InputInit();
+void InputClear();
 
 void CheckGLError()
 {
@@ -33,32 +48,30 @@ void HandleEvent(SDL_Event* pEvt)
 	case SDL_QUIT:
 		g_nQuit = true;
 		break;
-	// case SDL_KEYDOWN:
-	// 	g_KeyboardState.keys[(int)pEvt->key.keysym.sym] = BUTTON_DOWN|BUTTON_PUSHED;
-	// 	break;
-	// case SDL_KEYUP:
-	// 	g_KeyboardState.keys[(int)pEvt->key.keysym.sym] = BUTTON_UP|BUTTON_RELEASED;
-	// 	break;
-	// case SDL_MOUSEMOTION:
-	// 	g_MouseState.position[0] = pEvt->motion.x;
-	// 	g_MouseState.position[1] = pEvt->motion.y;
-	// 	break;
-	// case SDL_MOUSEBUTTONDOWN:
-	// case SDL_MOUSEBUTTONUP:
-	// 	if(pEvt->button.button < MOUSE_BUTTON_MAX)
-	// 	{
-	// 		int type = pEvt->type;
-	// 		if(SDL_MOUSEBUTTONUP == type)
-	// 		{
-	// 			g_MouseState.button[pEvt->button.button] = BUTTON_UP|BUTTON_RELEASED;
-	// 		}
-	// 		else
-	// 		{
-	// 			g_MouseState.button[pEvt->button.button] = BUTTON_DOWN|BUTTON_PUSHED;
-	// 		}
-
-	// 		if(pEvt->button.button == SDL_BUTTON_WHEELUP) g_fScale += 0.01f;
-	// 		else if (pEvt->button.button == SDL_BUTTON_WHEELDOWN) g_fScale -= 0.01f;
+	case SDL_KEYDOWN:
+		g_KeyboardState.keys[(int)pEvt->key.keysym.sym] = BUTTON_DOWN|BUTTON_PUSHED;
+		break;
+	case SDL_KEYUP:
+		g_KeyboardState.keys[(int)pEvt->key.keysym.sym] = BUTTON_UP|BUTTON_RELEASED;
+		break;
+	case SDL_MOUSEMOTION:
+		g_MouseState.position[0] = pEvt->motion.x;
+		g_MouseState.position[1] = pEvt->motion.y;
+		break;
+	case SDL_MOUSEBUTTONDOWN:
+	case SDL_MOUSEBUTTONUP:
+		if(pEvt->button.button < MOUSE_BUTTON_MAX)
+		{
+			int type = pEvt->type;
+			if(SDL_MOUSEBUTTONUP == type)
+			{
+				g_MouseState.button[pEvt->button.button] = BUTTON_UP|BUTTON_RELEASED;
+			}
+			else
+			{
+				g_MouseState.button[pEvt->button.button] = BUTTON_DOWN|BUTTON_PUSHED;
+			}
+		}
 	// 	}
 	// 	break;
 	// case SDL_JOYAXISMOTION:
@@ -136,20 +149,24 @@ int SDL_main(int argc, char** argv)
 		return 1;
 	}
 
+	InputInit();
+	TextInit();
+
 	while(!g_nQuit)
 	{
 		CheckGLError();
 
-
+		InputClear();
 		SDL_Event Evt;
 		while(SDL_PollEvent(&Evt))
 		{
 			HandleEvent(&Evt);
 		}
+		if(g_KeyboardState.keys['q'] & BUTTON_RELEASED)
+			g_nQuit = 1;
 
 
-
-		glClearColor(0,0,0,0);
+		glClearColor(0.2,0.2,0.2,0);
 		glViewport(0, 0, g_Width, g_Height);
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
@@ -157,12 +174,53 @@ int SDL_main(int argc, char** argv)
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		uplotfnxt("FPS %f", 1000.f);
+		uplotfnxt("FPS %f", 1000.f);
+		uplotfnxt("FPS %f", 1000.f);
 
+
+		TextFlush();
 		SDL_GL_SwapBuffers();
 	}
 	return 0;
 }
 
+
+void InputInit()
+{
+	g_nNumJoysticks = SDL_NumJoysticks();
+	if(g_nNumJoysticks > AXIS_MAX)
+		g_nNumJoysticks = AXIS_MAX;
+	memset(g_pJoyStick, 0, sizeof(g_pJoyStick));
+	uprintf("opening %d joysticks\n", g_nNumJoysticks);
+	for(uint32_t i = 0; i < g_nNumJoysticks; ++i)
+	{
+		g_pJoyStick[i] = SDL_JoystickOpen(i);
+	}
+	memset(&g_PadState, 0, sizeof(g_PadState));
+	memset(&g_MouseState, 0, sizeof(g_MouseState));
+	memset(&g_KeyboardState, 0, sizeof(g_MouseState));
+}
+
+void InputClose()
+{
+	for(uint32_t i = 0; i < g_nNumJoysticks; ++i)
+	{
+		SDL_JoystickClose(g_pJoyStick[i]);
+	}
+}
+
+void InputClear()
+{
+	for(uint32_t i = 0; i < g_nNumJoysticks; ++i)
+		for(uint32_t j = 0; j < BUTTON_MAX; ++j)
+			g_PadState[i].button[j] &= ~BUTTON_FRAME;
+
+	for(uint32_t i = 0; i < MOUSE_BUTTON_MAX; ++i)
+		g_MouseState.button[i] &= ~BUTTON_FRAME;
+	for(uint32_t i = 0; i < KEYBOARD_MAX_KEYS; ++i)
+		g_KeyboardState.keys[i] &= ~BUTTON_FRAME;
+}
 
 #ifdef _WIN32
 void uprintf(const char* fmt, ...)
