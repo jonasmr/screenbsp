@@ -3,11 +3,8 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <math.h>
-///must be first
-#ifdef _WIN32
-#include <windows.h>
-#endif
-#include <GL/glew.h>
+#include <stddef.h>
+
 #include "SDL.h"
 
 

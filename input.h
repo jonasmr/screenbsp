@@ -29,12 +29,15 @@ enum
 	BUTTON_PUSHED	= 0x08,
 	BUTTON_FRAME = BUTTON_PUSHED|BUTTON_RELEASED
 };
-
+struct SPadAxis
+{
+	float x, y;
+};
 struct SPadState
 {
 	int16_t axis[AXIS_MAX];
 	uint8_t button[BUTTON_MAX];
-	v2		vaxis[2];
+	SPadAxis vaxis[2];
 };
 
 enum
