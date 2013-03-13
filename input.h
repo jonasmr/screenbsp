@@ -1,4 +1,5 @@
 #pragma once
+#include "base.h"
 
 enum
 {
@@ -74,19 +75,6 @@ extern SPadState g_PadState[MAX_PADS];
 extern SMouseState g_MouseState;
 extern SKeyboardState g_KeyboardState;
 
-extern bool g_bRetrieveString;
-extern const char* g_pRetrieveStringResult;
 
-inline const char* GetStringInput()
-{
-	return g_pRetrieveStringResult;
-}
-inline bool StringInputActive()
-{
-	return g_bRetrieveString;
-}
-
-inline void StartStringInput(bool bEnabled)
-{
-	g_bRetrieveString = bEnabled;
-}
+void InputInit();
+void InputClear();

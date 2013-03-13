@@ -2,6 +2,7 @@
 
 #define PI 3.14159265358979323846f
 #define TWOPI 6.2831853071795864769f
+#define TORAD (PI/180.f)
 
 
 struct v2;
@@ -62,7 +63,12 @@ struct v3
 	void operator -=(const float r);
 	void operator *=(const float r);
 	void operator /=(const float r);
-	void operator =(const v4&);
+
+	v2 tov2();
+	v4 tov4();
+	v4 tov4(float w);
+
+
 };
 struct v4
 {
@@ -77,7 +83,10 @@ struct v4
 		};
 		float v[4];
 	};
-	void operator =(const v3&);
+
+
+	v2 tov2();
+	v3 tov3();
 };
 
 union m
@@ -182,21 +191,7 @@ v3 operator -(const v3 l, float f);
 v3 operator *(const v3 v, float f);
 v3 operator /(const v3 v, float f);
 v3 operator -(const v3 v);
-inline
-void v4::operator =(const v3& o)
-{
-	x = o.x;
-	y = o.y;
-	z = o.z;
-	w = 0;
-}
-inline
-void v3::operator =(const v4& o)
-{
-	x = o.x;
-	y = o.y;
-	z = o.z;
-}
+
 
 inline
 v3 v3init(float x, float y, float z){v3 r; r.x = x; r.y = y;r.z = z; return r;}
@@ -224,14 +219,18 @@ v4 v4init(v3 v, float w){ v4 r; r.x = v.x; r.y = v.y; r.z = v.z; r.w = w; return
 
 m minit(v3 vx, v3 vy, v3 vz, v3 vtrans);
 m mid();
-m mcreate(v3 vDir, v3 vLeft, v3 vPoint);
+m mcreate(v3 vDir, v3 vRight, v3 vPoint);
 m mmult(m m0, m m1);
-m mrotatex(m m0, float fAngle);
-m mrotatey(m m0, float fAngle);
-m mrotatez(m m0, float fAngle);
+m mrotatex(float fAngle);
+m mrotatey(float fAngle);
+m mrotatez(float fAngle);
 m mtranslate(v3 trans);
+m mperspective(float fFovY, float fAspect, float fNear, float fFar);
 v3 mtransform(m mat, v3 point);
 v4 mtransform(m mat, v4 vector);
+
+void ZASSERTAFFINE(m mat);
+
 
 
 
