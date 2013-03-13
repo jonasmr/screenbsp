@@ -8,6 +8,7 @@
 #include "input.h"
 #include "glinc.h"
 #include "text.h"
+#include "math.h"
 
 
 SDL_Surface* g_Surface;
@@ -17,16 +18,9 @@ uint32_t g_Width = g_BaseWidth;
 uint32_t g_Height =  g_BaseHeight;
 uint32_t g_nQuit = 0;
 
-SPadState g_PadState[MAX_PADS];
-SDL_Joystick* g_pJoyStick[MAX_PADS];
-SMouseState g_MouseState;
-SKeyboardState g_KeyboardState;
-uint32_t g_nNumJoysticks = 0;
 
 uint32_t g_lShowDebug = 1;
 uint32_t g_lShowDebugText = 1;
-void InputInit();
-void InputClear();
 
 void CheckGLError()
 {
@@ -149,7 +143,15 @@ int SDL_main(int argc, char** argv)
 		return 1;
 	}
 
+	glewExperimental=1;
+	GLenum err=glewInit();
+	if(err!=GLEW_OK)
+	{
+		ZBREAK();
+	}
+
 	InputInit();
+
 	TextInit();
 
 	while(!g_nQuit)
@@ -162,64 +164,65 @@ int SDL_main(int argc, char** argv)
 		{
 			HandleEvent(&Evt);
 		}
-		if(g_KeyboardState.keys['q'] & BUTTON_RELEASED)
+		if((g_KeyboardState.keys['q']|g_KeyboardState.keys[SDLK_ESCAPE]) & BUTTON_RELEASED)
 			g_nQuit = 1;
 
 
-		glClearColor(0.2,0.2,0.2,0);
+		v3 vdir = v3init(0,0,-1);
+		v3 vright = v3init(1,0,0);
+		static float f = 0;
+		f += 3.8f;
+		m mrotx = mrotatey(f * TORAD);
+		v3 vdirx = mtransform(mrotx, vdir);
+		v3 vrightx = mtransform(mrotx, vright);
+		//m mrotz = mrotatez(45.f * TORAD);
+		//v3 vdirzx = mtransform(mrotz, vdirx);
+		//v3 vrightzx = mtransform(mrotz, vrightx);
+		m mat = mcreate(vdirx, vrightx, vdirx * -5.f);
+		//mat = mcreate(vdir, vright, v3init(0,0,5));
+		v3 vzero = v3init(0,0,0);
+		v3 vrrr = mtransform(mat, vzero);
+		uplotfnxt("VRR %f %f %f", vrrr.x, vrrr.y, vrrr.z);
+		m mprj = mperspective(45, (float)g_Width / (float)g_Height, 0.1f, 1000.f);
+
+
+		glClearColor(0.3,0.4,0.6,0);
 		glViewport(0, 0, g_Width, g_Height);
 		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		glOrtho(0, g_Width, g_Height, 0, 1, -1);
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		uplotfnxt("FPS %f", 1000.f);
-		uplotfnxt("FPS %f", 1000.f);
-		uplotfnxt("FPS %f", 1000.f);
+		glLoadMatrixf(&mprj.x.x);
 
+		glMatrixMode(GL_MODELVIEW);
+		glPushMatrix();
+		glLoadMatrixf(&mat.x.x);
+		
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		CheckGLError();
+
+
+		float x = 0.5f;
+		glPointSize(5.f);
+		glBegin(GL_POINTS);
+		glColor3f(1,0,0);
+		glVertex3f(x, x, 0.f);
+		glVertex3f(x, -x, 0.f);
+		glVertex3f(-x, -x, 0.f);
+		glVertex3f(-x, x, 0.f);
+		glEnd();
+		CheckGLError();
+
+
+
+
+
+
+
+		glPopMatrix();
 
 		TextFlush();
 		SDL_GL_SwapBuffers();
 	}
 	return 0;
-}
-
-
-void InputInit()
-{
-	g_nNumJoysticks = SDL_NumJoysticks();
-	if(g_nNumJoysticks > AXIS_MAX)
-		g_nNumJoysticks = AXIS_MAX;
-	memset(g_pJoyStick, 0, sizeof(g_pJoyStick));
-	uprintf("opening %d joysticks\n", g_nNumJoysticks);
-	for(uint32_t i = 0; i < g_nNumJoysticks; ++i)
-	{
-		g_pJoyStick[i] = SDL_JoystickOpen(i);
-	}
-	memset(&g_PadState, 0, sizeof(g_PadState));
-	memset(&g_MouseState, 0, sizeof(g_MouseState));
-	memset(&g_KeyboardState, 0, sizeof(g_MouseState));
-}
-
-void InputClose()
-{
-	for(uint32_t i = 0; i < g_nNumJoysticks; ++i)
-	{
-		SDL_JoystickClose(g_pJoyStick[i]);
-	}
-}
-
-void InputClear()
-{
-	for(uint32_t i = 0; i < g_nNumJoysticks; ++i)
-		for(uint32_t j = 0; j < BUTTON_MAX; ++j)
-			g_PadState[i].button[j] &= ~BUTTON_FRAME;
-
-	for(uint32_t i = 0; i < MOUSE_BUTTON_MAX; ++i)
-		g_MouseState.button[i] &= ~BUTTON_FRAME;
-	for(uint32_t i = 0; i < KEYBOARD_MAX_KEYS; ++i)
-		g_KeyboardState.keys[i] &= ~BUTTON_FRAME;
 }
 
 #ifdef _WIN32

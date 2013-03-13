@@ -435,6 +435,24 @@ v3 operator -(const v3 v)
 	return r;
 }
 
+v2 v3::tov2()
+{
+	v2 r;
+	r.x = x;
+	r.y = y;
+	return r;
+}
+v4 v3::tov4()
+{
+	v4 r;
+	r.x = x;
+	r.y = y;
+	r.z = z;
+	r.w = 0.f;
+	return r;
+}
+
+
 v3 v3cross(v3 v0, v3 v1)
 {
 	v3 r;
@@ -459,14 +477,31 @@ v3 v3normalize(v3 v)
 }
 
 
+v3 v4::tov3()
+{
+	v3 r;
+	r.x = x;
+	r.y = y;
+	r.z = z;
+	return r;
+}
+
+v2 v4::tov2()
+{
+	v2 r;
+	r.x = x;
+	r.y = y;
+	return r;
+}
+
 
 
 m minit(v3 vx, v3 vy, v3 vz, v3 vtrans)
 {
 	m r;
-	r.x = vx;
-	r.y = vy;
-	r.z = vz;
+	r.x = vx.tov4();
+	r.y = vy.tov4();
+	r.z = vz.tov4();
 	r.trans = v4init(vtrans, 1);
 	return r;
 }
@@ -493,88 +528,214 @@ m mcreate(v3 vDir, v3 vRight, v3 vPoint)
 {
 	v3 vUp = v3normalize(v3cross(vRight, vDir));
 	m r0 = mid();
-	r0.x = v4init(vRight,1.f);
-	r0.y = v4init(vUp, 1.f);
-	r0.z = v4init(-vDir, 1.f);
+	r0.x = v4init(vRight,0.f);
+	r0.y = v4init(vUp, 0.f);
+	r0.z = v4init(-vDir, 0.f);
+
+	{
+		float t;
+		t = r0.x.y;
+		r0.x.y = r0.y.x;
+		r0.y.x = t;
+
+		t = r0.x.z;
+		r0.x.z = r0.z.x;
+		r0.z.x = t;
+
+		t = r0.y.z;
+		r0.y.z = r0.z.y;
+		r0.z.y = t;
+	}
 	m rt = mtranslate(-vPoint);
-	return mmult(r0, rt);
+	m mtotales = mmult(r0, rt);
+	v3 v0 = v3init(0,0,0);
+	v3 v1 = mtransform(rt, v0);
+	v3 v2 = mtransform(r0, v1);
+	v3 v3__ = mtransform(mtotales, v0);
+
+	v3 vrotdir = mtransform(r0, vDir);
+	v3 vrotright = mtransform(r0, vRight);
+	v3 vrotupr = mtransform(r0, vUp);
+
+	// {
+	// 	v3 px = v3init(1,0,0);
+	// 	v3 py = v3init(0,1,0);
+	// 	v3 pz = v3init(0,0,1);
+	// 	m m0 = mrotatez(90*TORAD);
+	// 	m m1 = mrotatex(90*TORAD);
+	// 	m m2 = mrotatey(90*TORAD);
+	// 	v3 r0 = mtransform(m0, px);
+	// 	v3 r1 = mtransform(m1, py);
+	// 	v3 r2 = mtransform(m2, pz);
+	// 	uprintf("%p %p %p\n", &r0, &r1, &r2);
+	// }
+
+	ZASSERTAFFINE(rt);
+	ZASSERTAFFINE(r0);
+	ZASSERTAFFINE(mtotales);
+
+
+	return mtotales;
 }
 m mmult(m m0, m m1)
 {
 	m r;
-	r.x.x = m0.x.x * m1.x.x + m0.x.y * m1.y.x + m0.x.z * m1.z.x + m0.x.w * m1.w.x; 
-	r.x.y = m0.x.x * m1.x.y + m0.x.y * m1.y.y + m0.x.z * m1.z.y + m0.x.w * m1.w.y; 
-	r.x.z = m0.x.x * m1.x.z + m0.x.y * m1.y.z + m0.x.z * m1.z.z + m0.x.w * m1.w.z; 
-	r.x.w = m0.x.x * m1.x.w + m0.x.y * m1.y.w + m0.x.z * m1.z.w + m0.x.w * m1.w.w; 
+	uprintf("ptr is %p\n", &r);
+	r.x.x = m0.x.x * m1.x.x + m0.y.x * m1.x.y + m0.z.x * m1.x.z + m0.w.x * m1.x.w;
+	r.x.y = m0.x.y * m1.x.x + m0.y.y * m1.x.y + m0.z.y * m1.x.z + m0.w.y * m1.x.w;
+	r.x.z = m0.x.z * m1.x.x + m0.y.z * m1.x.y + m0.z.z * m1.x.z + m0.w.z * m1.x.w;
+	r.x.w = m0.x.w * m1.x.x + m0.y.w * m1.x.y + m0.z.w * m1.x.z + m0.w.w * m1.x.w;
 
-	r.y.x = m0.y.x * m1.x.x + m0.y.y * m1.y.x + m0.y.z * m1.z.x + m0.y.w * m1.w.x; 
-	r.y.y = m0.y.x * m1.x.y + m0.y.y * m1.y.y + m0.y.z * m1.z.y + m0.y.w * m1.w.y; 
-	r.y.z = m0.y.x * m1.x.z + m0.y.y * m1.y.z + m0.y.z * m1.z.z + m0.y.w * m1.w.z; 
-	r.y.w = m0.y.x * m1.x.w + m0.y.y * m1.y.w + m0.y.z * m1.z.w + m0.y.w * m1.w.w; 
+	r.y.x = m0.x.x * m1.y.x + m0.y.x * m1.y.y + m0.z.x * m1.y.z + m0.w.x * m1.y.w;
+	r.y.y = m0.x.y * m1.y.x + m0.y.y * m1.y.y + m0.z.y * m1.y.z + m0.w.y * m1.y.w;
+	r.y.z = m0.x.z * m1.y.x + m0.y.z * m1.y.y + m0.z.z * m1.y.z + m0.w.z * m1.y.w;
+	r.y.w = m0.x.w * m1.y.x + m0.y.w * m1.y.y + m0.z.w * m1.y.z + m0.w.w * m1.y.w;
 
-	r.z.x = m0.z.x * m1.x.x + m0.z.y * m1.y.x + m0.z.z * m1.z.x + m0.z.w * m1.w.x; 
-	r.z.y = m0.z.x * m1.x.y + m0.z.y * m1.y.y + m0.z.z * m1.z.y + m0.z.w * m1.w.y; 
-	r.z.z = m0.z.x * m1.x.z + m0.z.y * m1.y.z + m0.z.z * m1.z.z + m0.z.w * m1.w.z; 
-	r.z.w = m0.z.x * m1.x.w + m0.z.y * m1.y.w + m0.z.z * m1.z.w + m0.z.w * m1.w.w; 
+	r.z.x = m0.x.x * m1.z.x + m0.y.x * m1.z.y + m0.z.x * m1.z.z + m0.w.x * m1.z.w;
+	r.z.y = m0.x.y * m1.z.x + m0.y.y * m1.z.y + m0.z.y * m1.z.z + m0.w.y * m1.z.w;
+	r.z.z = m0.x.z * m1.z.x + m0.y.z * m1.z.y + m0.z.z * m1.z.z + m0.w.z * m1.z.w;
+	r.z.w = m0.x.w * m1.z.x + m0.y.w * m1.z.y + m0.z.w * m1.z.z + m0.w.w * m1.z.w;
 
-	r.y.x = m0.w.x * m1.x.x + m0.w.y * m1.y.x + m0.w.z * m1.z.x + m0.w.w * m1.w.x; 
-	r.y.y = m0.w.x * m1.x.y + m0.w.y * m1.y.y + m0.w.z * m1.z.y + m0.w.w * m1.w.y; 
-	r.y.z = m0.w.x * m1.x.z + m0.w.y * m1.y.z + m0.w.z * m1.z.z + m0.w.w * m1.w.z; 
-	r.y.w = m0.w.x * m1.x.w + m0.w.y * m1.y.w + m0.w.z * m1.z.w + m0.w.w * m1.w.w; 
+
+	r.w.x = m0.x.x * m1.w.x + m0.y.x * m1.w.y + m0.z.x * m1.w.z + m0.w.x * m1.w.w;
+	r.w.y = m0.x.y * m1.w.x + m0.y.y * m1.w.y + m0.z.y * m1.w.z + m0.w.y * m1.w.w;
+	r.w.z = m0.x.z * m1.w.x + m0.y.z * m1.w.y + m0.z.z * m1.w.z + m0.w.z * m1.w.w;
+	r.w.w = m0.x.w * m1.w.x + m0.y.w * m1.w.y + m0.z.w * m1.w.z + m0.w.w * m1.w.w;
+
+
+	// r.x.x = m0.x.x * m1.x.x + m0.x.y * m1.y.x + m0.x.z * m1.z.x + m0.x.w * m1.w.x; 
+	// r.x.y = m0.x.x * m1.x.y + m0.x.y * m1.y.y + m0.x.z * m1.z.y + m0.x.w * m1.w.y; 
+	// r.x.z = m0.x.x * m1.x.z + m0.x.y * m1.y.z + m0.x.z * m1.z.z + m0.x.w * m1.w.z; 
+	// r.x.w = m0.x.x * m1.x.w + m0.x.y * m1.y.w + m0.x.z * m1.z.w + m0.x.w * m1.w.w; 
+
+	// r.y.x = m0.y.x * m1.x.x + m0.y.y * m1.y.x + m0.y.z * m1.z.x + m0.y.w * m1.w.x; 
+	// r.y.y = m0.y.x * m1.x.y + m0.y.y * m1.y.y + m0.y.z * m1.z.y + m0.y.w * m1.w.y; 
+	// r.y.z = m0.y.x * m1.x.z + m0.y.y * m1.y.z + m0.y.z * m1.z.z + m0.y.w * m1.w.z; 
+	// r.y.w = m0.y.x * m1.x.w + m0.y.y * m1.y.w + m0.y.z * m1.z.w + m0.y.w * m1.w.w; 
+
+	// r.z.x = m0.z.x * m1.x.x + m0.z.y * m1.y.x + m0.z.z * m1.z.x + m0.z.w * m1.w.x; 
+	// r.z.y = m0.z.x * m1.x.y + m0.z.y * m1.y.y + m0.z.z * m1.z.y + m0.z.w * m1.w.y; 
+	// r.z.z = m0.z.x * m1.x.z + m0.z.y * m1.y.z + m0.z.z * m1.z.z + m0.z.w * m1.w.z; 
+	// r.z.w = m0.z.x * m1.x.w + m0.z.y * m1.y.w + m0.z.z * m1.z.w + m0.z.w * m1.w.w; 
+
+	// r.w.x = m0.w.x * m1.x.x + m0.w.y * m1.y.x + m0.w.z * m1.z.x + m0.w.w * m1.w.x; 
+	// r.w.y = m0.w.x * m1.x.y + m0.w.y * m1.y.y + m0.w.z * m1.z.y + m0.w.w * m1.w.y; 
+	// r.w.z = m0.w.x * m1.x.z + m0.w.y * m1.y.z + m0.w.z * m1.z.z + m0.w.w * m1.w.z; 
+	// r.w.w = m0.w.x * m1.x.w + m0.w.y * m1.y.w + m0.w.z * m1.z.w + m0.w.w * m1.w.w; 
 
 	return r;
 }
-m mrotatex(m m0, float fAngle)
+m mrotatex(float fAngle)
 {
 	m r = mid();
 	float ca = cos(fAngle);
 	float sa = sin(fAngle);
 	r.y.y = ca;
-	r.y.z = -sa;
-	r.z.y = sa;
+	r.y.z = sa;
+	r.z.y = -sa;
 	r.z.z = ca;
+	ZASSERTAFFINE(r);
 	return r;
 }
-m mrotatey(m m0, float fAngle)
+m mrotatey(float fAngle)
 {
 	m r = mid();
 	float ca = cos(fAngle);
 	float sa = sin(fAngle);
 	r.x.x = ca;
-	r.x.z = sa;
-	r.z.x = -sa;
+	r.x.z = -sa;
+	r.z.x = sa;
 	r.z.z = ca;
+	ZASSERTAFFINE(r);
+
 	return r;	
 }
-m mrotatez(m m0, float fAngle)
+m mrotatez(float fAngle)
 {
 	m r = mid();
 	float ca = cos(fAngle);
 	float sa = sin(fAngle);
 	r.x.x = ca;
-	r.x.y = -sa;
-	r.y.x = sa;
-	r.y.z = ca;
+	r.x.y = sa;
+	r.y.x = -sa;
+	r.y.y = ca;
+	ZASSERTAFFINE(r);
+
 	return r;	
 
 }
 m mtranslate(v3 trans)
 {
 	m r = mid();
-	r.trans = trans;
+	r.trans = v4init(trans,1.f);
 	return r;
 }
 
 v3 mtransform(m mat, v3 point)
 {
 	v3 r;
-	r.x = v3dot(v3init(mat.x), point);
-	r.y = v3dot(v3init(mat.y), point);
-	r.z = v3dot(v3init(mat.z), point);
-	r += point;
+	r.x = mat.x.x * point.x + mat.y.x * point.y + mat.z.x * point.z;
+	r.y = mat.x.y * point.x + mat.y.y * point.y + mat.z.y * point.z;
+	r.z = mat.x.z * point.x + mat.y.z * point.y + mat.z.z * point.z;
+	r += v3init(mat.trans);
 	return r;
 }
 
+m mperspective(float fFovY, float fAspect, float fNear, float fFar)\
+{
+	//f aspect 0 0 0  -- 
+	// 0 f 0 0 -- 
+	// 0 0 zFar + zNear zNear - zFar 2 × zFar × zNear zNear - zFar 
+	// 0 0 -1 0
+
+	float ymax = fNear * tan(fFovY * PI / 360.f);
+	float ymin = -ymax;
+	float xmax = ymax * fAspect;
+	float xmin = ymin * fAspect;
+
+	float width = ymax - xmin;
+	float height = xmax - ymin;
+	float w = 2 * fNear / width;
+	w = w / fAspect;
+	float h = 2 * fNear / height;
+
+
+	float fAngle = fFovY * PI / 360.f;
+	float f = cos(fAngle)/sin(fAngle);
+
+	float fDepth = fFar - fNear;
+	float q = -(fFar + fNear) / fDepth;
+	float qn =  -2 * (fFar + fNear) / fDepth;
+	m r = mid();
+	r.x.x = w;
+	r.y.y = h;
+	r.z.z = q;
+	r.z.w = -1.f;
+	r.w.z = qn;
+
+
+
+
+	return r;
+
+}
+
+
+void ZASSERTAFFINE(m mat)
+{
+	ZASSERT(fabs(1-v3length(mat.x.tov3())) < 0.001f);
+	ZASSERT(fabs(1-v3length(mat.y.tov3())) < 0.001f);
+	ZASSERT(fabs(1-v3length(mat.z.tov3())) < 0.001f);
+
+
+	float d0 = v3dot(mat.x.tov3(), mat.y.tov3());
+	float d1 = v3dot(mat.x.tov3(), mat.z.tov3());
+	float d2 = v3dot(mat.z.tov3(), mat.y.tov3());
+	ZASSERT(fabs(d0) < 0.001f);
+	ZASSERT(fabs(d1) < 0.001f);
+	ZASSERT(fabs(d2) < 0.001f);
+
+}
 
 
 v2 v2randir()
