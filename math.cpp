@@ -528,24 +528,24 @@ m mcreate(v3 vDir, v3 vRight, v3 vPoint)
 {
 	v3 vUp = v3normalize(v3cross(vRight, vDir));
 	m r0 = mid();
-	r0.x = v4init(vRight,0.f);
-	r0.y = v4init(vUp, 0.f);
-	r0.z = v4init(-vDir, 0.f);
+	msetxaxis(r0, vRight);
+	msetyaxis(r0, vUp);
+	msetzaxis(r0, -vDir);
 
-	{
-		float t;
-		t = r0.x.y;
-		r0.x.y = r0.y.x;
-		r0.y.x = t;
+	// {
+	// 	float t;
+	// 	t = r0.x.y;
+	// 	r0.x.y = r0.y.x;
+	// 	r0.y.x = t;
 
-		t = r0.x.z;
-		r0.x.z = r0.z.x;
-		r0.z.x = t;
+	// 	t = r0.x.z;
+	// 	r0.x.z = r0.z.x;
+	// 	r0.z.x = t;
 
-		t = r0.y.z;
-		r0.y.z = r0.z.y;
-		r0.z.y = t;
-	}
+	// 	t = r0.y.z;
+	// 	r0.y.z = r0.z.y;
+	// 	r0.z.y = t;
+	// }
 	m rt = mtranslate(-vPoint);
 	m mtotales = mmult(r0, rt);
 	v3 v0 = v3init(0,0,0);
@@ -719,8 +719,24 @@ m mperspective(float fFovY, float fAspect, float fNear, float fFar)\
 	return r;
 
 }
-
-
+void msetxaxis(m& mat, v3 axis)
+{
+	mat.x.x = axis.x;
+	mat.y.x = axis.y;
+	mat.z.x = axis.z;
+}
+void msetyaxis(m& mat, v3 axis)
+{
+	mat.x.y = axis.x;
+	mat.y.y = axis.y;
+	mat.z.y = axis.z;
+}
+void msetzaxis(m& mat, v3 axis)
+{
+	mat.x.z = axis.x;
+	mat.y.z = axis.y;
+	mat.z.z = axis.z;
+}
 void ZASSERTAFFINE(m mat)
 {
 	ZASSERT(fabs(1-v3length(mat.x.tov3())) < 0.001f);

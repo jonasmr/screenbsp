@@ -3,3 +3,7 @@
 #endif
 #include <GL/glew.h>
 #include "SDL.h"
+
+
+void CheckGLError();
+
