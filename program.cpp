@@ -18,21 +18,151 @@ struct SCameraState
 	v3 vPosition;
 } g_Camera;
 
+struct SObject
+{
+	m mObjectToWorld;
+	v3 vSize;
+};
+
+struct SOccluder : SObject
+{
+};
+
+struct SWorldObject : SObject
+{
+
+};
+
+
+SOccluder g_Occluders[2];
+
+void DebugRender()
+{
+	glBegin(GL_LINES);
+	glColor3f(1,0,0);
+	glVertex3f(0, 0, 0.f);
+	glVertex3f(1.f, 0, 0.f);
+	glColor3f(0,1,0);
+	glVertex3f(0, 0, 0.f);
+	glVertex3f(0.f, 1.f, 0.f);
+	glColor3f(0,0,1);
+	glVertex3f(0, 0, 0.f);
+	glVertex3f(0.f, 0, 1.f);
+	glEnd();
+}
+
+void WorldInit()
+{
+	g_Occluders[0].mObjectToWorld = mrotatey(90*TORAD);
+	g_Occluders[0].mObjectToWorld.trans = v4init(2.f,0.f,0.1f, 1.f);
+	g_Occluders[0].vSize = v3init(0.5f, 0.5f, 0.f);
+
+	g_Occluders[1].mObjectToWorld = mrotatey(90*TORAD);
+	g_Occluders[1].mObjectToWorld.trans = v4init(2.f,0.f,-1.f, 1.f);
+	g_Occluders[1].vSize = v3init(0.65f, 1.9f, 0);
+	
+	
+}
+
+void WorldRender()
+{
+	for(uint32 i = 0; i < 2; ++i)
+	{
+		glPushMatrix();
+		glMultMatrixf(&g_Occluders[i].mObjectToWorld.x.x);
+		float x = g_Occluders[i].vSize.x;
+		float y = g_Occluders[i].vSize.y;
+		glBegin(GL_LINE_STRIP);
+		glColor3f(1,1,1);
+		glVertex3f(x, y, 0.f);
+		glVertex3f(x, -y, 0.f);
+		glVertex3f(-x, -y, 0.f);
+		glVertex3f(-x, y, 0.f);
+		glVertex3f(x, y, 0.f);
+		glEnd();
+		glPopMatrix();
+	}
+
+
+
+}
+
+
+void UpdateCamera()
+{
+	v3 vDir = v3init(0,0,0);
+	if(g_KeyboardState.keys['a'] & BUTTON_DOWN)
+	{
+		vDir.x = -1.f;
+	}
+	else if(g_KeyboardState.keys['d'] & BUTTON_DOWN)
+	{
+		vDir.x = 1.f;
+	}
+
+	if(g_KeyboardState.keys['w'] & BUTTON_DOWN)
+	{
+		vDir.z = 1.f;
+	}
+	else if(g_KeyboardState.keys['s'] & BUTTON_DOWN)
+	{
+		vDir.z = -1.f;
+	}
+	float fSpeed = 0.1f;
+	if((g_KeyboardState.keys[SDLK_RSHIFT]|g_KeyboardState.keys[SDLK_LSHIFT]) & BUTTON_DOWN)
+		fSpeed *= 0.2f;
+	g_Camera.vPosition += g_Camera.vDir * vDir.z * fSpeed;
+	g_Camera.vPosition += g_Camera.vRight * vDir.x * fSpeed;
+
+
+	static int mousex, mousey;
+	if(g_MouseState.button[1] & BUTTON_PUSHED)
+	{
+		mousex = g_MouseState.position[0];
+		mousey = g_MouseState.position[1];
+	}
+
+	if(g_MouseState.button[1] & BUTTON_DOWN)
+	{
+		int dx = g_MouseState.position[0] - mousex;
+		int dy = g_MouseState.position[1] - mousey;
+		mousex = g_MouseState.position[0];
+		mousey = g_MouseState.position[1];
+
+		float fRotX = dy * -0.25f;
+		float fRotY = dx * -0.25f;
+		m mrotx = mrotatex(fRotX*TORAD);
+		m mroty = mrotatey(fRotY*TORAD);
+		g_Camera.vDir = mtransform(mroty, g_Camera.vDir);
+		g_Camera.vRight = mtransform(mroty, g_Camera.vRight);
+
+		m mview = mcreate(g_Camera.vDir, g_Camera.vRight, v3init(0,0,0));
+		m mviewinv = minverserotation(mview);
+		v3 vNewDir = mtransform(mrotx, v3init(0,0,-1));
+		g_Camera.vDir = mtransform(mviewinv, vNewDir);
+
+
+	}
+
+
+}
+
 
 void ProgramInit()
 {
-	g_Camera.vDir = v3init(0,0,-1);
-	g_Camera.vRight = v3init(1,0,0);
-	g_Camera.vPosition = v3init(0,0,5);
+	m mroty = mrotatey(45.f * TORAD);
+	g_Camera.vDir = mtransform(mroty, v3init(0,0,-1));
+	g_Camera.vRight = mtransform(mroty, v3init(1,0,0));
+	g_Camera.vPosition = g_Camera.vDir * -5.f;
+
+	WorldInit();
 }
 
 int ProgramMain()
 {
 
-	if((g_KeyboardState.keys['q']|g_KeyboardState.keys[SDLK_ESCAPE]) & BUTTON_RELEASED)
+	if(g_KeyboardState.keys[SDLK_ESCAPE] & BUTTON_RELEASED)
 		return 1;
-
-
 
 	m mprj; 
 	m mview;
@@ -45,26 +175,23 @@ int ProgramMain()
 		m mrotx = mrotatey(f * TORAD);
 		v3 vdirx = mtransform(mrotx, vdir);
 		v3 vrightx = mtransform(mrotx, vright);
-		//m mrotz = mrotatez(45.f * TORAD);
-		//v3 vdirzx = mtransform(mrotz, vdirx);
-		//v3 vrightzx = mtransform(mrotz, vrightx);
 		mview = mcreate(vdirx, vrightx, vdirx * -5.f);
-		//mat = mcreate(vdir, vright, v3init(0,0,5));
-		mprj = mperspective(45, (float)g_Width / (float)g_Height, 0.1f, 1000.f);
+		mprj = mperspective(45, (float)g_Width / (float)g_Height, 0.01f, 500.f);
 	}
 	else
 	{
-		uplotfnxt("FPS %4.2f Dir[%5.2f,%5.2f,%5.2f] Pos[%3.2f,%3.2f,%3.2f]", 1.f, 
+		UpdateCamera();
+		mview = mcreate(g_Camera.vDir, g_Camera.vRight, g_Camera.vPosition);
+		mprj = mperspective(45, (float)g_Width / (float)g_Height, 0.01f, 500.f);
+
+
+		uplotfnxt("FPS %4.2f Dir[%5.2f,%5.2f,%5.2f] Pos[%3.2f,%3.2f,%3.2f]" , 1.f, 
 			g_Camera.vDir.x,
 			g_Camera.vDir.y,
 			g_Camera.vDir.z,
 			g_Camera.vPosition.x,
 			g_Camera.vPosition.y,
 			g_Camera.vPosition.z);
-		mview = mcreate(g_Camera.vDir, g_Camera.vRight, g_Camera.vPosition);
-		mprj = mperspective(45, (float)g_Width / (float)g_Height, 0.1f, 1000.f);
-
-
 	}
 
 
@@ -92,6 +219,13 @@ int ProgramMain()
 	glVertex3f(-x, x, 0.f);
 	glEnd();
 	CheckGLError();
+
+
+	WorldRender();
+
+	DebugRender();
+
+
 	glPopMatrix();
 
 	return 0;
