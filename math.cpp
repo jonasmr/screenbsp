@@ -2,6 +2,7 @@
 #include <float.h>
 
 #include "base.h"
+#include "text.h"
 #include "math.h"
 
 
@@ -531,21 +532,6 @@ m mcreate(v3 vDir, v3 vRight, v3 vPoint)
 	msetxaxis(r0, vRight);
 	msetyaxis(r0, vUp);
 	msetzaxis(r0, -vDir);
-
-	// {
-	// 	float t;
-	// 	t = r0.x.y;
-	// 	r0.x.y = r0.y.x;
-	// 	r0.y.x = t;
-
-	// 	t = r0.x.z;
-	// 	r0.x.z = r0.z.x;
-	// 	r0.z.x = t;
-
-	// 	t = r0.y.z;
-	// 	r0.y.z = r0.z.y;
-	// 	r0.z.y = t;
-	// }
 	m rt = mtranslate(-vPoint);
 	m mtotales = mmult(r0, rt);
 	v3 v0 = v3init(0,0,0);
@@ -557,19 +543,6 @@ m mcreate(v3 vDir, v3 vRight, v3 vPoint)
 	v3 vrotright = mtransform(r0, vRight);
 	v3 vrotupr = mtransform(r0, vUp);
 
-	// {
-	// 	v3 px = v3init(1,0,0);
-	// 	v3 py = v3init(0,1,0);
-	// 	v3 pz = v3init(0,0,1);
-	// 	m m0 = mrotatez(90*TORAD);
-	// 	m m1 = mrotatex(90*TORAD);
-	// 	m m2 = mrotatey(90*TORAD);
-	// 	v3 r0 = mtransform(m0, px);
-	// 	v3 r1 = mtransform(m1, py);
-	// 	v3 r2 = mtransform(m2, pz);
-	// 	uprintf("%p %p %p\n", &r0, &r1, &r2);
-	// }
-
 	ZASSERTAFFINE(rt);
 	ZASSERTAFFINE(r0);
 	ZASSERTAFFINE(mtotales);
@@ -580,7 +553,6 @@ m mcreate(v3 vDir, v3 vRight, v3 vPoint)
 m mmult(m m0, m m1)
 {
 	m r;
-	uprintf("ptr is %p\n", &r);
 	r.x.x = m0.x.x * m1.x.x + m0.y.x * m1.x.y + m0.z.x * m1.x.z + m0.w.x * m1.x.w;
 	r.x.y = m0.x.y * m1.x.x + m0.y.y * m1.x.y + m0.z.y * m1.x.z + m0.w.y * m1.x.w;
 	r.x.z = m0.x.z * m1.x.x + m0.y.z * m1.x.y + m0.z.z * m1.x.z + m0.w.z * m1.x.w;
@@ -737,6 +709,22 @@ void msetzaxis(m& mat, v3 axis)
 	mat.y.z = axis.y;
 	mat.z.z = axis.z;
 }
+m minverserotation(m mat)
+{
+	m r = mat;
+
+	r.x.z = mat.z.x;
+	r.z.x = mat.x.z;
+
+	r.x.y = mat.y.x;
+	r.y.x = mat.x.y;
+
+	r.y.z = mat.z.y;
+	r.z.y = mat.y.z;
+	return r;
+
+}
+
 void ZASSERTAFFINE(m mat)
 {
 	ZASSERT(fabs(1-v3length(mat.x.tov3())) < 0.001f);

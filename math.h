@@ -231,6 +231,7 @@ v4 mtransform(m mat, v4 vector);
 void msetxaxis(m& mat, v3 axis);
 void msetyaxis(m& mat, v3 axis);
 void msetzaxis(m& mat, v3 axis);
+m minverserotation(m mat);
 void ZASSERTAFFINE(m mat);
 
 
