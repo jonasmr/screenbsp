@@ -228,11 +228,10 @@ m mtranslate(v3 trans);
 m mperspective(float fFovY, float fAspect, float fNear, float fFar);
 v3 mtransform(m mat, v3 point);
 v4 mtransform(m mat, v4 vector);
-
+void msetxaxis(m& mat, v3 axis);
+void msetyaxis(m& mat, v3 axis);
+void msetzaxis(m& mat, v3 axis);
 void ZASSERTAFFINE(m mat);
-
-
-
 
 
 

@@ -119,6 +119,8 @@ void HandleEvent(SDL_Event* pEvt)
 	}
 }
 
+int ProgramMain();
+void ProgramInit();
 
 #ifdef _WIN32
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw)
@@ -151,9 +153,13 @@ int SDL_main(int argc, char** argv)
 	}
 
 	InputInit();
-
 	TextInit();
 
+
+
+
+	ProgramInit();
+	
 	while(!g_nQuit)
 	{
 		CheckGLError();
@@ -164,60 +170,11 @@ int SDL_main(int argc, char** argv)
 		{
 			HandleEvent(&Evt);
 		}
-		if((g_KeyboardState.keys['q']|g_KeyboardState.keys[SDLK_ESCAPE]) & BUTTON_RELEASED)
+		if(ProgramMain())
+		{
 			g_nQuit = 1;
+		}
 
-
-		v3 vdir = v3init(0,0,-1);
-		v3 vright = v3init(1,0,0);
-		static float f = 0;
-		f += 3.8f;
-		m mrotx = mrotatey(f * TORAD);
-		v3 vdirx = mtransform(mrotx, vdir);
-		v3 vrightx = mtransform(mrotx, vright);
-		//m mrotz = mrotatez(45.f * TORAD);
-		//v3 vdirzx = mtransform(mrotz, vdirx);
-		//v3 vrightzx = mtransform(mrotz, vrightx);
-		m mat = mcreate(vdirx, vrightx, vdirx * -5.f);
-		//mat = mcreate(vdir, vright, v3init(0,0,5));
-		v3 vzero = v3init(0,0,0);
-		v3 vrrr = mtransform(mat, vzero);
-		uplotfnxt("VRR %f %f %f", vrrr.x, vrrr.y, vrrr.z);
-		m mprj = mperspective(45, (float)g_Width / (float)g_Height, 0.1f, 1000.f);
-
-
-		glClearColor(0.3,0.4,0.6,0);
-		glViewport(0, 0, g_Width, g_Height);
-		glMatrixMode(GL_PROJECTION);
-		glLoadMatrixf(&mprj.x.x);
-
-		glMatrixMode(GL_MODELVIEW);
-		glPushMatrix();
-		glLoadMatrixf(&mat.x.x);
-		
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		CheckGLError();
-
-
-		float x = 0.5f;
-		glPointSize(5.f);
-		glBegin(GL_POINTS);
-		glColor3f(1,0,0);
-		glVertex3f(x, x, 0.f);
-		glVertex3f(x, -x, 0.f);
-		glVertex3f(-x, -x, 0.f);
-		glVertex3f(-x, x, 0.f);
-		glEnd();
-		CheckGLError();
-
-
-
-
-
-
-
-		glPopMatrix();
 
 		TextFlush();
 		SDL_GL_SwapBuffers();
