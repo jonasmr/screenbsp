@@ -35,6 +35,7 @@ struct SWorldObject : SObject
 
 
 SOccluder g_Occluders[2];
+SWorldObject g_WorldObjects[1];
 
 void DebugRender()
 {
@@ -60,12 +61,18 @@ void WorldInit()
 	g_Occluders[1].mObjectToWorld = mrotatey(90*TORAD);
 	g_Occluders[1].mObjectToWorld.trans = v4init(2.f,0.f,-1.f, 1.f);
 	g_Occluders[1].vSize = v3init(0.65f, 1.9f, 0);
+
+	g_WorldObjects[0].mObjectToWorld = mrotatey(90*TORAD);
+	g_WorldObjects[0].mObjectToWorld.trans = v4init(3.f,0.f,-0.5f, 1.f);
+	g_WorldObjects[0].vSize = v3init(0.25f, 0.2f, 0.2);
 	
 	
 }
 
 void WorldRender()
 {
+		g_WorldObjects[0].mObjectToWorld = mmult(g_WorldObjects[0].mObjectToWorld, mrotatey(0.5f*TORAD));
+
 	for(uint32 i = 0; i < 2; ++i)
 	{
 		glPushMatrix();
@@ -84,6 +91,48 @@ void WorldRender()
 	}
 
 
+	for(uint32 i = 0; i < 1; ++i)
+	{
+		glPushMatrix();
+		glMultMatrixf(&g_WorldObjects[i].mObjectToWorld.x.x);
+		float x = g_WorldObjects[i].vSize.x;
+		float y = g_WorldObjects[i].vSize.y;
+		float z = g_WorldObjects[i].vSize.z;
+		glBegin(GL_LINE_STRIP);
+		glColor3f(0,1,0);
+		glVertex3f(x, y, z);
+		glVertex3f(x, -y, z);
+		glVertex3f(-x, -y, z);
+		glVertex3f(-x, y, z);
+		glVertex3f(x, y, z);
+		glEnd();
+
+		glBegin(GL_LINE_STRIP);
+		glColor3f(0,1,0);
+		glVertex3f(x, y, -z);
+		glVertex3f(x, -y, -z);
+		glVertex3f(-x, -y, -z);
+		glVertex3f(-x, y, -z);
+		glVertex3f(x, y, -z);
+		glEnd();
+
+		glBegin(GL_LINES);
+		glColor3f(0,1,0);
+		glVertex3f(x, y, -z);
+		glVertex3f(x, y, z);
+		glVertex3f(x, -y, -z);
+		glVertex3f(x, -y, z);
+		glVertex3f(-x, -y, -z);
+		glVertex3f(-x, -y, z);
+		glVertex3f(-x, y, -z);
+		glVertex3f(-x, y, z);
+		glVertex3f(x, y, -z);
+		glVertex3f(x, y, z);
+		glEnd();
+
+
+		glPopMatrix();
+	}
 
 }
 
@@ -176,13 +225,13 @@ int ProgramMain()
 		v3 vdirx = mtransform(mrotx, vdir);
 		v3 vrightx = mtransform(mrotx, vright);
 		mview = mcreate(vdirx, vrightx, vdirx * -5.f);
-		mprj = mperspective(45, (float)g_Width / (float)g_Height, 0.01f, 500.f);
+		mprj = mperspective(45, (float)g_Width / (float)g_Height, 0.01f, 200.f);
 	}
 	else
 	{
 		UpdateCamera();
 		mview = mcreate(g_Camera.vDir, g_Camera.vRight, g_Camera.vPosition);
-		mprj = mperspective(45, (float)g_Width / (float)g_Height, 0.01f, 500.f);
+		mprj = mperspective(45, (float)g_Width / (float)g_Height, 0.001f, 500.f);
 
 
 		uplotfnxt("FPS %4.2f Dir[%5.2f,%5.2f,%5.2f] Pos[%3.2f,%3.2f,%3.2f]" , 1.f, 
@@ -194,6 +243,7 @@ int ProgramMain()
 			g_Camera.vPosition.z);
 	}
 
+	glLineWidth(2.f);
 
 	glClearColor(0.3,0.4,0.6,0);
 	glViewport(0, 0, g_Width, g_Height);
@@ -207,19 +257,6 @@ int ProgramMain()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	CheckGLError();
-
-
-	float x = 0.5f;
-	glPointSize(5.f);
-	glBegin(GL_POINTS);
-	glColor3f(1,0,0);
-	glVertex3f(x, x, 0.f);
-	glVertex3f(x, -x, 0.f);
-	glVertex3f(-x, -x, 0.f);
-	glVertex3f(-x, x, 0.f);
-	glEnd();
-	CheckGLError();
-
 
 	WorldRender();
 
