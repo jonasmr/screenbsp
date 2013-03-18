@@ -67,6 +67,15 @@ v2 operator +(const v2 l, float f)
 	res.y = l.y+f;
 	return res;
 }
+
+v2 operator +(float f, const v2 l)
+{
+	v2 res;
+	res.x = l.x+f;
+	res.y = l.y+f;
+	return res;
+}
+
 v2 operator -(const v2 l, const v2 r)
 {
 	v2 res;
@@ -80,6 +89,14 @@ v2 operator -(const v2 l, float f)
 	v2 res;
 	res.x = l.x-f;
 	res.y = l.y-f;
+	return res;
+}
+
+v2 operator -(float f, const v2 l)
+{
+	v2 res;
+	res.x = f- l.x;
+	res.y = f- l.y;
 	return res;
 }
 
@@ -100,6 +117,15 @@ v2 operator *(const v2 v, float f)
 	return res;
 }
 
+v2 operator *(float f, const v2 v)
+{
+	v2 res;
+	res.x = v.x*f;
+	res.y = v.y*f;
+	return res;
+}
+
+
 v2 operator /(const v2 v, const v2 r)
 {
 	v2 res;
@@ -114,6 +140,14 @@ v2 operator /(const v2 v, float f)
 	v2 res;
 	res.x = v.x/f;
 	res.y = v.y/f;
+	return res;
+}
+
+v2 operator /(float f, const v2 v)
+{
+	v2 res;
+	res.x = f/v.x;
+	res.y = f/v.y;
 	return res;
 }
 
@@ -371,6 +405,16 @@ v3 operator +(const v3 l, float f)
 	res.z = l.z+f;	
 	return res;
 }
+
+v3 operator +(float f, const v3 l)
+{
+	v3 res;
+	res.x = l.x+f;
+	res.y = l.y+f;
+	res.z = l.z+f;	
+	return res;
+}
+
 v3 operator -(const v3 l, const v3 r)
 {
 	v3 res;
@@ -386,6 +430,15 @@ v3 operator -(const v3 l, float f)
 	res.x = l.x-f;
 	res.y = l.y-f;
 	res.z = l.z-f;	
+	return res;
+}
+
+v3 operator -(float f, const v3 l)
+{
+	v3 res;
+	res.x = f - l.x;
+	res.y = f - l.y;
+	res.z = f - l.z;	
 	return res;
 }
 
@@ -408,6 +461,16 @@ v3 operator *(const v3 v, float f)
 	return res;
 }
 
+v3 operator *(float f, const v3 v)
+{
+	v3 res;
+	res.x = v.x*f;
+	res.y = v.y*f;
+	res.z = v.z*f;	
+	return res;
+}
+
+
 v3 operator /(const v3 v, const v3 r)
 {
 	v3 res;
@@ -426,6 +489,16 @@ v3 operator /(const v3 v, float f)
 	res.z = v.z/f;	
 	return res;
 }
+
+v3 operator /(float f, const v3 v)
+{
+	v3 res;
+	res.x = f / v.x;
+	res.y = f / v.y;
+	res.z = f / v.z;	
+	return res;
+}
+
 
 v3 operator -(const v3 v)
 {
@@ -450,6 +523,16 @@ v4 v3::tov4()
 	r.y = y;
 	r.z = z;
 	r.w = 0.f;
+	return r;
+}
+
+v4 v3::tov4(float w)
+{
+	v4 r;
+	r.x = x;
+	r.y = y;
+	r.z = z;
+	r.w = w;
 	return r;
 }
 
@@ -494,6 +577,207 @@ v2 v4::tov2()
 	r.y = y;
 	return r;
 }
+
+
+
+float v4dot(v4 v0, v4 v1)
+{
+	return v0.x * v1.x + v0.y * v1.y + v0.z * v1.z + v0.w * v1.w;
+}
+
+
+void v4::operator +=(const v4& r)
+{
+	x += r.x;
+	y += r.y;
+	z += r.z;
+	w += r.w;
+}
+void v4::operator -=(const v4& r)
+{
+	x -= r.x;
+	y -= r.y;
+	z -= r.z;
+	w -= r.w;
+}
+void v4::operator *=(const v4& r)
+{
+	x *= r.x;
+	y *= r.y;
+	z *= r.z;
+	w *= r.w;
+}
+void v4::operator /=(const v4& r)
+{
+	x /= r.x;
+	y /= r.y;
+	z /= r.z;
+	w /= r.w;
+}
+
+void v4::operator +=(const float r)
+{
+	x += r;
+	y += r;
+	z += r;
+	w += r;
+}
+void v4::operator -=(const float r)
+{
+	x -= r;
+	y -= r;
+	z -= r;
+	w -= r;
+}
+void v4::operator *=(const float r)
+{
+	x *= r;
+	y *= r;
+	z *= r;
+	w *= r;
+}
+void v4::operator /=(const float r)
+{
+	x /= r;
+	y /= r;
+	z /= r;
+	w /= r;
+}
+
+v4 operator +(const v4 l, const v4 r)
+{
+	v4 res;
+	res.x = l.x+r.x;
+	res.y = l.y+r.y;
+	res.z = l.z+r.z;	
+	res.w = l.w+r.w;	
+	return res;
+}
+
+v4 operator +(const v4 l, float f)
+{
+	v4 res;
+	res.x = l.x+f;
+	res.y = l.y+f;
+	res.z = l.z+f;	
+	res.w = l.w+f;	
+	return res;
+}
+
+v4 operator +(float f, const v4 l)
+{
+	v4 res;
+	res.x = l.x+f;
+	res.y = l.y+f;
+	res.z = l.z+f;	
+	res.w = l.w+f;	
+	return res;
+}
+
+v4 operator -(const v4 l, const v4 r)
+{
+	v4 res;
+	res.x = l.x-r.x;
+	res.y = l.y-r.y;
+	res.z = l.z-r.z;	
+	res.w = l.w-r.w;	
+	return res;
+}
+
+v4 operator -(const v4 l, float f)
+{
+	v4 res;
+	res.x = l.x-f;
+	res.y = l.y-f;
+	res.z = l.z-f;	
+	res.w = l.w-f;	
+	return res;
+}
+
+v4 operator -(float f, const v4 l)
+{
+	v4 res;
+	res.x = f - l.x;
+	res.y = f - l.y;
+	res.z = f - l.z;	
+	res.w = f - l.w;	
+	return res;
+}
+
+v4 operator *(const v4 v, const v4 r)
+{
+	v4 res;
+	res.x = v.x*r.x;
+	res.y = v.y*r.y;
+	res.z = v.z*r.z;	
+	res.w = v.w*r.w;
+	return res;
+}
+
+
+v4 operator *(const v4 v, float f)
+{
+	v4 res;
+	res.x = v.x*f;
+	res.y = v.y*f;
+	res.z = v.z*f;	
+	res.w = v.w*f;	
+	return res;
+}
+
+v4 operator *(float f, const v4 v)
+{
+	v4 res;
+	res.x = v.x*f;
+	res.y = v.y*f;
+	res.z = v.z*f;	
+	res.w = v.w*f;	
+	return res;
+}
+
+
+v4 operator /(const v4 v, const v4 r)
+{
+	v4 res;
+	res.x = v.x/r.x;
+	res.y = v.y/r.y;
+	res.z = v.z/r.z;	
+	res.w = v.w/r.w;
+	return res;
+}
+
+
+v4 operator /(const v4 v, float f)
+{
+	v4 res;
+	res.x = v.x/f;
+	res.y = v.y/f;
+	res.z = v.z/f;	
+	res.w = v.w/f;
+	return res;
+}
+
+v4 operator /(float f, const v4 v)
+{
+	v4 res;
+	res.x = f / v.x;
+	res.y = f / v.y;
+	res.z = f / v.z;	
+	res.w = f / v.w;
+	return res;
+}
+
+
+v4 operator -(const v4 v)
+{
+	v4 r;
+	r.x = -v.x;
+	r.y = -v.y;
+	r.z = -v.z;
+	r.w = -v.w;
+	return r;
+}
+
 
 
 

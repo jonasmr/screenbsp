@@ -3,7 +3,7 @@ LDFLAGS=-framework OpenGL -framework CoreAudio `/usr/local/bin/sdl-config --stat
 CFLAGS=`/usr/local/bin/sdl-config --cflags` -mmacosx-version-min="10.7" -Iglew/glew-1.9.0/include -DGLEW_STATIC -Wno-c++11-extensions
 CFLAGS+=-g -O0 -Wno-invalid-offsetof
 
-CPP_SOURCES = main.cpp math.cpp text.cpp input.cpp program.cpp
+CPP_SOURCES = main.cpp math.cpp text.cpp input.cpp program.cpp bsp.cpp
 C_SOURCES = stb_image.c glew.c
 
 CC=clang
