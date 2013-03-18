@@ -85,6 +85,18 @@ struct v4
 	};
 
 
+	void operator +=(const v4& r);
+	void operator -=(const v4& r);
+	void operator *=(const v4& r);
+	void operator /=(const v4& r);
+
+	void operator +=(const float r);
+	void operator -=(const float r);
+	void operator *=(const float r);
+	void operator /=(const float r);
+
+
+
 	v2 tov2();
 	v3 tov3();
 };
@@ -116,6 +128,10 @@ v2 operator +(const v2 l, float f);
 v2 operator -(const v2 l, float f);
 v2 operator *(const v2 v, float f);
 v2 operator /(const v2 v, float f);
+v2 operator +(float f, const v2 l);
+v2 operator -(float f, const v2 l);
+v2 operator *(float f, const v2 v);
+v2 operator /(float f, const v2 v);
 
 float v2length(v2 v);
 v2 v2normalize(v2 v);
@@ -190,6 +206,10 @@ v3 operator +(const v3 l, float f);
 v3 operator -(const v3 l, float f);
 v3 operator *(const v3 v, float f);
 v3 operator /(const v3 v, float f);
+v3 operator +(float f, const v3 l);
+v3 operator -(float f, const v3 l);
+v3 operator *(float f, const v3 v);
+v3 operator /(float f, const v3 v);
 v3 operator -(const v3 v);
 
 
@@ -214,6 +234,25 @@ inline
 v4 v4init(float x, float y, float z, float w) {v4 r; r.x = x; r.y = y; r.z = z; r.w = w; return r;}
 inline
 v4 v4init(v3 v, float w){ v4 r; r.x = v.x; r.y = v.y; r.z = v.z; r.w = w; return r; }
+inline
+v4 v4init(v4 v, float w){ v4 r; r.x = v.x; r.y = v.y; r.z = v.z; r.w = w; return r; }
+float v4dot(v4 v0, v4 v1);
+
+
+v4 operator +(const v4 l, const v4 r);
+v4 operator -(const v4 l, const v4 r);
+v4 operator *(const v4 l, const v4 r);
+v4 operator /(const v4 l, const v4 r);
+
+v4 operator +(const v4 l, float f);
+v4 operator -(const v4 l, float f);
+v4 operator *(const v4 v, float f);
+v4 operator /(const v4 v, float f);
+v4 operator +(float f, const v4 l);
+v4 operator -(float f, const v4 l);
+v4 operator *(float f, const v4 v);
+v4 operator /(float f, const v4 v);
+v4 operator -(const v4 v);
 
 
 
