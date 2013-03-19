@@ -560,8 +560,56 @@ v3 v3normalize(v3 v)
 	return v / v3length(v);
 
 }
+v3 v3min(v3 a, v3 b)
+{
+	v3 r;
+	r.x = a.x < b.x ? a.x : b.x;
+	r.y = a.y < b.y ? a.y : b.y;
+	r.z = a.z < b.z ? a.z : b.z;
+	return r;
+}
 
+v3 v3max(v3 a, v3 b)
+{
+	v3 r;
+	r.x = a.x >= b.x ? a.x : b.x;
+	r.y = a.y >= b.y ? a.y : b.y;
+	r.z = a.z >= b.z ? a.z : b.z;
+	return r;
+}
 
+v3 v3abs(v3 a)
+{
+	v3 r;
+	r.x = fabs(a.x);
+	r.y = fabs(a.y);
+	r.z = fabs(a.z);
+	return r;
+}
+v3 v3splatx(v3 v)
+{
+	v3 r;
+	r.x = v.x;
+	r.y = v.x;
+	r.z = v.x;
+	return r;
+}
+v3 v3splaty(v3 v)
+{
+	v3 r;
+	r.x = v.y;
+	r.y = v.y;
+	r.z = v.y;
+	return r;
+}
+v3 v3splatz(v3 v)
+{
+	v3 r;
+	r.x = v.z;
+	r.y = v.z;
+	r.z = v.z;
+	return r;
+}
 v3 v4::tov3()
 {
 	v3 r;
@@ -938,6 +986,15 @@ v3 mtransform(m mat, v3 point)
 	return r;
 }
 
+v3 mrotate(m mat, v3 point)
+{
+	v3 r;
+	r.x = mat.x.x * point.x + mat.y.x * point.y + mat.z.x * point.z;
+	r.y = mat.x.y * point.x + mat.y.y * point.y + mat.z.y * point.z;
+	r.z = mat.x.z * point.x + mat.y.z * point.y + mat.z.z * point.z;
+	return r;
+}
+
 m mperspective(float fFovY, float fAspect, float fNear, float fFar)\
 {
 	//f aspect 0 0 0  -- 
@@ -1025,6 +1082,33 @@ void ZASSERTAFFINE(m mat)
 	ZASSERT(fabs(d2) < 0.001f);
 
 }
+
+
+
+extern v3 g_CENTER;
+v3 obbtoaabb(m mrotation, v3 vHalfSize)
+{
+	v3 vx = v3abs(mrotation.x.tov3() * vHalfSize.x);
+	v3 vy = v3abs(mrotation.y.tov3() * vHalfSize.y);
+	v3 vz = v3abs(mrotation.z.tov3() * vHalfSize.z);
+	// vx = v3abs(mgetxaxis(mrotation) * vHalfSize.x);
+	// vy = v3abs(mgetyaxis(mrotation) * vHalfSize.y);
+	// vz = v3abs(mgetzaxis(mrotation) * vHalfSize.z);
+	// vx = v3max(v3abs(vx), v3abs(-vx));
+	// vy = v3max(v3abs(vy), v3abs(-vy));
+	// vz = v3max(v3abs(vz), v3abs(-vz));
+	//return v3max(v3max(vy,vz), vx);
+	// v3 v0 = g_CENTER + vx;
+	// v3 v1 = v0 + vy;
+	// v3 v2 = v1 + vz;
+	// ZDEBUG_DRAWLINE(g_CENTER, v0, 0x444444ff, true);
+	// ZDEBUG_DRAWLINE(v0, v1, 0x777777ff, true);
+	// ZDEBUG_DRAWLINE(v1, v2, 0xaaaaaaff, true);
+	// ZDEBUG_DRAWLINE(g_CENTER, g_CENTER + vx + vy + vz, 0xffff0000, true);
+
+	return vx + vy + vz;
+}
+
 
 
 v2 v2randir()

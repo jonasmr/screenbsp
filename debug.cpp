@@ -22,7 +22,8 @@ void DebugDrawLine(v3 start, v3 end, uint32_t nColor)
 	SDebugDrawLine* pLine = g_DebugDrawState.Lines.PushBack();
 	pLine->start = start;
 	pLine->end = end;
-	pLine->nColor = nColor;
+	uplotfnxt("Adding line %6.3f %6.3f %6.3f  --> %6.3f %6.3f %6.3f", start.x, start.y, start.z, end.x, end.y, end.z);
+ 	pLine->nColor = nColor;
 }
 void DebugDrawLine(v4 start, v4 end, uint32_t nColor)
 {
