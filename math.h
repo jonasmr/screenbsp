@@ -233,6 +233,14 @@ v3 v3cross(v3 v0, v3 v1);
 float v3length(v3 v);
 float v3lengthsq(v3 v);
 v3 v3normalize(v3 v);
+v3 v3min(v3 a, v3 b);
+v3 v3max(v3 a, v3 b);
+v3 v3abs(v3 a, v3 b);
+v3 v3splatx(v3 v);
+v3 v3splaty(v3 v);
+v3 v3splatz(v3 v);
+
+
 
 
 inline 
@@ -275,6 +283,7 @@ m mtranslate(v3 trans);
 m mperspective(float fFovY, float fAspect, float fNear, float fFar);
 v3 mtransform(m mat, v3 point);
 v4 mtransform(m mat, v4 vector);
+v3 mrotate(m mat, v3 vector);
 void msetxaxis(m& mat, v3 axis);
 void msetyaxis(m& mat, v3 axis);
 void msetzaxis(m& mat, v3 axis);
@@ -284,7 +293,7 @@ inline v3 mgetzaxis(const m& mat){v3 r; r.x = mat.z.x; r.y = mat.z.y; r.z = mat.
 m minverserotation(m mat);
 void ZASSERTAFFINE(m mat);
 
-
+v3 obbtoaabb(m mrotation, v3 vHalfSize);
 
 
 float frand();

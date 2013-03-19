@@ -9,6 +9,7 @@
 #include "math.h"
 #include "program.h"
 #include "bsp.h"
+#include "debug.h"
 
 
 extern uint32_t g_Width;
@@ -39,6 +40,9 @@ void DebugRender()
 	glVertex3f(0, 0, 0.f);
 	glVertex3f(0.f, 0, 1.f);
 	glEnd();
+
+
+	DebugDrawFlush();
 }
 
 void WorldInit()
@@ -58,9 +62,17 @@ void WorldInit()
 	
 }
 
+int g_nSimulate = 1;
 void WorldRender()
 {
-	g_WorldObjects[0].mObjectToWorld = mmult(g_WorldObjects[0].mObjectToWorld, mrotatey(0.5f*TORAD));
+	if(g_KeyboardState.keys[SDLK_F1] & BUTTON_RELEASED)
+	{
+		g_nSimulate = !g_nSimulate;
+	}
+	if(g_nSimulate)
+	{
+		g_WorldObjects[0].mObjectToWorld = mmult(g_WorldObjects[0].mObjectToWorld, mrotatey(0.5f*TORAD));
+	}
 
 	// for(uint32 i = 0; i < 2; ++i)
 	// {
@@ -80,7 +92,7 @@ void WorldRender()
 	// }
 
 	//void BspOccluderTest(SOccluder* pOccluders, uint32 nNumOccluders)
-	BspOccluderTest(&g_Occluders[0], 2);
+	BspOccluderTest(&g_Occluders[0], 2, &g_WorldObjects[0], 1);
 	for(uint32 i = 0; i < 1; ++i)
 	{
 		glPushMatrix();

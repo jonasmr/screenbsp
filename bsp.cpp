@@ -375,36 +375,61 @@ bool BspClipQuad(SOccluderBsp* pBsp, v4 v0, v4 v1, v4 v2, v4 v3)
 	return BspClipQuadR(pBsp, 0, 0, 4, 4, &vClipBuffer[0], &nIndices[0]);
 }
 
-// void RunBspTest(SOccluderBsp* pBsp, SOccluderPlane* pTest, uint32 nNumOccluders, ZRenderGraphNode** ppNodes, uint32 nNumNodes)
-// {
-// 	for(uint32 i = 0; i< nNumNodes; ++i)
-// 	{
-// 		if(!ppNodes[i]) 
-// 			continue;
-// 		SMatrix mObjectToWorld = ppNodes[i]->GetObjectToWorldTransform();
-// 		float4 vHalfSize = ppNodes[i]->GetLocalHalfSize();
-// 		float4 vCenter = ppNodes[i]->GetLocalCenter();
-// 		float4 vCenterWorld = WVectorTransform(mObjectToWorld, vCenter);
-// 		float4 AABB = TransformOBBToAABB(mObjectToWorld, vHalfSize);
 
-// 		float4 vCenterPoly = vCenterWorld - WSet(AABB.x(), 0.f, 0.f, 0.f);
-// 		float4 vDir0 = WSet(0.f,  AABB.y(),  AABB.z(), 0.f);
-// 		float4 vDir1 = WSet(0.f, -AABB.y(),  AABB.z(), 0.f);
-// 		float4 vDir2 = WSet(0.f, -AABB.y(), -AABB.z(), 0.f);
-// 		float4 vDir3 = WSet(0.f,  AABB.y(), -AABB.z(), 0.f);
-// 		float4 v0 = vCenterPoly + vDir0;
-// 		float4 v1 = vCenterPoly + vDir1;
-// 		float4 v2 = vCenterPoly + vDir2;
-// 		float4 v3 = vCenterPoly + vDir3;
-// 		ZDEBUG_DRAWLINE(v0, v1, 0xff0000ff, true);
-// 		ZDEBUG_DRAWLINE(v1, v2, 0xff0000ff, true);
-// 		ZDEBUG_DRAWLINE(v2, v3, 0xff0000ff, true);
-// 		ZDEBUG_DRAWLINE(v3, v0, 0xff0000ff, true);
-// 		BspClipQuad(pBsp, v0, v1, v2, v3);
-// 	}
-// 	DebugArray DEBUG;
-// 	DrawBspRecursive(pBsp, 0, g_nBspFlipMask, g_nBspDrawMask, -1.f, DEBUG);
-// }
+v3 g_CENTER;
+
+void RunBspTest(SOccluderBsp* pBsp, SOccluderPlane* pTest, uint32 nNumOccluders, SWorldObject* pObjects, uint32 nNumObjects)
+{
+	for(uint32 i = 0; i < nNumObjects; ++i)
+	{
+		m mObjectToWorld = pObjects[i].mObjectToWorld;
+		v3 vHalfSize = pObjects[i].vSize;
+		v4 vCenterWorld = pObjects[i].mObjectToWorld.trans;
+		g_CENTER = vCenterWorld.tov3();
+		v3 AABB = obbtoaabb(mObjectToWorld, vHalfSize);
+
+		v4 vCenterPoly = vCenterWorld - v4init(AABB.x, 0.f, 0.f, 0.f);
+		v4 vDir0 = v4init(0.f,  AABB.y,  AABB.z, 0.f);
+		v4 vDir1 = v4init(0.f, -AABB.y,  AABB.z, 0.f);
+		v4 vDir2 = v4init(0.f, -AABB.y, -AABB.z, 0.f);
+		v4 vDir3 = v4init(0.f,  AABB.y, -AABB.z, 0.f);
+
+		v4 vDir4 = v4init(2*AABB.x,  AABB.y,  AABB.z, 0.f);
+		v4 vDir5 = v4init(2*AABB.x, -AABB.y,  AABB.z, 0.f);
+		v4 vDir6 = v4init(2*AABB.x, -AABB.y, -AABB.z, 0.f);
+		v4 vDir7 = v4init(2*AABB.x,  AABB.y, -AABB.z, 0.f);
+
+		v4 v0 = vCenterPoly + vDir0;
+		v4 v1 = vCenterPoly + vDir1;
+		v4 v2 = vCenterPoly + vDir2;
+		v4 v3 = vCenterPoly + vDir3;
+		v4 v4_ = vCenterPoly + vDir4;
+		v4 v5 = vCenterPoly + vDir5;
+		v4 v6 = vCenterPoly + vDir6;
+		v4 v7 = vCenterPoly + vDir7;
+
+		ZDEBUG_DRAWLINE(v0, v1, 0xff0000ff, true);
+		ZDEBUG_DRAWLINE(v1, v2, 0xff0000ff, true);
+		ZDEBUG_DRAWLINE(v2, v3, 0xff0000ff, true);
+		ZDEBUG_DRAWLINE(v3, v0, 0xff0000ff, true);
+
+		ZDEBUG_DRAWLINE(v4_, v5, 0xff0000ff, true);
+		ZDEBUG_DRAWLINE(v5, v6, 0xff0000ff, true);
+		ZDEBUG_DRAWLINE(v6, v7, 0xff0000ff, true);
+		ZDEBUG_DRAWLINE(v7, v4_, 0xff0000ff, true);
+
+
+		ZDEBUG_DRAWLINE(v0, v4_, 0xff0000ff, true);
+		ZDEBUG_DRAWLINE(v1, v5, 0xff0000ff, true);
+		ZDEBUG_DRAWLINE(v2, v6, 0xff0000ff, true);
+		ZDEBUG_DRAWLINE(v3, v7, 0xff0000ff, true);
+
+
+		//BspClipQuad(pBsp, v0, v1, v2, v3);
+	}
+	DebugArray DEBUG;
+	DrawBspRecursive(pBsp, 0, g_nBspFlipMask, g_nBspDrawMask, -1.f, DEBUG);
+}
 
 v4 MakePlane(v3 p, v3 normal)
 {
@@ -418,7 +443,7 @@ v4 MakePlane(v3 p, v3 normal)
 	return r;
 }
 
-void BspOccluderTest(SOccluder* pOccluders, uint32 nNumOccluders)
+void BspOccluderTest(SOccluder* pOccluders, uint32 nNumOccluders,SWorldObject* pObjects, uint32 nNumObjects)
 {
 	SOccluderPlane* pPlanes = new SOccluderPlane[nNumOccluders];
 	uint8* nMasks = new uint8[nNumOccluders];
@@ -446,24 +471,23 @@ void BspOccluderTest(SOccluder* pOccluders, uint32 nNumOccluders)
 			v3 v1 = vCorners[(i+1) % 4];
 			v3 v2 = vCameraPosition;
 			v3 vCenter = (v0 + v1 + v2) / v3init(3.f);
-			v3 vNormal = v3normalize(v3cross(v3normalize(v1 - v0), v3normalize(v2 - v0)));
+			v3 vNormal = -v3normalize(v3cross(v3normalize(v1 - v0), v3normalize(v2 - v0)));
 			v3 vEnd = vCenter + vNormal;
 			Plane.p[i] = MakePlane(vCorners[i], vNormal);
 			Plane.corners[i] = vCorners[i];
 			ZDEBUG_DRAWLINE(v0, v1, (uint32)-1, true);
 			ZDEBUG_DRAWLINE(v1, v2, (uint32)-1, true);
 			ZDEBUG_DRAWLINE(v2, v0, (uint32)-1, true);
-			ZDEBUG_DRAWLINE(vCenter, vEnd, 0xff00ffff, true);
+			ZDEBUG_DRAWLINE(vCenter, vEnd, 0xff0000ff, true);
 		}
 		Plane.normal = MakePlane(vCorners[0], vNormal);
 	}
-	// SOccluderBsp Bsp;
-	// Bsp.pOccluders = pPlanes;
-	// Bsp.nNumOccluders = nNumOccluders;
+	SOccluderBsp Bsp;
+	Bsp.pOccluders = pPlanes;
+	Bsp.nNumOccluders = nNumOccluders;
+	BuildBsp(&Bsp);
 
-	//BuildBsp(&Bsp);
-
-	//RunBspTest(&Bsp, pPlanes, nNumOccluders, ppNodes, nNumNodes);
+	RunBspTest(&Bsp, pPlanes, nNumOccluders, pObjects, nNumObjects);
 
 	delete[] pPlanes;
 	delete[] nMasks;
