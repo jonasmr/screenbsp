@@ -8,6 +8,9 @@
 #include "text.h"
 #include "math.h"
 #include "program.h"
+#include "bsp.h"
+
+
 extern uint32_t g_Width;
 extern uint32_t g_Height;
 
