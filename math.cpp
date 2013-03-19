@@ -1084,28 +1084,11 @@ void ZASSERTAFFINE(m mat)
 }
 
 
-
-extern v3 g_CENTER;
 v3 obbtoaabb(m mrotation, v3 vHalfSize)
 {
 	v3 vx = v3abs(mrotation.x.tov3() * vHalfSize.x);
 	v3 vy = v3abs(mrotation.y.tov3() * vHalfSize.y);
 	v3 vz = v3abs(mrotation.z.tov3() * vHalfSize.z);
-	// vx = v3abs(mgetxaxis(mrotation) * vHalfSize.x);
-	// vy = v3abs(mgetyaxis(mrotation) * vHalfSize.y);
-	// vz = v3abs(mgetzaxis(mrotation) * vHalfSize.z);
-	// vx = v3max(v3abs(vx), v3abs(-vx));
-	// vy = v3max(v3abs(vy), v3abs(-vy));
-	// vz = v3max(v3abs(vz), v3abs(-vz));
-	//return v3max(v3max(vy,vz), vx);
-	// v3 v0 = g_CENTER + vx;
-	// v3 v1 = v0 + vy;
-	// v3 v2 = v1 + vz;
-	// ZDEBUG_DRAWLINE(g_CENTER, v0, 0x444444ff, true);
-	// ZDEBUG_DRAWLINE(v0, v1, 0x777777ff, true);
-	// ZDEBUG_DRAWLINE(v1, v2, 0xaaaaaaff, true);
-	// ZDEBUG_DRAWLINE(g_CENTER, g_CENTER + vx + vy + vz, 0xffff0000, true);
-
 	return vx + vy + vz;
 }
 
