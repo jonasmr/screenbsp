@@ -154,6 +154,9 @@ inline float v2distance(v2 a, v2 b)
 
 inline
 v2 v2init(float x, float y){v2 r; r.x = x; r.y = y; return r;}
+inline 
+v2 v2init(float f){v2 r; r.x = f; r.y = f; return r;}
+
 inline
 v2 v2zero(){v2 z = {0,0};return z;}
 inline
@@ -213,6 +216,8 @@ v3 operator /(float f, const v3 v);
 v3 operator -(const v3 v);
 
 
+inline 
+v3 v3init(float f){v3 r; r.x = f; r.y = f; r.z = f; return r;}
 inline
 v3 v3init(float x, float y, float z){v3 r; r.x = x; r.y = y;r.z = z; return r;}
 inline 
@@ -229,6 +234,9 @@ float v3length(v3 v);
 float v3lengthsq(v3 v);
 v3 v3normalize(v3 v);
 
+
+inline 
+v4 v4init(float f){v4 r; r.x = f; r.y = f; r.z = f; r.w = f; return r;}
 
 inline
 v4 v4init(float x, float y, float z, float w) {v4 r; r.x = x; r.y = y; r.z = z; r.w = w; return r;}
@@ -270,6 +278,9 @@ v4 mtransform(m mat, v4 vector);
 void msetxaxis(m& mat, v3 axis);
 void msetyaxis(m& mat, v3 axis);
 void msetzaxis(m& mat, v3 axis);
+inline v3 mgetxaxis(const m& mat){v3 r; r.x = mat.x.x; r.y = mat.x.y; r.z = mat.x.z; return r;}
+inline v3 mgetyaxis(const m& mat){v3 r; r.x = mat.y.x; r.y = mat.y.y; r.z = mat.y.z; return r;}
+inline v3 mgetzaxis(const m& mat){v3 r; r.x = mat.z.x; r.y = mat.z.y; r.z = mat.z.z; return r;}
 m minverserotation(m mat);
 void ZASSERTAFFINE(m mat);
 

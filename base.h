@@ -22,8 +22,6 @@ typedef intptr_t intptr;
 typedef uintptr_t uintptr;
 typedef ptrdiff_t ptrdiff;
 
-void uprintf(const char* fmt, ...);
-
 #ifdef _WIN32
 #define ZBREAK() __debugbreak()
 #else

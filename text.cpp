@@ -3,6 +3,7 @@
 #include "text.h"
 #include "stb_image.h"
 #include "math.h"
+#include "debug.h"
 #include <algorithm>
 #include "glinc.h"
 

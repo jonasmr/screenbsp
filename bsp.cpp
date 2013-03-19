@@ -2,12 +2,13 @@
 #include "math.h"
 #include "fixedarray.h"
 #include "text.h"
+#include "program.h"
 
 
 #define OCCLUDER_EMPTY (0xc000)
 #define OCCLUDER_LEAF (0x8000)
 #define OCCLUDER_CLIP_MAX 0x100
-#define ZDEBUG_DRAWLINE(...)
+//#define ZDEBUG_DRAWLINE(...)
 
 struct SOccluderPlane
 {
@@ -405,9 +406,9 @@ bool BspClipQuad(SOccluderBsp* pBsp, v4 v0, v4 v1, v4 v2, v4 v3)
 // 	DrawBspRecursive(pBsp, 0, g_nBspFlipMask, g_nBspDrawMask, -1.f, DEBUG);
 // }
 
-v4 MakePlane(v4 p, v4 normal)
+v4 MakePlane(v3 p, v3 normal)
 {
-	v4 r = v4init(normal, -(v3dot(normal.tov3(),p.tov3())));
+	v4 r = v4init(normal, -(v3dot(normal,p)));
 	float vDot = v4dot(v4init(p, 1.f), r);
 	if(fabsf(vDot) > 0.001f)
 	{
@@ -417,54 +418,55 @@ v4 MakePlane(v4 p, v4 normal)
 	return r;
 }
 
-// void BspOccluderTest(SOccluder* pOccluders, uint32 nNumOccluders, ZRenderGraphNode** ppNodes, uint32 nNumNodes)
-// {
-// 	SOccluderPlane* pPlanes = ZNEW SOccluderPlane[nNumOccluders];
-// 	uint8* nMasks = ZNEW uint8[nNumOccluders];
-// 	memset(nMasks, 0xff, nNumOccluders);
+void BspOccluderTest(SOccluder* pOccluders, uint32 nNumOccluders)
+{
+	SOccluderPlane* pPlanes = new SOccluderPlane[nNumOccluders];
+	uint8* nMasks = new uint8[nNumOccluders];
+	memset(nMasks, 0xff, nNumOccluders);
 
 
-// 	float4 vCameraPosition = WLoadZero();
-// 	for(uint32 i = 0; i < nNumOccluders; ++i)
-// 	{
-// 		float4 vCorners[4];
-// 		SOccluder Occ = pOccluders[i];
-// 		float4 vNormal = WLoad3U(&Occ.vNormal.x);
-// 		float4 vUp = WLoad3U(&Occ.vUp.x);
-// 		float4 vLeft = WVectorCross3(vNormal, vUp);
-// 		float4 vCenter = WLoad3U(&Occ.vCenter.x);
-// 		vCorners[0] = vCenter + vUp * Occ.vSize.y + vLeft * Occ.vSize.x;
-// 		vCorners[1] = vCenter - vUp * Occ.vSize.y + vLeft * Occ.vSize.x;
-// 		vCorners[2] = vCenter - vUp * Occ.vSize.y - vLeft * Occ.vSize.x;
-// 		vCorners[3] = vCenter + vUp * Occ.vSize.y - vLeft * Occ.vSize.x;
-// 		SOccluderPlane& Plane = pPlanes[i];
+	v3 vCameraPosition = v3init(0);
+	for(uint32 i = 0; i < nNumOccluders; ++i)
+	{
+		v3 vCorners[4];
+		SOccluder Occ = pOccluders[i];
+		v3 vNormal = Occ.mObjectToWorld.z.tov3();
+		v3 vUp = Occ.mObjectToWorld.y.tov3();
+		v3 vLeft = v3cross(vNormal, vUp);
+		v3 vCenter = Occ.mObjectToWorld.w.tov3();
+		vCorners[0] = vCenter + vUp * Occ.vSize.y + vLeft * Occ.vSize.x;
+		vCorners[1] = vCenter - vUp * Occ.vSize.y + vLeft * Occ.vSize.x;
+		vCorners[2] = vCenter - vUp * Occ.vSize.y - vLeft * Occ.vSize.x;
+		vCorners[3] = vCenter + vUp * Occ.vSize.y - vLeft * Occ.vSize.x;
+		SOccluderPlane& Plane = pPlanes[i];
 
-// 		for(uint32 i = 0; i < 4; ++i)
-// 		{
-// 			float4 v0 = vCorners[i];
-// 			float4 v1 = vCorners[(i+1) % 4];
-// 			float4 v2 = vCameraPosition;
-// 			float4 vCenter = (v0 + v1 + v2) / WReplicate(3.f);
-// 			float4 vNormal = WVectorNormalize3(WVectorCross3(WVectorNormalize3(v1 - v0), WVectorNormalize3(v2 - v0)));
-// 			float4 vEnd = vCenter + vNormal;
-// 			Plane.p[i] = MakePlane(vCorners[i], vNormal);
-// 			Plane.corners[i] = vCorners[i];
-// 			ZDEBUG_DRAWLINE(v0, v1, (uint32)-1, true);
-// 			ZDEBUG_DRAWLINE(v1, v2, (uint32)-1, true);
-// 			ZDEBUG_DRAWLINE(v2, v0, (uint32)-1, true);
-// 			ZDEBUG_DRAWLINE(vCenter, vEnd, 0xff00ffff, true);
-// 		}
-// 		Plane.normal = MakePlane(vCorners[0], vNormal);
-// 	}
-// 	SOccluderBsp Bsp;
-// 	Bsp.pOccluders = pPlanes;
-// 	Bsp.nNumOccluders = nNumOccluders;
+		for(uint32 i = 0; i < 4; ++i)
+		{
+			v3 v0 = vCorners[i];
+			v3 v1 = vCorners[(i+1) % 4];
+			v3 v2 = vCameraPosition;
+			v3 vCenter = (v0 + v1 + v2) / v3init(3.f);
+			v3 vNormal = v3normalize(v3cross(v3normalize(v1 - v0), v3normalize(v2 - v0)));
+			v3 vEnd = vCenter + vNormal;
+			Plane.p[i] = MakePlane(vCorners[i], vNormal);
+			Plane.corners[i] = vCorners[i];
+			ZDEBUG_DRAWLINE(v0, v1, (uint32)-1, true);
+			ZDEBUG_DRAWLINE(v1, v2, (uint32)-1, true);
+			ZDEBUG_DRAWLINE(v2, v0, (uint32)-1, true);
+			ZDEBUG_DRAWLINE(vCenter, vEnd, 0xff00ffff, true);
+		}
+		Plane.normal = MakePlane(vCorners[0], vNormal);
+	}
+	// SOccluderBsp Bsp;
+	// Bsp.pOccluders = pPlanes;
+	// Bsp.nNumOccluders = nNumOccluders;
 
-// 	BuildBsp(&Bsp);
+	//BuildBsp(&Bsp);
 
-// 	RunBspTest(&Bsp, pPlanes, nNumOccluders, ppNodes, nNumNodes);
+	//RunBspTest(&Bsp, pPlanes, nNumOccluders, ppNodes, nNumNodes);
 
-// 	ZDELETE(pPlanes);
-// }
+	delete[] pPlanes;
+	delete[] nMasks;
+}
 
 

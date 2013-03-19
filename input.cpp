@@ -1,4 +1,5 @@
 #include "input.h"
+#include "debug.h"
 
 SPadState g_PadState[MAX_PADS];
 SDL_Joystick* g_pJoyStick[MAX_PADS];

@@ -9,6 +9,7 @@
 #include "glinc.h"
 #include "text.h"
 #include "math.h"
+#include "debug.h"
 
 
 SDL_Surface* g_Surface;
@@ -17,8 +18,6 @@ uint32_t g_BaseHeight =  720;
 uint32_t g_Width = g_BaseWidth;
 uint32_t g_Height =  g_BaseHeight;
 uint32_t g_nQuit = 0;
-
-
 uint32_t g_lShowDebug = 1;
 uint32_t g_lShowDebugText = 1;
 
@@ -176,6 +175,7 @@ int SDL_main(int argc, char** argv)
 		}
 
 
+		DebugDrawFlush();
 		TextFlush();
 		SDL_GL_SwapBuffers();
 	}

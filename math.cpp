@@ -4,6 +4,7 @@
 #include "base.h"
 #include "text.h"
 #include "math.h"
+#include "debug.h"
 
 
 void v2::operator +=(const v2& r)
