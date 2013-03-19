@@ -92,7 +92,7 @@ void WorldRender()
 	// }
 
 	//void BspOccluderTest(SOccluder* pOccluders, uint32 nNumOccluders)
-	BspOccluderTest(&g_Occluders[0], 2, &g_WorldObjects[0], 1);
+	BspOccluderTest(&g_Occluders[0], 1, &g_WorldObjects[0], 1);
 	for(uint32 i = 0; i < 1; ++i)
 	{
 		glPushMatrix();
