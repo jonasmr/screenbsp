@@ -7,6 +7,7 @@
 #include "glinc.h"
 #include "text.h"
 #include "math.h"
+#include "program.h"
 extern uint32_t g_Width;
 extern uint32_t g_Height;
 
@@ -17,21 +18,6 @@ struct SCameraState
 	v3 vRight;
 	v3 vPosition;
 } g_Camera;
-
-struct SObject
-{
-	m mObjectToWorld;
-	v3 vSize;
-};
-
-struct SOccluder : SObject
-{
-};
-
-struct SWorldObject : SObject
-{
-
-};
 
 
 SOccluder g_Occluders[2];
@@ -71,26 +57,27 @@ void WorldInit()
 
 void WorldRender()
 {
-		g_WorldObjects[0].mObjectToWorld = mmult(g_WorldObjects[0].mObjectToWorld, mrotatey(0.5f*TORAD));
+	g_WorldObjects[0].mObjectToWorld = mmult(g_WorldObjects[0].mObjectToWorld, mrotatey(0.5f*TORAD));
 
-	for(uint32 i = 0; i < 2; ++i)
-	{
-		glPushMatrix();
-		glMultMatrixf(&g_Occluders[i].mObjectToWorld.x.x);
-		float x = g_Occluders[i].vSize.x;
-		float y = g_Occluders[i].vSize.y;
-		glBegin(GL_LINE_STRIP);
-		glColor3f(1,1,1);
-		glVertex3f(x, y, 0.f);
-		glVertex3f(x, -y, 0.f);
-		glVertex3f(-x, -y, 0.f);
-		glVertex3f(-x, y, 0.f);
-		glVertex3f(x, y, 0.f);
-		glEnd();
-		glPopMatrix();
-	}
+	// for(uint32 i = 0; i < 2; ++i)
+	// {
+	// 	glPushMatrix();
+	// 	glMultMatrixf(&g_Occluders[i].mObjectToWorld.x.x);
+	// 	float x = g_Occluders[i].vSize.x;
+	// 	float y = g_Occluders[i].vSize.y;
+	// 	glBegin(GL_LINE_STRIP);
+	// 	glColor3f(1,1,1);
+	// 	glVertex3f(x, y, 0.f);
+	// 	glVertex3f(x, -y, 0.f);
+	// 	glVertex3f(-x, -y, 0.f);
+	// 	glVertex3f(-x, y, 0.f);
+	// 	glVertex3f(x, y, 0.f);
+	// 	glEnd();
+	// 	glPopMatrix();
+	// }
 
-
+	//void BspOccluderTest(SOccluder* pOccluders, uint32 nNumOccluders)
+	BspOccluderTest(&g_Occluders[0], 2);
 	for(uint32 i = 0; i < 1; ++i)
 	{
 		glPushMatrix();

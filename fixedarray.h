@@ -1,6 +1,6 @@
 #pragma once
 #include "podhelp.h"
-
+#include "debug.h"
 
 //POD only
 template< typename T, uint32_t SIZE, bool bISPOD = true>
