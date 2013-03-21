@@ -281,6 +281,8 @@ m mrotatey(float fAngle);
 m mrotatez(float fAngle);
 m mtranslate(v3 trans);
 m mperspective(float fFovY, float fAspect, float fNear, float fFar);
+m mortho(float fXWidth, float fYWidth, float fZRange);
+
 v3 mtransform(m mat, v3 point);
 v4 mtransform(m mat, v4 vector);
 v3 mrotate(m mat, v3 vector);
