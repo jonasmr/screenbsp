@@ -1026,13 +1026,20 @@ m mperspective(float fFovY, float fAspect, float fNear, float fFar)\
 	r.z.z = q;
 	r.z.w = -1.f;
 	r.w.z = qn;
+	return r;
+}
 
 
-
-
+m mortho(float fX, float fY, float fZRange)
+{
+	m r = mid();
+	r.x.x = 2.f / fX;
+	r.y.y = 2.f / fY;
+	r.z.z = 1.f / fZRange;
 	return r;
 
 }
+
 void msetxaxis(m& mat, v3 axis)
 {
 	mat.x.x = axis.x;

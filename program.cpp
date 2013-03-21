@@ -14,6 +14,8 @@
 
 extern uint32_t g_Width;
 extern uint32_t g_Height;
+uint32 g_nUseOrtho = 0;
+float g_fOrthoScale = 10;
 
 
 struct SCameraState
@@ -72,6 +74,7 @@ void WorldRender()
 	if(g_nSimulate)
 	{
 		g_WorldObjects[0].mObjectToWorld = mmult(g_WorldObjects[0].mObjectToWorld, mrotatey(0.5f*TORAD));
+		g_Occluders[0].mObjectToWorld = mmult(g_Occluders[0].mObjectToWorld, mrotatez(0.3f*TORAD));
 	}
 
 	// for(uint32 i = 0; i < 2; ++i)
@@ -142,6 +145,14 @@ void WorldRender()
 void UpdateCamera()
 {
 	v3 vDir = v3init(0,0,0);
+	if(g_MouseState.button[SDL_BUTTON_WHEELUP] & BUTTON_RELEASED)
+		g_fOrthoScale *= 0.96;
+	if(g_MouseState.button[SDL_BUTTON_WHEELDOWN] & BUTTON_RELEASED)
+		g_fOrthoScale /= 0.96;
+	uplotfnxt("ORTHO SCALE %f\n", g_fOrthoScale);
+
+
+
 	if(g_KeyboardState.keys['a'] & BUTTON_DOWN)
 	{
 		vDir.x = -1.f;
@@ -217,23 +228,22 @@ int ProgramMain()
 
 	m mprj; 
 	m mview;
-	if(0)
-	{
-		v3 vdir = v3init(0,0,-1);
-		v3 vright = v3init(1,0,0);
-		static float f = 0;
-		f += 3.8f;
-		m mrotx = mrotatey(f * TORAD);
-		v3 vdirx = mtransform(mrotx, vdir);
-		v3 vrightx = mtransform(mrotx, vright);
-		mview = mcreate(vdirx, vrightx, vdirx * -5.f);
-		mprj = mperspective(45, (float)g_Width / (float)g_Height, 0.01f, 200.f);
-	}
-	else
 	{
 		UpdateCamera();
 		mview = mcreate(g_Camera.vDir, g_Camera.vRight, g_Camera.vPosition);
-		mprj = mperspective(45, (float)g_Width / (float)g_Height, 0.001f, 500.f);
+		if(g_KeyboardState.keys[SDLK_F2] & BUTTON_RELEASED)
+			g_nUseOrtho = !g_nUseOrtho;
+
+		float fAspect = (float)g_Width / (float)g_Height;
+
+		if(g_nUseOrtho)
+		{
+			mprj = mortho(g_fOrthoScale, g_fOrthoScale / fAspect, 1000);
+		}
+		else
+		{
+			mprj = mperspective(30, (float)g_Width / (float)g_Height, 0.001f, 100.f);
+		}
 
 
 		uplotfnxt("FPS %4.2f Dir[%5.2f,%5.2f,%5.2f] Pos[%3.2f,%3.2f,%3.2f]" , 1.f, 
