@@ -3,12 +3,15 @@
 #include "fixedarray.h"
 #include "text.h"
 #include "program.h"
+#include "input.h"
 
 
 #define OCCLUDER_EMPTY (0xc000)
 #define OCCLUDER_LEAF (0x8000)
 #define OCCLUDER_CLIP_MAX 0x100
 //#define ZDEBUG_DRAWLINE(...)
+
+uint32 g_nSHOWSHOW=3;
 
 struct SOccluderPlane
 {
@@ -131,9 +134,7 @@ void BspAddOccluder(SOccluderBsp* pBsp, SOccluderPlane* pOccluder, uint32 nOcclu
 }
 
 
-void BuildBsp(SOccluderBsp* pBsp)
- {
-}
+
 uint32 g_nBspFlipMask = 0;
 uint32 g_nBspDrawMask = -1;
 
@@ -396,6 +397,9 @@ bool BspClipQuadR(SOccluderBsp* pBsp, uint32 nNodeIndex, v4* pVertices, uint32 n
 		//uprintf("%d ", d);
 		nMask |= d;
 	}
+	uplotfnxt("N %d idx %d\n", n, nNodeIndex);
+	ZASSERT(nNodeIndex < pBsp->Nodes.Size());
+
 	//uprintf("\n");
 	if(nMask == 3)
 	{
@@ -478,12 +482,9 @@ bool BspClipQuadR(SOccluderBsp* pBsp, uint32 nNodeIndex, v4* pVertices, uint32 n
 				pLast = v;
 			}
 		}
+		*pPut++ = pVertexIn[-1];
 		//pVertexNew = pOut;
 		uint32 nNumVertexIn = pPut - pVertexNew;
-
-				// 		last = pVertexNew + nMaxVertex - 1;
-				// for(v4* v = pVertexOut; v < pVertexNew + nMaxVertex; ++v)
-
 
 		pLast = pVertexNew + nMaxVertex - 1;
 		pPut = pVertexOut;
@@ -507,22 +508,28 @@ bool BspClipQuadR(SOccluderBsp* pBsp, uint32 nNodeIndex, v4* pVertices, uint32 n
 
 		{
 			v4* last = pVertexIn-1;
-			for(v4* v = pVertexNew; v < pVertexIn; ++v)
+			if(g_nSHOWSHOW&1)
 			{
-				v3 v0 = v[0].tov3()+ g_Offset;
-				v3 v1 = (*last).tov3()+ g_Offset;
-				last = v;
-				ZDEBUG_DRAWLINE(v0, v1, 0xffff00ff,true);
-				uplotfnxt("LALA");
+				for(v4* v = pVertexNew; v < pVertexIn; ++v)
+				{
+					v3 v0 = v[0].tov3()+ g_Offset;
+					v3 v1 = (*last).tov3()+ g_Offset;
+					last = v;
+					ZDEBUG_DRAWLINE(v0, v1, 0xffff00ff,true);
+					uplotfnxt("LALA");
+				}
 			}
 			last = pVertexNew + nMaxVertex - 1;
-			for(v4* v = pVertexOut; v < pVertexNew + nMaxVertex; ++v)
+			if(g_nSHOWSHOW&2)
 			{
-				v3 v0 = v[0].tov3() + g_Offset;
-				v3 v1 = last->tov3()+ g_Offset;
-				last = v;
-				uplotfnxt("LALA2");
-				ZDEBUG_DRAWLINE(v0, v1, 0xffffff00,true);
+				for(v4* v = pVertexOut; v < pVertexNew + nMaxVertex; ++v)
+				{
+					v3 v0 = v[0].tov3() + g_Offset;
+					v3 v1 = last->tov3()+ g_Offset;
+					last = v;
+					uplotfnxt("LALA2");
+					ZDEBUG_DRAWLINE(v0, v1, 0xffffff00,true);
+				}
 			}
 
 		}
@@ -717,6 +724,11 @@ void BspDestroy(SOccluderBsp* pBsp)
 }
 void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, m mWorldToView)
 {
+				if(g_KeyboardState.keys[SDLK_F3]&BUTTON_RELEASED)
+			{
+				g_nSHOWSHOW = (g_nSHOWSHOW+1)%4;
+			}
+
 	pBsp->Nodes.Clear();
 	pBsp->Occluders.Clear();
 	// 	SOccluderPlane* pPlanes = new SOccluderPlane[nNumOccluders];
