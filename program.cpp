@@ -77,9 +77,13 @@ void WorldRender()
 	{
 		g_WorldObjects[0].mObjectToWorld = mmult(g_WorldObjects[0].mObjectToWorld, mrotatey(0.5f*TORAD));
 		g_Occluders[0].mObjectToWorld = mmult(g_Occluders[0].mObjectToWorld, mrotatez(0.3f*TORAD));
+		static float xx = 0;
+		xx += 0.005f;
+		g_WorldObjects[0].mObjectToWorld.trans = v4init(3.f, 0.f, sin(xx)*2, 1.f);
 	}
 
-	BspBuild(g_Bsp, &g_Occluders[0], 2, mid());
+	uint32 nNumOccluders = 1;
+	BspBuild(g_Bsp, &g_Occluders[0], nNumOccluders, mid());
 	uint32 nNumObjects = 2;
 	bool* bVisible = (bool*)alloca(nNumObjects);
 	for(uint32 i = 0; i < 2; ++i)
@@ -128,7 +132,7 @@ void WorldRender()
 		glEnd();
 
 		glBegin(GL_LINE_STRIP);
-		glColor3f(0,1,0);
+		//glColor3f(0,1,0);
 		glVertex3f(x, y, -z);
 		glVertex3f(x, -y, -z);
 		glVertex3f(-x, -y, -z);
@@ -137,7 +141,7 @@ void WorldRender()
 		glEnd();
 
 		glBegin(GL_LINES);
-		glColor3f(0,1,0);
+		//glColor3f(0,1,0);
 		glVertex3f(x, y, -z);
 		glVertex3f(x, y, z);
 		glVertex3f(x, -y, -z);
