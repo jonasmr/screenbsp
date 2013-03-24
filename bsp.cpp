@@ -32,8 +32,7 @@ struct SOccluderBspNode
 
 struct SOccluderBsp
 {
-	SOccluderPlane* pOccluders;
-	uint32 nNumOccluders;
+	TFixedArray<SOccluderPlane, 1024> Occluders;
 	TFixedArray<SOccluderBspNode, 1024> Nodes;
 };
 
@@ -66,7 +65,7 @@ void BspAddOccluderRecursive(SOccluderBsp* pBsp, SOccluderPlane* pOccluder, uint
 {
 	SOccluderBspNode Node = pBsp->Nodes[nBspIndex];
 	ZASSERT(Node.Index.nOccluderIndex != nOccluderIndex);
-	SOccluderPlane* pPlane = pBsp->pOccluders + Node.Index.nOccluderIndex;
+	SOccluderPlane* pPlane = pBsp->Occluders.Ptr() + Node.Index.nOccluderIndex;
 	uint8 nEdge = Node.Index.nEdge;
 	v4 vPlane = pPlane->p[nEdge];
 	int inside[4];
@@ -134,14 +133,6 @@ void BspAddOccluder(SOccluderBsp* pBsp, SOccluderPlane* pOccluder, uint32 nOcclu
 
 void BuildBsp(SOccluderBsp* pBsp)
  {
-	pBsp->Nodes.Clear();
-	if(!pBsp->nNumOccluders)
-		return;
-
-	for(uint32 i = 0; i < pBsp->nNumOccluders; ++i)
-	{
-		BspAddOccluder(pBsp, &pBsp->pOccluders[i], i);
-	}
 }
 uint32 g_nBspFlipMask = 0;
 uint32 g_nBspDrawMask = -1;
@@ -150,7 +141,7 @@ typedef TFixedArray<v4, 1024> DebugArray;
 void DrawBspRecursive(SOccluderBsp* pBsp, uint32 nOccluderIndex, uint32 nFlipMask, uint32 nDrawMask, float fOffset, DebugArray& DEBUG)
 {
 	SOccluderBspNode Node = pBsp->Nodes[nOccluderIndex];
-	SOccluderPlane* pPlane = pBsp->pOccluders + Node.Index.nOccluderIndex;
+	SOccluderPlane* pPlane = pBsp->Occluders.Ptr() + Node.Index.nOccluderIndex;
 	v4 vOffset = v4init(fOffset, 0.f, 0.f, 0.f);
 	v4 v0 = v4init(pPlane->corners[(Node.Index.nEdge+3) %4],1.f);
 	v4 v1 = v4init(pPlane->corners[(Node.Index.nEdge) %4],1.f);
@@ -360,22 +351,31 @@ void DrawBspRecursive(SOccluderBsp* pBsp, uint32 nOccluderIndex, uint32 nFlipMas
 // 		}
 // 	}
 // }
+#define DEBUG_OFFSET 0.4f
+float g_OFFSET = DEBUG_OFFSET;
+v3 g_Offset = v3init(1,0,0);
+v3 g_DepthOffset = v3init(0.4f, 0.f, 0.f);
+v3 g_XOffset = v3init(0.0f, 0.0f, 0.f);
 
-float g_OFFSET = 0.05f;
 
 bool BspClipQuadR(SOccluderBsp* pBsp, uint32 nNodeIndex, v4* pVertices, uint32 nNumVertices)
 {
+	if(nNodeIndex&0x8000)
+	{
+		return true;
+	}
 	uint32 nMaxVertex = 2*(nNumVertices+1);
 	uint8* nDot = (uint8*)alloca(nNumVertices+1);
 	v4* pVertexNew = (v4*)alloca(nMaxVertex*sizeof(v4));
-	//uprintf("a0 %p-%p : a1 %p-%p\n", nDot, nDot + nNumVertices+1, pVertexNew, pVertexNew + nMaxVertex);
+
+
 	if((uint64)pVertexNew& 0x3)
 		ZBREAK();
 	if((uint64)nDot& 0x3)
 		ZBREAK();
 
 	SOccluderBspNode* pNode = &pBsp->Nodes[nNodeIndex];
-	SOccluderPlane* pOccluder = pBsp->pOccluders + pNode->Index.nOccluderIndex;
+	SOccluderPlane* pOccluder = pBsp->Occluders.Ptr() + pNode->Index.nOccluderIndex;
 	uint32 nEdge = pNode->Index.nEdge;
 	v4 vPlane = pOccluder->p[nEdge];
 	v4 vNormalPlane = pOccluder->normal;
@@ -409,9 +409,7 @@ bool BspClipQuadR(SOccluderBsp* pBsp, uint32 nNodeIndex, v4* pVertices, uint32 n
 			int idxn = (i + 1) % nNumVertices;
 			int i0 = nDot[i];
 			int i1 = nDot[idxn];
-			//uprintf("check %d %d(%d %d) (%p) %d:[%4.2f %4.2f %4.2f]::[%4.2f %4.2f %4.2f]\n", 
-			//	i, idxn, i0, i1, &nDot[0], nNumVertices,pVertices[i].x, pVertices[i].y, pVertices[i].z,
-			//	pVertices[idxn].x, pVertices[idxn].y, pVertices[idxn].z);
+
 			ZASSERT(i0 == INSIDE || i0 == OUTSIDE);
 			ZASSERT(i1 == INSIDE || i1 == OUTSIDE);
 			if(INSIDE == i0)
@@ -429,27 +427,16 @@ bool BspClipQuadR(SOccluderBsp* pBsp, uint32 nNodeIndex, v4* pVertices, uint32 n
 					float fLenScale = 1 / (Len0 + Len1);
 					Len0 *= fLenScale;
 					Len1 *= fLenScale;
-					// v4 vToPlane0 =  * v4init(vPlane,1.f);
-					// v4 vToPlane1 = v4dot(vVertex1, vPlane) * v4init(vPlane,1.f);
-					//v4 vIntersection = vVertex - vToPlane;
 					v4 vIntersection = Len1 * vVertex0 + Len0 * vVertex1;
-					// /uprintf("INTERSECTION IS %f\n", v4dot(vIntersection, vPlane));
 					ZASSERT(pVertexIn+1 < pVertexOut);
 					
 					*pVertexIn++ = pVertices[i];
 					*pVertexIn++ = vIntersection;					
-					
-					//uprintf("push %4.2f %4.2f %4.2f\n", vIntersection.x, vIntersection.y, vIntersection.z);
-					//uprintf("push %4.2f %4.2f %4.2f\n", pVertices[i].x, pVertices[i].y, pVertices[i].z);
-
 					*--pVertexOut = vIntersection;
 				}
 				else
 				{
 					*pVertexIn++ = pVertices[i];
-					//uprintf("push %4.2f %4.2f %4.2f\n", pVertices[i].x, pVertices[i].y, pVertices[i].z);
-
-					//nIndicesIn[nIndexIn++] = i + nPolyIndex;
 				}
 			}
 			else
@@ -464,26 +451,12 @@ bool BspClipQuadR(SOccluderBsp* pBsp, uint32 nNodeIndex, v4* pVertices, uint32 n
 					float fLenScale = 1 / (Len0 + Len1);
 					Len0 *= fLenScale;
 					Len1 *= fLenScale;
-
-
-//					v4 vToPlane = v4dot(vVertex, vPlane) * v4init(vPlane,0.f);
 					v4 vIntersection = Len1 * vVertex0 + Len0 * vVertex1;
-
-//					v4 vIntersection = vVertex - vToPlane;
-					//uprintf("INTERSECTION IS %f\n", v4dot(vIntersection, vPlane));
 					ZASSERT(pVertexIn < pVertexOut-1);
 					*pVertexIn++ = vIntersection;
-					//uprintf("push %4.2f %4.2f %4.2f\n", vIntersection.x, vIntersection.y, vIntersection.z);
 					*--pVertexOut = pVertices[i];
 					*--pVertexOut = vIntersection;
 
-					// int nIndex = nVertexIndex++;
-					// pVertices[nIndex] = vIntersection;
-
-					// nIndicesIn[nIndexIn++] = nIndex;
-					// nIndicesOut[nIndexOut++] = nIndex;
-					// nIndicesOut[nIndexOut++] = i + nPolyIndex;
-					// ZASSERT(nIndexOut < OCCLUDER_CLIP_MAX);
 				}
 				else
 				{
@@ -493,94 +466,83 @@ bool BspClipQuadR(SOccluderBsp* pBsp, uint32 nNodeIndex, v4* pVertices, uint32 n
 			}
 		}
 		//remove degenerate triangles
-		#if 0
-		bool bTestIn = true;
-		bool bTestOut = true;
-		uint32 nNewPolyIndex = nPolyIndex + nNumVertices;
-		ZASSERT(nNewPolyIndex < OCCLUDER_CLIP_MAX);
-		if(nIndexIn > 2)
+		v4* pLast = pVertexIn-1;
+		v4* pPut = pVertexNew;
+		uint32 nNumVertexInbefore = pLast - pVertexNew;
+		for(v4* v = pVertexNew; v < pVertexIn-1; ++v)
 		{
-			int p1 = nIndexIn-2, p0 = nIndexIn-1;
-			int nIndex = 0;
-			uint32 i;
-			for( i = 0; i < nIndexIn-2; ++i)
+			float len = v3length(v3cross( (*pLast-v[0]).tov3(), (v[1]-v[0]).tov3()));
+			if(fabs(len)>0.001f)
 			{
-				float len = v3length(v3cross((pVertices[pIndices[i]] - pVertices[pIndices[p0]]).tov3(), (pVertices[pIndices[p1]] - pVertices[pIndices[p0]]).tov3()));
-				if(fabs(len)> 0.001f)
-				{
-					pIndices[nNewPolyIndex + nIndex++] = p1;
-				}
-				p1 = p0;
-				p0 = i;
-			}
-			if(nIndex > 0)
-			{
-				pIndices[nNewPolyIndex + nIndex++] = p0;
-				pIndices[nNewPolyIndex + nIndex++] = i;
-				bTestIn = BspClipQuadR(pBsp, pNode->nInside, nNewPolyIndex, nIndex, nVertexIndex, pVertices, pIndices);
-			}
-			else
-			{
-				bTestIn = true;
+				*pPut++ = v[0];
+				pLast = v;
 			}
 		}
+		//pVertexNew = pOut;
+		uint32 nNumVertexIn = pPut - pVertexNew;
 
-		if(nIndexOut > 2)
+				// 		last = pVertexNew + nMaxVertex - 1;
+				// for(v4* v = pVertexOut; v < pVertexNew + nMaxVertex; ++v)
+
+
+		pLast = pVertexNew + nMaxVertex - 1;
+		pPut = pVertexOut;
+		uint32 nNumVertexOutbefore = pVertexNew + nMaxVertex - pVertexOut;
+		for(v4* v = pVertexOut; v < pVertexNew + nMaxVertex - 1; ++v)
 		{
-			int p1 = nIndexOut-2, p0 = nIndexOut-1;
-			int nIndex = 0;
-			uint32 i;
-			for( i = 0; i < nIndexOut-2; ++i)
+			float len = v3length(v3cross( (*pLast-v[0]).tov3(), (v[1]-v[0]).tov3()));
+			if(fabs(len)>0.001f)
 			{
-				float len = v3length(v3cross((pVertices[pIndices[i]] - pVertices[pIndices[p0]]).tov3(), (pVertices[pIndices[p1]] - pVertices[pIndices[p0]]).tov3()));
-				if(fabs(len)> 0.001f)
-				{
-					pIndices[nNewPolyIndex + nIndex++] = p1;
-				}
-				p1 = p0;
-				p0 = i;
-			}
-			if(nIndex > 0)
-			{
-				pIndices[nNewPolyIndex + nIndex++] = p0;
-				pIndices[nNewPolyIndex + nIndex++] = i;
-				bTestIn = BspClipQuadR(pBsp, pNode->nOutside, nNewPolyIndex, nIndex, nVertexIndex, pVertices, pIndices);
-			}
-			else
-			{
-				bTestIn = true;
+				*pPut++ = v[0];
+				pLast = v;
 			}
 		}
+		*pPut++ = pVertexNew[nMaxVertex-1];
+		uint32 nNumVertexOut = pPut - pVertexOut;
+
+		uplotfnxt("Culled vertex %d %d\n", nNumVertexInbefore - nNumVertexIn, nNumVertexOutbefore - nNumVertexOut);
+
+
+
+
+		{
+			v4* last = pVertexIn-1;
+			for(v4* v = pVertexNew; v < pVertexIn; ++v)
+			{
+				v3 v0 = v[0].tov3()+ g_Offset;
+				v3 v1 = (*last).tov3()+ g_Offset;
+				last = v;
+				ZDEBUG_DRAWLINE(v0, v1, 0xffff00ff,true);
+				uplotfnxt("LALA");
+			}
+			last = pVertexNew + nMaxVertex - 1;
+			for(v4* v = pVertexOut; v < pVertexNew + nMaxVertex; ++v)
+			{
+				v3 v0 = v[0].tov3() + g_Offset;
+				v3 v1 = last->tov3()+ g_Offset;
+				last = v;
+				uplotfnxt("LALA2");
+				ZDEBUG_DRAWLINE(v0, v1, 0xffffff00,true);
+			}
+
+		}
+		bool bTestIn = true, bTestOut = true;
+		g_Offset += g_DepthOffset;
+		g_Offset += g_XOffset;
+		if(nNumVertexIn)
+		{
+			bTestIn = BspClipQuadR(pBsp, pNode->nInside, pVertexNew, nNumVertexIn);
+		}
+		g_Offset -= g_XOffset;
+		g_Offset -= g_XOffset;
+		if(nNumVertexOut)
+		{
+			bTestOut = BspClipQuadR(pBsp, pNode->nOutside, pVertexOut, nNumVertexOut);
+		}
+		g_Offset += g_XOffset;
+		g_Offset -= g_DepthOffset;
 		return bTestIn && bTestOut;
-		#else
-			{
-				v4* last = pVertexIn-1;
-				for(v4* v = pVertexNew; v < pVertexIn; ++v)
-				{
-					v3 v0 = v[0].tov3()+ v3init(0.02, 0, 0);
-					v3 v1 = (*last).tov3()+ v3init(0.02, 0, 0);
-					last = v;
-					ZDEBUG_DRAWLINE(v0, v1, 0xffff00ff,true);
-					uplotfnxt("LALA");
-				}
-				last = pVertexNew + nMaxVertex - 1;
-				for(v4* v = pVertexOut; v < pVertexNew + nMaxVertex; ++v)
-				{
-					v3 v0 = v[0].tov3() + v3init(0.02, 0, 0);
-					v3 v1 = last->tov3()+ v3init(0.02, 0, 0);
-					last = v;
-					uplotfnxt("LALA2");
-					ZDEBUG_DRAWLINE(v0, v1, 0xffffff00,true);
-				}
 
-			}
-			return pVertexNew == pVertexIn && pVertexOut == (pVertexNew + nMaxVertex - 1);
-		#endif
-
-
-	// v4* pVertexNew = (v4*)alloca(nMaxVertex);
-	// v4* pVertexIn = pVertexNew;
-	// v4* pVertexOut = pVertexNew + nMaxVertex - 1;
 
 
 
@@ -632,66 +594,107 @@ bool BspClipQuad(SOccluderBsp* pBsp, v4 v0, v4 v1, v4 v2, v4 v3)
 	nIndices[1] = 1;
 	nIndices[2] = 2;
 	nIndices[3] = 3;
-	g_OFFSET = 3;
+	g_OFFSET = 0;
 	return BspClipQuadR(pBsp, 0, &vClipBuffer[0], 4);
-	//return BspClipQuadR(pBsp, 0, 0, 4, 4, &vClipBuffer[0], &nIndices[0]);
 }
 
 
-v3 g_CENTER;
-
-void RunBspTest(SOccluderBsp* pBsp, SOccluderPlane* pTest, uint32 nNumOccluders, SWorldObject* pObjects, uint32 nNumObjects)
+bool BspCullObject(SOccluderBsp* pBsp, SWorldObject* pObject)
 {
-	for(uint32 i = 0; i < nNumObjects; ++i)
-	{
-		m mObjectToWorld = pObjects[i].mObjectToWorld;
-		v3 vHalfSize = pObjects[i].vSize;
-		v4 vCenterWorld = pObjects[i].mObjectToWorld.trans;
-		g_CENTER = vCenterWorld.tov3();
-		v3 AABB = obbtoaabb(mObjectToWorld, vHalfSize);
+	m mObjectToWorld = pObject->mObjectToWorld;
+	v3 vHalfSize = pObject->vSize;
+	v4 vCenterWorld = pObject->mObjectToWorld.trans;
+	v3 AABB = obbtoaabb(mObjectToWorld, vHalfSize);
 
-		v4 vCenterPoly = vCenterWorld - v4init(AABB.x, 0.f, 0.f, 0.f);
-		v4 vDir0 = v4init(0.f,  AABB.y,  AABB.z, 0.f);
-		v4 vDir1 = v4init(0.f, -AABB.y,  AABB.z, 0.f);
-		v4 vDir2 = v4init(0.f, -AABB.y, -AABB.z, 0.f);
-		v4 vDir3 = v4init(0.f,  AABB.y, -AABB.z, 0.f);
-
-		// v4 vDir4 = v4init(2*AABB.x,  AABB.y,  AABB.z, 0.f);
-		// v4 vDir5 = v4init(2*AABB.x, -AABB.y,  AABB.z, 0.f);
-		// v4 vDir6 = v4init(2*AABB.x, -AABB.y, -AABB.z, 0.f);
-		// v4 vDir7 = v4init(2*AABB.x,  AABB.y, -AABB.z, 0.f);
-
-		v4 v0 = vCenterPoly + vDir0;
-		v4 v1 = vCenterPoly + vDir1;
-		v4 v2 = vCenterPoly + vDir2;
-		v4 v3 = vCenterPoly + vDir3;
-		// v4 v4_ = vCenterPoly + vDir4;
-		// v4 v5 = vCenterPoly + vDir5;
-		// v4 v6 = vCenterPoly + vDir6;
-		// v4 v7 = vCenterPoly + vDir7;
-
-		ZDEBUG_DRAWLINE(v0, v1, 0xff0000ff, true);
-		ZDEBUG_DRAWLINE(v1, v2, 0xff0000ff, true);
-		ZDEBUG_DRAWLINE(v2, v3, 0xff0000ff, true);
-		ZDEBUG_DRAWLINE(v3, v0, 0xff0000ff, true);
-
-		// ZDEBUG_DRAWLINE(v4_, v5, 0xff0000ff, true);
-		// ZDEBUG_DRAWLINE(v5, v6, 0xff0000ff, true);
-		// ZDEBUG_DRAWLINE(v6, v7, 0xff0000ff, true);
-		// ZDEBUG_DRAWLINE(v7, v4_, 0xff0000ff, true);
+	v4 vCenterPoly = vCenterWorld - v4init(AABB.x, 0.f, 0.f, 0.f);
+	v4 vDir0 = v4init(0.f,  AABB.y,  AABB.z, 0.f);
+	v4 vDir1 = v4init(0.f, -AABB.y,  AABB.z, 0.f);
+	v4 vDir2 = v4init(0.f, -AABB.y, -AABB.z, 0.f);
+	v4 vDir3 = v4init(0.f,  AABB.y, -AABB.z, 0.f);
 
 
-		// ZDEBUG_DRAWLINE(v0, v4_, 0xff0000ff, true);
-		// ZDEBUG_DRAWLINE(v1, v5, 0xff0000ff, true);
-		// ZDEBUG_DRAWLINE(v2, v6, 0xff0000ff, true);
-		// ZDEBUG_DRAWLINE(v3, v7, 0xff0000ff, true);
+	v4 v0 = vCenterPoly + vDir0;
+	v4 v1 = vCenterPoly + vDir1;
+	v4 v2 = vCenterPoly + vDir2;
+	v4 v3 = vCenterPoly + vDir3;
+	// v4 vDir4 = v4init(2*AABB.x,  AABB.y,  AABB.z, 0.f);
+	// v4 vDir5 = v4init(2*AABB.x, -AABB.y,  AABB.z, 0.f);
+	// v4 vDir6 = v4init(2*AABB.x, -AABB.y, -AABB.z, 0.f);
+	// v4 vDir7 = v4init(2*AABB.x,  AABB.y, -AABB.z, 0.f);
+	// v4 v4_ = vCenterPoly + vDir4;
+	// v4 v5 = vCenterPoly + vDir5;
+	// v4 v6 = vCenterPoly + vDir6;
+	// v4 v7 = vCenterPoly + vDir7;
+	// ZDEBUG_DRAWLINE(v4_, v5, 0xff0000ff, true);
+	// ZDEBUG_DRAWLINE(v5, v6, 0xff0000ff, true);
+	// ZDEBUG_DRAWLINE(v6, v7, 0xff0000ff, true);
+	// ZDEBUG_DRAWLINE(v7, v4_, 0xff0000ff, true);
+	// ZDEBUG_DRAWLINE(v0, v4_, 0xff0000ff, true);
+	// ZDEBUG_DRAWLINE(v1, v5, 0xff0000ff, true);
+	// ZDEBUG_DRAWLINE(v2, v6, 0xff0000ff, true);
+	// ZDEBUG_DRAWLINE(v3, v7, 0xff0000ff, true);
+
+	ZDEBUG_DRAWLINE(v0, v1, 0xff0000ff, true);
+	ZDEBUG_DRAWLINE(v1, v2, 0xff0000ff, true);
+	ZDEBUG_DRAWLINE(v2, v3, 0xff0000ff, true);
+	ZDEBUG_DRAWLINE(v3, v0, 0xff0000ff, true);
 
 
-		BspClipQuad(pBsp, v0, v1, v2, v3);
-	}
-	DebugArray DEBUG;
-	DrawBspRecursive(pBsp, 0, g_nBspFlipMask, g_nBspDrawMask, -1.f, DEBUG);
+
+	return BspClipQuad(pBsp, v0, v1, v2, v3);
 }
+
+// void RunBspTest(SOccluderBsp* pBsp, SOccluderPlane* pTest, uint32 nNumOccluders, SWorldObject* pObjects, uint32 nNumObjects)
+// {
+// 	for(uint32 i = 0; i < nNumObjects; ++i)
+// 	{
+// 		m mObjectToWorld = pObjects[i].mObjectToWorld;
+// 		v3 vHalfSize = pObjects[i].vSize;
+// 		v4 vCenterWorld = pObjects[i].mObjectToWorld.trans;
+// 		v3 AABB = obbtoaabb(mObjectToWorld, vHalfSize);
+
+// 		v4 vCenterPoly = vCenterWorld - v4init(AABB.x, 0.f, 0.f, 0.f);
+// 		v4 vDir0 = v4init(0.f,  AABB.y,  AABB.z, 0.f);
+// 		v4 vDir1 = v4init(0.f, -AABB.y,  AABB.z, 0.f);
+// 		v4 vDir2 = v4init(0.f, -AABB.y, -AABB.z, 0.f);
+// 		v4 vDir3 = v4init(0.f,  AABB.y, -AABB.z, 0.f);
+
+// 		// v4 vDir4 = v4init(2*AABB.x,  AABB.y,  AABB.z, 0.f);
+// 		// v4 vDir5 = v4init(2*AABB.x, -AABB.y,  AABB.z, 0.f);
+// 		// v4 vDir6 = v4init(2*AABB.x, -AABB.y, -AABB.z, 0.f);
+// 		// v4 vDir7 = v4init(2*AABB.x,  AABB.y, -AABB.z, 0.f);
+
+// 		v4 v0 = vCenterPoly + vDir0;
+// 		v4 v1 = vCenterPoly + vDir1;
+// 		v4 v2 = vCenterPoly + vDir2;
+// 		v4 v3 = vCenterPoly + vDir3;
+// 		// v4 v4_ = vCenterPoly + vDir4;
+// 		// v4 v5 = vCenterPoly + vDir5;
+// 		// v4 v6 = vCenterPoly + vDir6;
+// 		// v4 v7 = vCenterPoly + vDir7;
+
+// 		ZDEBUG_DRAWLINE(v0, v1, 0xff0000ff, true);
+// 		ZDEBUG_DRAWLINE(v1, v2, 0xff0000ff, true);
+// 		ZDEBUG_DRAWLINE(v2, v3, 0xff0000ff, true);
+// 		ZDEBUG_DRAWLINE(v3, v0, 0xff0000ff, true);
+
+// 		// ZDEBUG_DRAWLINE(v4_, v5, 0xff0000ff, true);
+// 		// ZDEBUG_DRAWLINE(v5, v6, 0xff0000ff, true);
+// 		// ZDEBUG_DRAWLINE(v6, v7, 0xff0000ff, true);
+// 		// ZDEBUG_DRAWLINE(v7, v4_, 0xff0000ff, true);
+
+
+// 		// ZDEBUG_DRAWLINE(v0, v4_, 0xff0000ff, true);
+// 		// ZDEBUG_DRAWLINE(v1, v5, 0xff0000ff, true);
+// 		// ZDEBUG_DRAWLINE(v2, v6, 0xff0000ff, true);
+// 		// ZDEBUG_DRAWLINE(v3, v7, 0xff0000ff, true);
+
+
+// 		BspClipQuad(pBsp, v0, v1, v2, v3);
+// 	}
+// 	DebugArray DEBUG;
+// 	DrawBspRecursive(pBsp, 0, g_nBspFlipMask, g_nBspDrawMask, -1.f, DEBUG);
+// }
 
 v4 MakePlane(v3 p, v3 normal)
 {
@@ -704,15 +707,23 @@ v4 MakePlane(v3 p, v3 normal)
 
 	return r;
 }
-
-void BspOccluderTest(SOccluder* pOccluders, uint32 nNumOccluders,SWorldObject* pObjects, uint32 nNumObjects)
+SOccluderBsp* BspCreate()
 {
-	SOccluderPlane* pPlanes = new SOccluderPlane[nNumOccluders];
-	uint8* nMasks = new uint8[nNumOccluders];
-	memset(nMasks, 0xff, nNumOccluders);
+	return new SOccluderBsp;
+}
+void BspDestroy(SOccluderBsp* pBsp)
+{
+	delete pBsp;
+}
+void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, m mWorldToView)
+{
+	pBsp->Nodes.Clear();
+	pBsp->Occluders.Clear();
+	// 	SOccluderPlane* pPlanes = new SOccluderPlane[nNumOccluders];
+	pBsp->Occluders.Resize(nNumOccluders);
+	SOccluderPlane* pPlanes = pBsp->Occluders.Ptr();
+	v3 vCameraPosition = v3init(0,0,0);
 
-
-	v3 vCameraPosition = v3init(0);
 	for(uint32 i = 0; i < nNumOccluders; ++i)
 	{
 		v3 vCorners[4];
@@ -740,19 +751,68 @@ void BspOccluderTest(SOccluder* pOccluders, uint32 nNumOccluders,SWorldObject* p
 			ZDEBUG_DRAWLINE(v0, v1, (uint32)-1, true);
 			ZDEBUG_DRAWLINE(v1, v2, (uint32)-1, true);
 			ZDEBUG_DRAWLINE(v2, v0, (uint32)-1, true);
-//			ZDEBUG_DRAWLINE(vCenter, vEnd, 0xff0000ff, true);
 		}
 		Plane.normal = MakePlane(vCorners[0], vNormal);
 	}
-	SOccluderBsp Bsp;
-	Bsp.pOccluders = pPlanes;
-	Bsp.nNumOccluders = nNumOccluders;
-	BuildBsp(&Bsp);
 
-	RunBspTest(&Bsp, pPlanes, nNumOccluders, pObjects, nNumObjects);
+	pBsp->Nodes.Clear();
+	if(!pBsp->Occluders.Size())
+		return;
 
-	delete[] pPlanes;
-	delete[] nMasks;
+	for(uint32 i = 0; i < pBsp->Occluders.Size(); ++i)
+	{
+		BspAddOccluder(pBsp, &pBsp->Occluders[i], i);
+	}
 }
+
+
+// void BspOccluderTest(SOccluder* pOccluders, uint32 nNumOccluders,SWorldObject* pObjects, uint32 nNumObjects)
+// {
+// 	SOccluderPlane* pPlanes = new SOccluderPlane[nNumOccluders];
+// 	uint8* nMasks = new uint8[nNumOccluders];
+// 	memset(nMasks, 0xff, nNumOccluders);
+
+
+// 	v3 vCameraPosition = v3init(0);
+// 	for(uint32 i = 0; i < nNumOccluders; ++i)
+// 	{
+// 		v3 vCorners[4];
+// 		SOccluder Occ = pOccluders[i];
+// 		v3 vNormal = Occ.mObjectToWorld.z.tov3();
+// 		v3 vUp = Occ.mObjectToWorld.y.tov3();
+// 		v3 vLeft = v3cross(vNormal, vUp);
+// 		v3 vCenter = Occ.mObjectToWorld.w.tov3();
+// 		vCorners[0] = vCenter + vUp * Occ.vSize.y + vLeft * Occ.vSize.x;
+// 		vCorners[1] = vCenter - vUp * Occ.vSize.y + vLeft * Occ.vSize.x;
+// 		vCorners[2] = vCenter - vUp * Occ.vSize.y - vLeft * Occ.vSize.x;
+// 		vCorners[3] = vCenter + vUp * Occ.vSize.y - vLeft * Occ.vSize.x;
+// 		SOccluderPlane& Plane = pPlanes[i];
+
+// 		for(uint32 i = 0; i < 4; ++i)
+// 		{
+// 			v3 v0 = vCorners[i];
+// 			v3 v1 = vCorners[(i+1) % 4];
+// 			v3 v2 = vCameraPosition;
+// 			v3 vCenter = (v0 + v1 + v2) / v3init(3.f);
+// 			v3 vNormal = v3normalize(v3cross(v3normalize(v1 - v0), v3normalize(v2 - v0)));
+// 			v3 vEnd = vCenter + vNormal;
+// 			Plane.p[i] = MakePlane(vCorners[i], vNormal);
+// 			Plane.corners[i] = vCorners[i];
+// 			ZDEBUG_DRAWLINE(v0, v1, (uint32)-1, true);
+// 			ZDEBUG_DRAWLINE(v1, v2, (uint32)-1, true);
+// 			ZDEBUG_DRAWLINE(v2, v0, (uint32)-1, true);
+// 		}
+// 		Plane.normal = MakePlane(vCorners[0], vNormal);
+// 	}
+// 	SOccluderBsp Bsp;
+// 	Bsp.pOccluders = pPlanes;
+// 	Bsp.nNumOccluders = nNumOccluders;
+// 	BuildBsp(&Bsp);
+
+// 	RunBspTest(&Bsp, pPlanes, nNumOccluders, pObjects, nNumObjects);
+
+// 	delete[] pPlanes;
+// 	delete[] nMasks;
+// }
 
 

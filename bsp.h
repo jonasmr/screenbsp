@@ -2,4 +2,12 @@
 #include "base.h"
 #include "program.h"
 
-void BspOccluderTest(SOccluder* pOccluders, uint32 nNumOccluders, SWorldObject* pObjects, uint32 nNumObjects);
+
+struct SOccluderBsp;
+
+SOccluderBsp* BspCreate();
+void BspDestroy(SOccluderBsp* pBsp);
+void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, m mWorldToView);
+bool BspCullObject(SOccluderBsp* pBsp, SWorldObject* pObject);
+
+
