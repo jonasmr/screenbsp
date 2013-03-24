@@ -11,7 +11,7 @@
 #define OCCLUDER_CLIP_MAX 0x100
 //#define ZDEBUG_DRAWLINE(...)
 
-uint32 g_nSHOWSHOW=3;
+uint32 g_nOccluderDebug=1; //0:nothing, 1:show non clipped, 2: show all non rejected steps
 
 struct SOccluderPlane
 {
@@ -38,6 +38,7 @@ struct SOccluderBsp
 	TFixedArray<SOccluderPlane, 1024> Occluders;
 	TFixedArray<SOccluderBspNode, 1024> Nodes;
 };
+void BspOccluderDebugDraw(v4* pVertexNew, v4* pVertexIn, uint32 nColor);
 
 int BspAddInternal(SOccluderBsp* pBsp, uint32 nOccluderIndex, uint32 nMask)
 {
@@ -483,7 +484,6 @@ bool BspClipQuadR(SOccluderBsp* pBsp, uint32 nNodeIndex, v4* pVertices, uint32 n
 			}
 		}
 		*pPut++ = pVertexIn[-1];
-		//pVertexNew = pOut;
 		uint32 nNumVertexIn = pPut - pVertexNew;
 
 		pLast = pVertexNew + nMaxVertex - 1;
@@ -501,50 +501,86 @@ bool BspClipQuadR(SOccluderBsp* pBsp, uint32 nNodeIndex, v4* pVertices, uint32 n
 		*pPut++ = pVertexNew[nMaxVertex-1];
 		uint32 nNumVertexOut = pPut - pVertexOut;
 
-		uplotfnxt("Culled vertex %d %d\n", nNumVertexInbefore - nNumVertexIn, nNumVertexOutbefore - nNumVertexOut);
+
+
+		if(nNumVertexIn < 3) nNumVertexIn = 0;
+		if(nNumVertexOut < 3) nNumVertexOut = 0;
 
 
 
+		// {
+		// 	v4* last = pVertexIn-1;
+		// 	if(g_nSHOWSHOW&1)
+		// 	{
+		// 		for(v4* v = pVertexNew; v < pVertexIn; ++v)
+		// 		{
+		// 			v3 v0 = v[0].tov3()+ g_Offset;
+		// 			v3 v1 = (*last).tov3()+ g_Offset;
+		// 			last = v;
+		// 			ZDEBUG_DRAWLINE(v0, v1, 0xffff00ff,true);
+		// 			uplotfnxt("LALA");
+		// 		}
+		// 	}
+		// 	last = pVertexNew + nMaxVertex - 1;
+		// 	if(g_nSHOWSHOW&2)
+		// 	{
+		// 		for(v4* v = pVertexOut; v < pVertexNew + nMaxVertex; ++v)
+		// 		{
+		// 			v3 v0 = v[0].tov3() + g_Offset;
+		// 			v3 v1 = last->tov3()+ g_Offset;
+		// 			last = v;
+		// 			uplotfnxt("LALA2");
+		// 			ZDEBUG_DRAWLINE(v0, v1, 0xffffff00,true);
+		// 		}
+		// 	}
 
-		{
-			v4* last = pVertexIn-1;
-			if(g_nSHOWSHOW&1)
-			{
-				for(v4* v = pVertexNew; v < pVertexIn; ++v)
-				{
-					v3 v0 = v[0].tov3()+ g_Offset;
-					v3 v1 = (*last).tov3()+ g_Offset;
-					last = v;
-					ZDEBUG_DRAWLINE(v0, v1, 0xffff00ff,true);
-					uplotfnxt("LALA");
-				}
-			}
-			last = pVertexNew + nMaxVertex - 1;
-			if(g_nSHOWSHOW&2)
-			{
-				for(v4* v = pVertexOut; v < pVertexNew + nMaxVertex; ++v)
-				{
-					v3 v0 = v[0].tov3() + g_Offset;
-					v3 v1 = last->tov3()+ g_Offset;
-					last = v;
-					uplotfnxt("LALA2");
-					ZDEBUG_DRAWLINE(v0, v1, 0xffffff00,true);
-				}
-			}
-
-		}
+		// }
 		bool bTestIn = true, bTestOut = true;
 		g_Offset += g_DepthOffset;
 		g_Offset += g_XOffset;
 		if(nNumVertexIn)
 		{
-			bTestIn = BspClipQuadR(pBsp, pNode->nInside, pVertexNew, nNumVertexIn);
+			ZASSERT(pNode->nInside != OCCLUDER_EMPTY);
+			// if(g_nOccluderDebug==2)
+			// 	BspOccluderDebugDraw(pVertexNew, pVertexIn, 0xffffffff);
+
+			if(OCCLUDER_LEAF == pNode->nInside)
+			{
+				for(v4* v = pVertexNew; v < pVertexIn; ++v)
+				{
+					bTestIn = bTestIn && (v4dot(*v, vNormalPlane) > 0.f ? 1 : 0);
+				}
+				
+				if(bTestIn==false && g_nOccluderDebug)
+				{
+					BspOccluderDebugDraw(pVertexNew, pVertexIn, 0xffff0000);//not clipped
+				}
+			}
+			else
+			{
+				bTestIn = BspClipQuadR(pBsp, pNode->nInside, pVertexNew, nNumVertexIn);
+			}
 		}
 		g_Offset -= g_XOffset;
 		g_Offset -= g_XOffset;
 		if(nNumVertexOut)
 		{
-			bTestOut = BspClipQuadR(pBsp, pNode->nOutside, pVertexOut, nNumVertexOut);
+			ZASSERT(pNode->nOutside != OCCLUDER_LEAF);
+			if(pNode->nOutside == OCCLUDER_EMPTY)
+			{
+				if(g_nOccluderDebug)
+				{
+					BspOccluderDebugDraw(pVertexOut, pVertexOut + nNumVertexOut, 0xffff6600); // non clipped
+					BspOccluderDebugDraw(pVertices, pVertices + nNumVertices, 0xffff6600); // non clipped
+				}
+				return false;
+			}
+			else
+			{
+				// if(g_nOccluderDebug == 1)
+				// 	BspOccluderDebugDraw(pVertexOut, pVertexOut + nNumVertexOut, 0xffffffff); // maybe clipped
+				bTestOut = BspClipQuadR(pBsp, pNode->nOutside, pVertexOut, nNumVertexOut);
+			}
 		}
 		g_Offset += g_XOffset;
 		g_Offset -= g_DepthOffset;
@@ -566,7 +602,7 @@ bool BspClipQuadR(SOccluderBsp* pBsp, uint32 nNodeIndex, v4* pVertices, uint32 n
 			}
 			else
 			{
-				return n != 0 && BspClipQuadR(pBsp, pNode->nInside, pVertices, nNumVertices);
+				return BspClipQuadR(pBsp, pNode->nInside, pVertices, nNumVertices);
 
 			}
 
@@ -641,10 +677,10 @@ bool BspCullObject(SOccluderBsp* pBsp, SWorldObject* pObject)
 	// ZDEBUG_DRAWLINE(v2, v6, 0xff0000ff, true);
 	// ZDEBUG_DRAWLINE(v3, v7, 0xff0000ff, true);
 
-	ZDEBUG_DRAWLINE(v0, v1, 0xff0000ff, true);
-	ZDEBUG_DRAWLINE(v1, v2, 0xff0000ff, true);
-	ZDEBUG_DRAWLINE(v2, v3, 0xff0000ff, true);
-	ZDEBUG_DRAWLINE(v3, v0, 0xff0000ff, true);
+	// ZDEBUG_DRAWLINE(v0, v1, 0xff0000ff, true);
+	// ZDEBUG_DRAWLINE(v1, v2, 0xff0000ff, true);
+	// ZDEBUG_DRAWLINE(v2, v3, 0xff0000ff, true);
+	// ZDEBUG_DRAWLINE(v3, v0, 0xff0000ff, true);
 
 
 
@@ -724,10 +760,10 @@ void BspDestroy(SOccluderBsp* pBsp)
 }
 void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, m mWorldToView)
 {
-				if(g_KeyboardState.keys[SDLK_F3]&BUTTON_RELEASED)
-			{
-				g_nSHOWSHOW = (g_nSHOWSHOW+1)%4;
-			}
+	if(g_KeyboardState.keys[SDLK_F3]&BUTTON_RELEASED)
+	{
+		g_nOccluderDebug = (g_nOccluderDebug+1)%3;
+	}
 
 	pBsp->Nodes.Clear();
 	pBsp->Occluders.Clear();
@@ -827,4 +863,17 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, m
 // 	delete[] nMasks;
 // }
 
+
+
+void BspOccluderDebugDraw(v4* pVertexNew, v4* pVertexIn, uint32 nColor)
+{
+	v4* last = pVertexIn-1;
+	for(v4* v = pVertexNew; v < pVertexIn; ++v)
+	{
+		v3 v0 = v[0].tov3() + v3init(-0.01f,0,0);
+		v3 v1 = (*last).tov3()+ v3init(-0.01f,0,0);
+		last = v;
+		ZDEBUG_DRAWLINE(v0, v1, nColor,true);
+	}
+}
 
