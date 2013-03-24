@@ -17,6 +17,8 @@ extern uint32_t g_Height;
 uint32 g_nUseOrtho = 0;
 float g_fOrthoScale = 10;
 
+SOccluderBsp* g_Bsp = 0;
+
 
 struct SCameraState
 {
@@ -64,7 +66,7 @@ void WorldInit()
 	
 }
 
-int g_nSimulate = 1;
+int g_nSimulate = 0;
 void WorldRender()
 {
 	if(g_KeyboardState.keys[SDLK_F1] & BUTTON_RELEASED)
@@ -75,6 +77,15 @@ void WorldRender()
 	{
 		g_WorldObjects[0].mObjectToWorld = mmult(g_WorldObjects[0].mObjectToWorld, mrotatey(0.5f*TORAD));
 		g_Occluders[0].mObjectToWorld = mmult(g_Occluders[0].mObjectToWorld, mrotatez(0.3f*TORAD));
+	}
+
+	BspBuild(g_Bsp, &g_Occluders[0], 2, mid());
+	uint32 nNumObjects = 2;
+	bool* bVisible = (bool*)alloca(nNumObjects);
+	for(uint32 i = 0; i < 2; ++i)
+	{
+		bVisible[i] = BspCullObject(g_Bsp, &g_WorldObjects[i]);
+
 	}
 
 	// for(uint32 i = 0; i < 2; ++i)
@@ -95,7 +106,7 @@ void WorldRender()
 	// }
 
 	//void BspOccluderTest(SOccluder* pOccluders, uint32 nNumOccluders)
-	BspOccluderTest(&g_Occluders[0], 1, &g_WorldObjects[0], 1);
+	//BspOccluderTest(&g_Occluders[0], 1, &g_WorldObjects[0], 1);
 	for(uint32 i = 0; i < 1; ++i)
 	{
 		glPushMatrix();
@@ -104,7 +115,11 @@ void WorldRender()
 		float y = g_WorldObjects[i].vSize.y;
 		float z = g_WorldObjects[i].vSize.z;
 		glBegin(GL_LINE_STRIP);
-		glColor3f(0,1,0);
+		if(bVisible[i])
+			glColor3f(0,1,0);
+		else
+			glColor3f(1,0,0);
+
 		glVertex3f(x, y, z);
 		glVertex3f(x, -y, z);
 		glVertex3f(-x, -y, z);
@@ -216,7 +231,7 @@ void ProgramInit()
 	g_Camera.vDir = mtransform(mroty, v3init(0,0,-1));
 	g_Camera.vRight = mtransform(mroty, v3init(1,0,0));
 	g_Camera.vPosition = g_Camera.vDir * -5.f;
-
+	g_Bsp = BspCreate();
 	WorldInit();
 }
 
@@ -256,7 +271,6 @@ int ProgramMain()
 	}
 
 	glLineWidth(2.f);
-
 	glClearColor(0.3,0.4,0.6,0);
 	glViewport(0, 0, g_Width, g_Height);
 	glMatrixMode(GL_PROJECTION);
