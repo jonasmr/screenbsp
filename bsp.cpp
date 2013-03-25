@@ -31,6 +31,7 @@ struct SOccluderBspNode
 	SOccluderEdgeIndex Index;
 	uint16	nInside;
 	uint16	nOutside;
+	bool bLeaf;
 };
 
 struct SOccluderBsp
@@ -46,6 +47,7 @@ int BspAddInternal(SOccluderBsp* pBsp, uint32 nOccluderIndex, uint32 nMask)
 	int nPrev = -1;
 	for(uint32 i = 0;nMask && i < 4; ++i)
 	{
+		uint32 nNextMask = nMask >> 1;
 		if(nMask&1)
 		{
 			int nIndex = (int)pBsp->Nodes.Size();
@@ -54,6 +56,7 @@ int BspAddInternal(SOccluderBsp* pBsp, uint32 nOccluderIndex, uint32 nMask)
 			pNode->nInside = OCCLUDER_LEAF;
 			pNode->Index.nEdge = (uint8)i;
 			pNode->Index.nOccluderIndex = (uint16)nOccluderIndex;
+			pNode->bLeaf = nNextMask == 0;
 			if(nPrev >= 0)
 			{
 				pBsp->Nodes[nPrev].nInside = (uint16)nIndex;
