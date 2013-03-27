@@ -10,10 +10,17 @@ struct SDebugDrawLine
 	v3 end;
 	uint32_t nColor;
 };
-
+struct SDebugDrawPoly
+{
+	uint32 nStart;
+	uint32 nVertices;
+	uint32 nColor;
+};
 struct SDebugDrawState
 {
 	TFixedArray<SDebugDrawLine, 2048> Lines;
+	TFixedArray<SDebugDrawPoly, 2048> Poly;
+	TFixedArray<v4, 2048*4> PolyVert;
 } g_DebugDrawState;
 
 void DebugDrawLine(v3 start, v3 end, uint32_t nColor)
@@ -27,6 +34,18 @@ void DebugDrawLine(v3 start, v3 end, uint32_t nColor)
 void DebugDrawLine(v4 start, v4 end, uint32_t nColor)
 {
 	return DebugDrawLine(start.tov3(), end.tov3(), nColor);
+}
+
+void DebugDrawPoly(v4* pVertex, uint32 nNumVertex, uint32_t nColor)
+{
+	if(g_DebugDrawState.Poly.Full() || g_DebugDrawState.PolyVert.Capacity() - g_DebugDrawState.PolyVert.Size() < nNumVertex)
+		return;
+	SDebugDrawPoly* pPoly = g_DebugDrawState.Poly.PushBack();
+	pPoly->nVertices = nNumVertex;
+	pPoly->nColor = nColor;
+	pPoly->nStart = g_DebugDrawState.PolyVert.Size();
+	g_DebugDrawState.PolyVert.PushBack(pVertex, nNumVertex);
+
 }
 
 void DebugDrawBounds(v3 vmin, v3 vmax, uint32_t nColor)
@@ -56,8 +75,30 @@ void DebugDrawFlush()
 			glVertex3fv((float*)&g_DebugDrawState.Lines[i].end);
 		}
 		glEnd();
+		v4* pVert = g_DebugDrawState.PolyVert.Ptr();
+		glEnable(GL_BLEND);
+		glBlendEquation(GL_FUNC_ADD);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		for(uint32 i = 0; i < g_DebugDrawState.Poly.Size(); ++i)
+		{
+			glBegin(GL_POLYGON);
+			uint32_t nColor = g_DebugDrawState.Poly[i].nColor;
+			uint32 nVertices = g_DebugDrawState.Poly[i].nVertices;
+			uint32 nStart = g_DebugDrawState.Poly[i].nStart;
+			glColor4ub(nColor >> 16, nColor >> 8, nColor, nColor>>24);
+			for(uint32 j = 0; j < nVertices; ++j)
+			{
+				v4 v = pVert[nStart+j];// + v4init(i * 0.5f,0,0,0);
+				glVertex3fv(&v.x);
+			}
+
+			glEnd();
+		}
+		glDisable(GL_BLEND);
 
 	}
 	g_DebugDrawState.Lines.Clear();
+	g_DebugDrawState.Poly.Clear();
+	g_DebugDrawState.PolyVert.Clear();
 
 }

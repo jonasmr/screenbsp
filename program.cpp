@@ -82,7 +82,7 @@ void WorldRender()
 		g_WorldObjects[0].mObjectToWorld.trans = v4init(3.f, 0.f, sin(xx)*2, 1.f);
 	}
 
-	uint32 nNumOccluders = 2;
+	uint32 nNumOccluders = 1;
 	BspBuild(g_Bsp, &g_Occluders[0], nNumOccluders, mid());
 	uint32 nNumObjects = 2;
 	bool* bCulled = (bool*)alloca(nNumObjects);
