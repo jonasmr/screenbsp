@@ -40,7 +40,7 @@ struct SOccluderBsp
 	TFixedArray<SOccluderPlane, 1024> Occluders;
 	TFixedArray<SOccluderBspNode, 1024> Nodes;
 };
-void BspOccluderDebugDraw(v4* pVertexNew, v4* pVertexIn, uint32 nColor);
+void BspOccluderDebugDraw(v4* pVertexNew, v4* pVertexIn, uint32 nColor, uint32 nFill = 0) ;
 
 int BspAddInternal(SOccluderBsp* pBsp, uint32 nOccluderIndex, uint32 nMask)
 {
@@ -332,10 +332,17 @@ bool BspClipQuadR(SOccluderBsp* pBsp, uint32 nNodeIndex, v4* pVertices, uint32 n
 		if(nNumVertexIn < 3) nNumVertexIn = 0;
 		if(nNumVertexOut < 3) nNumVertexOut = 0;
 
-		if(0 == g_nOccluderClipLevels)
+		if(0 == nClipLevel)
 		{
-			BspOccluderDebugDraw(pVertexNew, pVertexIn, 0xffff0000);
-			BspOccluderDebugDraw(pVertexOut, pVertexOut + nNumVertexOut, 0xff00ff00);
+	// SOccluderPlane* pOccluder = pBsp->Occluders.Ptr() + pNode->Index.nOccluderIndex;
+	// uint32 nEdge = pNode->Index.nEdge;
+			v3 p0 = pOccluder->corners[(nEdge+1)%4]*1.05f;
+			v3 p1 = pOccluder->corners[nEdge]*1.05f;
+			ZDEBUG_DRAWLINE(p0, p1, 0, true);
+
+
+			BspOccluderDebugDraw(pVertexNew, pVertexNew + nNumVertexIn, 0x88ff0000, 1);
+			BspOccluderDebugDraw(pVertexOut, pVertexOut + nNumVertexOut, 0x8800ff00, 1);
 		}
 
 
@@ -349,8 +356,7 @@ bool BspClipQuadR(SOccluderBsp* pBsp, uint32 nNodeIndex, v4* pVertices, uint32 n
 			ZASSERT(pNode->nInside != OCCLUDER_EMPTY);
 			// if(g_nOccluderDebug==2)
 			// 	BspOccluderDebugDraw(pVertexNew, pVertexIn, 0xffffffff);
-
-			if(OCCLUDER_LEAF == pNode->nInside)
+			if(OCCLUDER_LEAF == pNode->nInside || pNode->bLeaf)
 			{
 				for(v4* v = pVertexNew; v < pVertexIn; ++v)
 				{
@@ -401,6 +407,8 @@ bool BspClipQuadR(SOccluderBsp* pBsp, uint32 nNodeIndex, v4* pVertices, uint32 n
 		if(nMask == INSIDE)
 		{
 			uplotfnxt("OC: %2d:%d [INSIDE]", pNode->Index.nOccluderIndex, pNode->Index.nEdge);
+			if(pNode->bLeaf)
+				return true;
 			// all in inside
 			ZASSERT(pNode->nInside != OCCLUDER_EMPTY);
 			if(pNode->nInside == OCCLUDER_LEAF)
@@ -583,15 +591,31 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, m
 }
 
 
-void BspOccluderDebugDraw(v4* pVertexNew, v4* pVertexIn, uint32 nColor)
+void BspOccluderDebugDraw(v4* pVertexNew, v4* pVertexIn, uint32 nColor, uint32 nFill)
 {
-	v4* last = pVertexIn-1;
-	for(v4* v = pVertexNew; v < pVertexIn; ++v)
+	//if(nFill)
 	{
-		v3 v0 = v[0].tov3() + v3init(-0.01f,0,0);
-		v3 v1 = (*last).tov3()+ v3init(-0.01f,0,0);
-		last = v;
-		ZDEBUG_DRAWLINE(v0, v1, nColor,true);
+		ZDEBUG_DRAWPOLY(pVertexNew, pVertexIn - pVertexNew, nColor);
+		// v4* last = pVertexIn-1;
+		// for(v4* v = pVertexNew; v < pVertexIn; ++v)
+		// {
+		// 	v3 v0 = v[0].tov3() + v3init(-0.01f,0,0);
+		// 	v3 v1 = (*last).tov3()+ v3init(-0.01f,0,0);
+		// 	last = v;
+		// 	ZDEBUG_DRAWLINE(v0, v1, nColor,true);
+		// }
+	}
+	//else
+	{
+		v4* last = pVertexIn-1;
+		for(v4* v = pVertexNew; v < pVertexIn; ++v)
+		{
+			v3 v0 = v[0].tov3() + v3init(-0.01f,0,0);
+			v3 v1 = (*last).tov3()+ v3init(-0.01f,0,0);
+			last = v;
+			ZDEBUG_DRAWLINE(v0, v1, nColor,true);
+		}
+
 	}
 }
 
