@@ -82,15 +82,16 @@ void WorldRender()
 		g_WorldObjects[0].mObjectToWorld.trans = v4init(3.f, 0.f, sin(xx)*2, 1.f);
 	}
 
-	uint32 nNumOccluders = 1;
+	uint32 nNumOccluders = 2;
 	BspBuild(g_Bsp, &g_Occluders[0], nNumOccluders, mid());
-	uint32 nNumObjects = 2;
+	uint32 nNumObjects = 1;
 	bool* bCulled = (bool*)alloca(nNumObjects);
-	for(uint32 i = 0; i < 2; ++i)
+	for(uint32 i = 0; i < nNumObjects; ++i)
 	{
 		bCulled[i] = BspCullObject(g_Bsp, &g_WorldObjects[i]);
 
 	}
+	uplotfnxt("culled %d", bCulled[0] ? 1: 0);
 
 	// for(uint32 i = 0; i < 2; ++i)
 	// {
