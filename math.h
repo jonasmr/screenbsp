@@ -52,7 +52,7 @@ struct v3
 			float y;
 			float z;
 		};
-		float v[3];
+		//float v[3];
 	};
 	void operator +=(const v3& r);
 	void operator -=(const v3& r);
@@ -72,17 +72,17 @@ struct v3
 };
 struct v4
 {
-	union
-	{
-		struct
-		{
+	// union
+	// {
+	// 	struct
+	// 	{
 			float x;
 			float y;
 			float z;
 			float w;
-		};
-		float v[4];
-	};
+	// 	};
+	// 	//float v[4];
+	// };
 
 
 	void operator +=(const v4& r);
