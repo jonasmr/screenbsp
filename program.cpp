@@ -20,19 +20,22 @@ float g_fOrthoScale = 10;
 SOccluderBsp* g_Bsp = 0;
 
 
-struct SCameraState
-{
-	v3 vDir;
-	v3 vRight;
-	v3 vPosition;
-} g_Camera;
 
+SWorldState g_WorldState;
 
-SOccluder g_Occluders[2];
-SWorldObject g_WorldObjects[1];
 
 void DebugRender()
 {
+	for(int i = 0; i < g_WorldState.nNumOccluders; ++i)
+	{
+		ZDEBUG_DRAWBOUNDS(g_WorldState.Occluders[i].mObjectToWorld, g_WorldState.Occluders[i].vSize, -1);
+	}
+
+	for(int i = 0; i < g_WorldState.nNumWorldObjects; ++i)
+	{
+		ZDEBUG_DRAWBOUNDS(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].vSize, -1);
+	}
+	//root
 	glBegin(GL_LINES);
 	glColor3f(1,0,0);
 	glVertex3f(0, 0, 0.f);
@@ -51,19 +54,20 @@ void DebugRender()
 
 void WorldInit()
 {
-	g_Occluders[0].mObjectToWorld = mrotatey(90*TORAD);
-	g_Occluders[0].mObjectToWorld.trans = v4init(2.f,0.f,0.1f, 1.f);
-	g_Occluders[0].vSize = v3init(0.5f, 0.5f, 0.f);
+	g_WorldState.Occluders[0].mObjectToWorld = mrotatey(90*TORAD);
+	g_WorldState.Occluders[0].mObjectToWorld.trans = v4init(2.f,0.f,0.1f, 1.f);
+	g_WorldState.Occluders[0].vSize = v3init(0.5f, 0.5f, 0.f);
 
-	g_Occluders[1].mObjectToWorld = mrotatey(90*TORAD);
-	g_Occluders[1].mObjectToWorld.trans = v4init(2.f,0.f,-1.f, 1.f);
-	g_Occluders[1].vSize = v3init(0.65f, 1.9f, 0);
+	g_WorldState.Occluders[1].mObjectToWorld = mrotatey(90*TORAD);
+	g_WorldState.Occluders[1].mObjectToWorld.trans = v4init(2.f,0.f,-1.f, 1.f);
+	g_WorldState.Occluders[1].vSize = v3init(0.65f, 1.9f, 0);
+	g_WorldState.nNumOccluders = 2;
 
-	g_WorldObjects[0].mObjectToWorld = mrotatey(90*TORAD);
-	g_WorldObjects[0].mObjectToWorld.trans = v4init(3.f,0.f,-0.5f, 1.f);
-	g_WorldObjects[0].vSize = v3init(0.25f, 0.2f, 0.2);
+	g_WorldState.WorldObjects[0].mObjectToWorld = mrotatey(90*TORAD);
+	g_WorldState.WorldObjects[0].mObjectToWorld.trans = v4init(3.f,0.f,-0.5f, 1.f);
+	g_WorldState.WorldObjects[0].vSize = v3init(0.25f, 0.2f, 0.2);
 	
-	
+	g_WorldState.nNumWorldObjects = 1;
 }
 
 int g_nSimulate = 0;
@@ -75,50 +79,31 @@ void WorldRender()
 	}
 	if(g_nSimulate)
 	{
-		g_WorldObjects[0].mObjectToWorld = mmult(g_WorldObjects[0].mObjectToWorld, mrotatey(0.5f*TORAD));
-		g_Occluders[0].mObjectToWorld = mmult(g_Occluders[0].mObjectToWorld, mrotatez(0.3f*TORAD));
+		g_WorldState.WorldObjects[0].mObjectToWorld = mmult(g_WorldState.WorldObjects[0].mObjectToWorld, mrotatey(0.5f*TORAD));
+		g_WorldState.Occluders[0].mObjectToWorld = mmult(g_WorldState.Occluders[0].mObjectToWorld, mrotatez(0.3f*TORAD));
 		static float xx = 0;
 		xx += 0.005f;
-		g_WorldObjects[0].mObjectToWorld.trans = v4init(3.f, 0.f, sin(xx)*2, 1.f);
+		g_WorldState.WorldObjects[0].mObjectToWorld.trans = v4init(3.f, 0.f, sin(xx)*2, 1.f);
 	}
 
-	uint32 nNumOccluders = 2;
-	BspBuild(g_Bsp, &g_Occluders[0], nNumOccluders, mid());
-	uint32 nNumObjects = 1;
+	uint32 nNumOccluders = g_WorldState.nNumOccluders;
+	BspBuild(g_Bsp, &g_WorldState.Occluders[0], nNumOccluders, mid());
+	uint32 nNumObjects = g_WorldState.nNumWorldObjects;
 	bool* bCulled = (bool*)alloca(nNumObjects);
 	for(uint32 i = 0; i < nNumObjects; ++i)
 	{
-		bCulled[i] = BspCullObject(g_Bsp, &g_WorldObjects[i]);
+		bCulled[i] = BspCullObject(g_Bsp, &g_WorldState.WorldObjects[i]);
 
 	}
 	uplotfnxt("culled %d", bCulled[0] ? 1: 0);
 
-	// for(uint32 i = 0; i < 2; ++i)
-	// {
-	// 	glPushMatrix();
-	// 	glMultMatrixf(&g_Occluders[i].mObjectToWorld.x.x);
-	// 	float x = g_Occluders[i].vSize.x;
-	// 	float y = g_Occluders[i].vSize.y;
-	// 	glBegin(GL_LINE_STRIP);
-	// 	glColor3f(1,1,1);
-	// 	glVertex3f(x, y, 0.f);
-	// 	glVertex3f(x, -y, 0.f);
-	// 	glVertex3f(-x, -y, 0.f);
-	// 	glVertex3f(-x, y, 0.f);
-	// 	glVertex3f(x, y, 0.f);
-	// 	glEnd();
-	// 	glPopMatrix();
-	// }
-
-	//void BspOccluderTest(SOccluder* pOccluders, uint32 nNumOccluders)
-	//BspOccluderTest(&g_Occluders[0], 1, &g_WorldObjects[0], 1);
-	for(uint32 i = 0; i < 1; ++i)
+	for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
 	{
 		glPushMatrix();
-		glMultMatrixf(&g_WorldObjects[i].mObjectToWorld.x.x);
-		float x = g_WorldObjects[i].vSize.x;
-		float y = g_WorldObjects[i].vSize.y;
-		float z = g_WorldObjects[i].vSize.z;
+		glMultMatrixf(&g_WorldState.WorldObjects[i].mObjectToWorld.x.x);
+		float x = g_WorldState.WorldObjects[i].vSize.x;
+		float y = g_WorldState.WorldObjects[i].vSize.y;
+		float z = g_WorldState.WorldObjects[i].vSize.z;
 		glBegin(GL_LINE_STRIP);
 		if(!bCulled[i])
 			glColor3f(0,1,0);
@@ -161,6 +146,16 @@ void WorldRender()
 
 }
 
+void UpdatePicking()
+{
+	if(g_MouseState.button[0] & BUTTON_RELEASED)
+	{
+		v3 vPos = g_WorldState.Camera.vPosition;
+
+	}
+
+
+}
 
 void UpdateCamera()
 {
@@ -193,8 +188,8 @@ void UpdateCamera()
 	float fSpeed = 0.1f;
 	if((g_KeyboardState.keys[SDLK_RSHIFT]|g_KeyboardState.keys[SDLK_LSHIFT]) & BUTTON_DOWN)
 		fSpeed *= 0.2f;
-	g_Camera.vPosition += g_Camera.vDir * vDir.z * fSpeed;
-	g_Camera.vPosition += g_Camera.vRight * vDir.x * fSpeed;
+	g_WorldState.Camera.vPosition += g_WorldState.Camera.vDir * vDir.z * fSpeed;
+	g_WorldState.Camera.vPosition += g_WorldState.Camera.vRight * vDir.x * fSpeed;
 
 
 	static int mousex, mousey;
@@ -215,27 +210,86 @@ void UpdateCamera()
 		float fRotY = dx * -0.25f;
 		m mrotx = mrotatex(fRotX*TORAD);
 		m mroty = mrotatey(fRotY*TORAD);
-		g_Camera.vDir = mtransform(mroty, g_Camera.vDir);
-		g_Camera.vRight = mtransform(mroty, g_Camera.vRight);
+		g_WorldState.Camera.vDir = mtransform(mroty, g_WorldState.Camera.vDir);
+		g_WorldState.Camera.vRight = mtransform(mroty, g_WorldState.Camera.vRight);
 
-		m mview = mcreate(g_Camera.vDir, g_Camera.vRight, v3init(0,0,0));
+		m mview = mcreate(g_WorldState.Camera.vDir, g_WorldState.Camera.vRight, v3init(0,0,0));
 		m mviewinv = minverserotation(mview);
 		v3 vNewDir = mtransform(mrotx, v3init(0,0,-1));
-		g_Camera.vDir = mtransform(mviewinv, vNewDir);
+		g_WorldState.Camera.vDir = mtransform(mviewinv, vNewDir);
 
 
 	}
 
 
-}
 
+	g_WorldState.Camera.mview = mcreate(g_WorldState.Camera.vDir, g_WorldState.Camera.vRight, g_WorldState.Camera.vPosition);
+	if(g_KeyboardState.keys[SDLK_F2] & BUTTON_RELEASED)
+		g_nUseOrtho = !g_nUseOrtho;
+
+	float fAspect = (float)g_Width / (float)g_Height;
+	
+	if(g_nUseOrtho)
+	{
+		g_WorldState.Camera.mprj = mortho(g_fOrthoScale, g_fOrthoScale / fAspect, 1000);
+	}
+	else
+	{
+		g_WorldState.Camera.mprj = mperspective(45, ((float)g_Height / (float)g_Width), 0.001f, 100.f);
+	}
+	uplotfnxt("FPS %4.2f Dir[%5.2f,%5.2f,%5.2f] Pos[%3.2f,%3.2f,%3.2f]" , 1.f, 
+		g_WorldState.Camera.vDir.x,
+		g_WorldState.Camera.vDir.y,
+		g_WorldState.Camera.vDir.z,
+		g_WorldState.Camera.vPosition.x,
+		g_WorldState.Camera.vPosition.y,
+		g_WorldState.Camera.vPosition.z);
+
+
+
+
+	g_WorldState.Camera.mprjinv = minverse(g_WorldState.Camera.mprj);
+	g_WorldState.Camera.mviewinv = maffineinverse(g_WorldState.Camera.mview);
+
+	m identity = mmult(g_WorldState.Camera.mprj, g_WorldState.Camera.mprjinv);
+	m mprj2 = minverse(g_WorldState.Camera.mprjinv);
+
+//	ZBREAK();
+
+	//mouse
+
+	v4 vMouse = v4init( g_MouseState.position[0] / float(g_Height), g_MouseState.position[1] / float(g_Width), 0, 0);
+	vMouse = vMouse * 2.f - 1.f;
+	vMouse.z = 0.2f;
+	vMouse.w = 1;
+	uplotfnxt("MOUSE POS IS %f %f", vMouse.x, vMouse.y);
+	v4 vMouseUnproj = mtransform(g_WorldState.Camera.mprjinv, vMouse);
+	v3 vMouseView = vMouseUnproj.tov3() / vMouseUnproj.w;
+	//	m mviewinv = maffineinverse(g_WorldState.Camera.
+	vMouseView = v3init(1,1,-3);
+	v3 vMouseWorld = mtransform(g_WorldState.Camera.mviewinv, vMouseView);
+	uplotfnxt("Mouse world %f %f %f", vMouseWorld.x, vMouseWorld.y, vMouseWorld.z);
+	//	v3 
+	v3 test = g_WorldState.Camera.vPosition + g_WorldState.Camera.vDir * 3.f;
+	v3 t0 = test;
+	t0.y += 1.f;
+	t0 = vMouseWorld;
+	ZDEBUG_DRAWLINE(test, t0, -1, 0);
+	g_WorldState.Camera.vMouseWorld = vMouseWorld;
+
+}
+void foo()
+{
+	uprintf("lala\n");
+	ZBREAK();
+}
 
 void ProgramInit()
 {
 	m mroty = mrotatey(45.f * TORAD);
-	g_Camera.vDir = mtransform(mroty, v3init(0,0,-1));
-	g_Camera.vRight = mtransform(mroty, v3init(1,0,0));
-	g_Camera.vPosition = g_Camera.vDir * -5.f;
+	g_WorldState.Camera.vDir = mtransform(mroty, v3init(0,0,-1));
+	g_WorldState.Camera.vRight = mtransform(mroty, v3init(1,0,0));
+	g_WorldState.Camera.vPosition = g_WorldState.Camera.vDir * -5.f;
 	g_Bsp = BspCreate();
 	WorldInit();
 }
@@ -246,51 +300,23 @@ int ProgramMain()
 	if(g_KeyboardState.keys[SDLK_ESCAPE] & BUTTON_RELEASED)
 		return 1;
 
-	m mprj; 
-	m mview;
 	{
 		UpdateCamera();
-		mview = mcreate(g_Camera.vDir, g_Camera.vRight, g_Camera.vPosition);
-		if(g_KeyboardState.keys[SDLK_F2] & BUTTON_RELEASED)
-			g_nUseOrtho = !g_nUseOrtho;
-
-		float fAspect = (float)g_Width / (float)g_Height;
-
-		if(g_nUseOrtho)
-		{
-			mprj = mortho(g_fOrthoScale, g_fOrthoScale / fAspect, 1000);
-		}
-		else
-		{
-			mprj = mperspective(30, (float)g_Width / (float)g_Height, 0.001f, 100.f);
-		}
-
-
-		uplotfnxt("FPS %4.2f Dir[%5.2f,%5.2f,%5.2f] Pos[%3.2f,%3.2f,%3.2f]" , 1.f, 
-			g_Camera.vDir.x,
-			g_Camera.vDir.y,
-			g_Camera.vDir.z,
-			g_Camera.vPosition.x,
-			g_Camera.vPosition.y,
-			g_Camera.vPosition.z);
+		UpdatePicking();
 	}
 
-	glLineWidth(2.f);
+	glLineWidth(1.f);
 	glClearColor(0.3,0.4,0.6,0);
 	glViewport(0, 0, g_Width, g_Height);
 	glMatrixMode(GL_PROJECTION);
-	glLoadMatrixf(&mprj.x.x);
+	glLoadMatrixf(&g_WorldState.Camera.mprj.x.x);
 
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
-	glLoadMatrixf(&mview.x.x);
-	
+	glLoadMatrixf(&g_WorldState.Camera.mview.x.x);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 	CheckGLError();
-
 	WorldRender();
-
 	DebugRender();
 
 

@@ -248,6 +248,7 @@ bool BspClipQuadR(SOccluderBsp* pBsp, uint32 nNodeIndex, v4* pVertices, uint32 n
 
 		}
 	}
+
 //	uplotfnxt("N %d idx %d\n", n, nNodeIndex);
 	ZASSERT(nNodeIndex < pBsp->Nodes.Size());
 
