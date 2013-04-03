@@ -11,15 +11,15 @@ struct v4;
 
 struct v2
 {
-	union
-	{
-		struct
-		{
+	// union
+	// {
+	// 	struct
+	// 	{
 			float x;
 			float y;
-		};
-		float v[2];
-	};
+	// 	};
+	// 	float v[2];
+	// };
 	void operator +=(const v2& r);
 	void operator -=(const v2& r);
 	void operator *=(const v2& r);
@@ -29,14 +29,14 @@ struct v2
 	void operator *=(const float r);
 	void operator /=(const float r);
 
-	const float operator[](size_t s) const
-	{
-		return v[s];
-	}
-	float& operator[](size_t s)
-	{
-		return v[s];
-	}
+	// const float operator[](size_t s) const
+	// {
+	// 	return v[s];
+	// }
+	// float& operator[](size_t s)
+	// {
+	// 	return v[s];
+	// }
 
 };
 
@@ -44,16 +44,13 @@ struct v2
 
 struct v3
 {
-	union
-	{
-		struct
-		{
-			float x;
-			float y;
-			float z;
-		};
+	// union
+	// {
+	float x;
+	float y;
+	float z;
 		//float v[3];
-	};
+	// };
 	void operator +=(const v3& r);
 	void operator -=(const v3& r);
 	void operator *=(const v3& r);
@@ -114,7 +111,7 @@ union m
 			v4 w;
 		};
 	};
-	float m[16];
+	//float m[16];
 };
 
 
@@ -234,7 +231,10 @@ float v3length(v3 v);
 float v3lengthsq(v3 v);
 v3 v3normalize(v3 v);
 v3 v3min(v3 a, v3 b);
+v3 v3min(v3 a, float f);
 v3 v3max(v3 a, v3 b);
+v3 v3max(v3 a, float f);
+
 v3 v3abs(v3 a, v3 b);
 v3 v3splatx(v3 v);
 v3 v3splaty(v3 v);
@@ -286,6 +286,7 @@ m mortho(float fXWidth, float fYWidth, float fZRange);
 v3 mtransform(m mat, v3 point);
 v4 mtransform(m mat, v4 vector);
 v3 mrotate(m mat, v3 vector);
+m minverse(m);
 void msetxaxis(m& mat, v3 axis);
 void msetyaxis(m& mat, v3 axis);
 void msetzaxis(m& mat, v3 axis);
@@ -293,6 +294,7 @@ inline v3 mgetxaxis(const m& mat){v3 r; r.x = mat.x.x; r.y = mat.x.y; r.z = mat.
 inline v3 mgetyaxis(const m& mat){v3 r; r.x = mat.y.x; r.y = mat.y.y; r.z = mat.y.z; return r;}
 inline v3 mgetzaxis(const m& mat){v3 r; r.x = mat.z.x; r.y = mat.z.y; r.z = mat.z.z; return r;}
 m minverserotation(m mat);
+m maffineinverse(m mat);
 void ZASSERTAFFINE(m mat);
 
 v3 obbtoaabb(m mrotation, v3 vHalfSize);
@@ -331,3 +333,11 @@ T Max(T a, T b)
 template<typename T>
 T Clamp(T v, T a, T b)
 { return Max(Min(v,b), a); }
+
+template<typename T>
+void Swap(T& a, T& b)
+{
+	T t = a;
+	a = b;
+	b = t;
+}

@@ -16,13 +16,36 @@ struct SDebugDrawPoly
 	uint32 nVertices;
 	uint32 nColor;
 };
+
+struct SDebugDrawBounds
+{
+	m mat;
+	v3 vSize;
+	uint32 nColor;
+};
+
 struct SDebugDrawState
 {
 	TFixedArray<SDebugDrawLine, 2048> Lines;
 	TFixedArray<SDebugDrawPoly, 2048> Poly;
 	TFixedArray<v4, 2048*4> PolyVert;
+
+	TFixedArray<SDebugDrawBounds, 2048> Bounds;
 } g_DebugDrawState;
 
+
+void DebugDrawBounds(m mObjectToWorld, v3 vSize, uint32 nColor)
+{
+	if(g_DebugDrawState.Bounds.Full()) return;
+
+	SDebugDrawBounds* pBounds = g_DebugDrawState.Bounds.PushBack();
+	pBounds->mat = mObjectToWorld;
+	pBounds->vSize = vSize;
+	pBounds->nColor = nColor;
+
+
+
+}
 void DebugDrawLine(v3 start, v3 end, uint32_t nColor)
 {
 	if(g_DebugDrawState.Lines.Full()) return;
@@ -75,6 +98,90 @@ void DebugDrawFlush()
 			glVertex3fv((float*)&g_DebugDrawState.Lines[i].end);
 		}
 		glEnd();
+
+		for(SDebugDrawBounds& Bounds : g_DebugDrawState.Bounds)
+		{
+			glPushMatrix();
+			glMultMatrixf(&Bounds.mat.x.x);
+			v3 vScale = Bounds.vSize;
+			vScale = v3max(vScale, 0.1f) * 1.07f;
+			glScalef(vScale.x, vScale.y, vScale.z);
+
+			glBegin(GL_LINES);
+			glColor3ub(Bounds.nColor>>16, Bounds.nColor>>8, Bounds.nColor);
+
+			float f = 1.0f;
+			float z = 0.64f;
+
+			glVertex3f(f, f, f);
+			glVertex3f(z, f, f);
+			glVertex3f(f, f, f);
+			glVertex3f(f, z, f);
+			glVertex3f(f, f, f);
+			glVertex3f(f, f, z);
+
+			glVertex3f(-f, f, f);
+			glVertex3f(-z, f, f);
+			glVertex3f(-f, f, f);
+			glVertex3f(-f, z, f);
+			glVertex3f(-f, f, f);
+			glVertex3f(-f, f, z);
+
+			glVertex3f(f, -f, f);
+			glVertex3f(z, -f, f);
+			glVertex3f(f, -f, f);
+			glVertex3f(f, -z, f);
+			glVertex3f(f, -f, f);
+			glVertex3f(f, -f, z);
+
+			glVertex3f(-f,-f, f);
+			glVertex3f(-z,-f, f);
+			glVertex3f(-f,-f, f);
+			glVertex3f(-f,-z, f);
+			glVertex3f(-f,-f, f);
+			glVertex3f(-f,-f, z);
+
+			glVertex3f(f, f, -f);
+			glVertex3f(z, f, -f);
+			glVertex3f(f, f, -f);
+			glVertex3f(f, z, -f);
+			glVertex3f(f, f, -f);
+			glVertex3f(f, f, -z);
+
+			glVertex3f(-f, f, -f);
+			glVertex3f(-z, f, -f);
+			glVertex3f(-f, f, -f);
+			glVertex3f(-f, z, -f);
+			glVertex3f(-f, f, -f);
+			glVertex3f(-f, f, -z);
+
+			glVertex3f(f, -f, -f);
+			glVertex3f(z, -f, -f);
+			glVertex3f(f, -f, -f);
+			glVertex3f(f, -z, -f);
+			glVertex3f(f, -f, -f);
+			glVertex3f(f, -f, -z);
+
+			glVertex3f(-f,-f, -f);
+			glVertex3f(-z,-f, -f);
+			glVertex3f(-f,-f, -f);
+			glVertex3f(-f,-z, -f);
+			glVertex3f(-f,-f, -f);
+			glVertex3f(-f,-f, -z);
+
+
+
+
+			glEnd();
+
+
+
+
+			glPopMatrix();
+		}
+
+
+
 		v4* pVert = g_DebugDrawState.PolyVert.Ptr();
 		glEnable(GL_BLEND);
 		glBlendEquation(GL_FUNC_ADD);
@@ -100,5 +207,6 @@ void DebugDrawFlush()
 	g_DebugDrawState.Lines.Clear();
 	g_DebugDrawState.Poly.Clear();
 	g_DebugDrawState.PolyVert.Clear();
+	g_DebugDrawState.Bounds.Clear();
 
 }

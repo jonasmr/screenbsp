@@ -568,6 +568,14 @@ v3 v3min(v3 a, v3 b)
 	r.z = a.z < b.z ? a.z : b.z;
 	return r;
 }
+v3 v3min(v3 a, float f)
+{
+	v3 r;
+	r.x = a.x < f ? a.x : f;
+	r.y = a.y < f ? a.y : f;
+	r.z = a.z < f ? a.z : f;
+	return r;
+}
 
 v3 v3max(v3 a, v3 b)
 {
@@ -575,6 +583,14 @@ v3 v3max(v3 a, v3 b)
 	r.x = a.x >= b.x ? a.x : b.x;
 	r.y = a.y >= b.y ? a.y : b.y;
 	r.z = a.z >= b.z ? a.z : b.z;
+	return r;
+}
+v3 v3max(v3 a, float f)
+{
+	v3 r;
+	r.x = a.x >= f ? a.x : f;
+	r.y = a.y >= f ? a.y : f;
+	r.z = a.z >= f ? a.z : f;
 	return r;
 }
 
@@ -976,6 +992,8 @@ m mtranslate(v3 trans)
 	return r;
 }
 
+#define MAT_INDEX(i, j) (i*4+j)
+
 v3 mtransform(m mat, v3 point)
 {
 	v3 r;
@@ -984,6 +1002,84 @@ v3 mtransform(m mat, v3 point)
 	r.z = mat.x.z * point.x + mat.y.z * point.y + mat.z.z * point.z;
 	r += v3init(mat.trans);
 	return r;
+}
+
+v4 mtransform(m mat, v4 v)
+{
+	v4 r;
+	r.x = mat.x.x * v.x + mat.y.x * v.y + mat.z.x * v.z + mat.trans.x * v.w;
+	r.y = mat.x.y * v.x + mat.y.y * v.y + mat.z.y * v.z + mat.trans.y * v.w;
+	r.z = mat.x.z * v.x + mat.y.z * v.y + mat.z.z * v.z + mat.trans.z * v.w;
+	r.w = mat.x.w * v.x + mat.y.w * v.y + mat.w.z * v.z + mat.trans.w * v.w;
+	return r;
+}
+
+void mrowmul(int row, float scalar, float* fmat, float* finv)
+{
+	for(int i = 0;i < 4; ++i)
+	{
+		fmat[ MAT_INDEX(row, i) ] *= scalar;
+		finv[ MAT_INDEX(row, i) ] *= scalar;
+	}
+}
+
+void mrowmuladd(int rowsrc, int rowdst, float scalar, float* fmat, float* finv)
+{
+	for(int i = 0; i < 4; ++i)
+	{
+		fmat[ MAT_INDEX(rowdst, i) ] += scalar * fmat[MAT_INDEX(rowsrc,i)];
+		finv[ MAT_INDEX(rowdst, i) ] += scalar * finv[MAT_INDEX(rowsrc,i)];
+	}
+}
+
+void mreducedown(int i, float* fmat, float* finv)
+{
+	float* f = fmat;
+	float valueSrc = f[ MAT_INDEX(i,i) ];
+	if(fabs(valueSrc) < 1e-8)
+		return;
+
+
+	mrowmul( i, 1.f / f[MAT_INDEX(i,i)], f, finv);
+	for(int j = i+1; j < 4; ++j)
+	{
+		float value = f[ MAT_INDEX(j,i) ];
+		mrowmuladd(i, j, -value, f, finv);
+		ZASSERT(fabs(f[ MAT_INDEX(j,i) ]) < 0.00001f);
+	}
+}
+void mreduceup(int i, float* f, float* finv)
+{
+	float valueSrc = f[ MAT_INDEX(i,i) ];
+	if(fabsf(valueSrc) < 1e-8)
+		return;
+	for(int j = i-1; j >= 0; --j)
+	{
+		float value = f[ MAT_INDEX(j,i) ];
+		//			value - valueSrc * x == 0 // x == (value/valueSrc)
+		mrowmuladd(i, j, -value, f, finv);
+		ZASSERT(fabs(f[ MAT_INDEX(j,i) ]) < 0.00001f);
+	}
+}
+
+
+m minverse(m mat)
+{
+	m inv = mid();
+	float* fmat = (float*)&mat;
+	float* finv = (float*)&inv;
+	mreducedown(0, fmat, finv);
+	mreducedown(1, fmat, finv);
+	mreducedown(2, fmat, finv);
+	mreducedown(3, fmat, finv);
+
+	mreduceup(3, fmat, finv);
+	mreduceup(2, fmat, finv);
+	mreduceup(1, fmat, finv);
+
+
+	return inv;
+
 }
 
 v3 mrotate(m mat, v3 point)
@@ -1001,6 +1097,7 @@ m mperspective(float fFovY, float fAspect, float fNear, float fFar)\
 	// 0 f 0 0 -- 
 	// 0 0 zFar + zNear zNear - zFar 2 × zFar × zNear zNear - zFar 
 	// 0 0 -1 0
+#if 0
 
 	float ymax = fNear * tan(fFovY * PI / 360.f);
 	float ymin = -ymax;
@@ -1026,6 +1123,23 @@ m mperspective(float fFovY, float fAspect, float fNear, float fFar)\
 	r.z.z = q;
 	r.z.w = -1.f;
 	r.w.z = qn;
+#else
+	m r = mid();
+	float fAngle = (fFovY * PI / 180.f)/2.f;
+	float f = cos(fAngle) / sin(fAngle);
+	r.x.x = f * fAspect;
+	r.y.y = f;
+	r.z.z = (fFar + fNear) / (fNear - fFar);
+	r.z.w = (2*fFar*fNear) / (fNear - fFar);
+	r.w.z = -1.f;
+	if(1)
+	{
+		Swap(r.z.w, r.w.z);
+	}
+	r.w.w = 0.f;
+
+
+#endif
 	return r;
 }
 
@@ -1071,7 +1185,19 @@ m minverserotation(m mat)
 	r.y.z = mat.z.y;
 	r.z.y = mat.y.z;
 	return r;
+}
 
+m maffineinverse(m mat)
+{
+	// p = trans + rot * x
+	// p - trans = rot * x
+	// rot^ * (p - trans) = x
+	// rot^ * p + rot^ * (-trans) = x
+
+	m mrot = minverserotation(mat);
+	v3 trans = -mat.trans.tov3();
+	mrot.trans = v4init(mrotate(mrot, trans), 1.f);
+	return mrot;
 }
 
 void ZASSERTAFFINE(m mat)
