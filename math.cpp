@@ -1090,40 +1090,18 @@ v3 mrotate(m mat, v3 point)
 	r.z = mat.x.z * point.x + mat.y.z * point.y + mat.z.z * point.z;
 	return r;
 }
+m mviewport(float x, float y, float w, float h)
+{
+	m r = mid();
+	r.trans.x = x + w * 0.5f;
+	r.trans.y = y + h * 0.5f;
+	r.x.x = w * 0.5f;
+	r.y.y = h * 0.5f;
+	return r;
+}
 
 m mperspective(float fFovY, float fAspect, float fNear, float fFar)\
 {
-	//f aspect 0 0 0  -- 
-	// 0 f 0 0 -- 
-	// 0 0 zFar + zNear zNear - zFar 2 × zFar × zNear zNear - zFar 
-	// 0 0 -1 0
-#if 0
-
-	float ymax = fNear * tan(fFovY * PI / 360.f);
-	float ymin = -ymax;
-	float xmax = ymax * fAspect;
-	float xmin = ymin * fAspect;
-
-	float width = ymax - xmin;
-	float height = xmax - ymin;
-	float w = 2 * fNear / width;
-	w = w / fAspect;
-	float h = 2 * fNear / height;
-
-
-	float fAngle = fFovY * PI / 360.f;
-	float f = cos(fAngle)/sin(fAngle);
-
-	float fDepth = fFar - fNear;
-	float q = -(fFar + fNear) / fDepth;
-	float qn =  -2 * (fFar + fNear) / fDepth;
-	m r = mid();
-	r.x.x = w;
-	r.y.y = h;
-	r.z.z = q;
-	r.z.w = -1.f;
-	r.w.z = qn;
-#else
 	m r = mid();
 	float fAngle = (fFovY * PI / 180.f)/2.f;
 	float f = cos(fAngle) / sin(fAngle);
@@ -1137,9 +1115,6 @@ m mperspective(float fFovY, float fAspect, float fNear, float fFar)\
 		Swap(r.z.w, r.w.z);
 	}
 	r.w.w = 0.f;
-
-
-#endif
 	return r;
 }
 
@@ -1225,7 +1200,70 @@ v3 obbtoaabb(m mrotation, v3 vHalfSize)
 	return vx + vy + vz;
 }
 
+float rayplaneintersect(v3 r0, v3 rdir, v4 plane)
+{
+	v3 vpoint = plane.tov3() * -plane.w;
+	float fdot = v4dot(v4init(vpoint,1.f), plane);
+	ZASSERT(fabs(fdot)<1e-5f);
+	return rayplaneintersect(r0, rdir, plane.tov3() * -plane.w, plane.tov3());
+}
+float rayplaneintersect(v3 r0, v3 rdir, v3 p0, v3 pnormal)
+{
+	float t = -FLT_MAX;
+	float dot0 = v3dot(rdir, pnormal);
+	if(fabs(dot0)<1e-5f)
+		return t;
+	return v3dot((p0 - r0), pnormal);
+}
+float rayboxintersect(v3 r0, v3 rdir, m boxtransform, v3 boxsize)
+{
+	m inv = maffineinverse(boxtransform);
+	rdir = mrotate(inv, rdir);
+	r0 = mtransform(inv, r0);
+	float tx0 = (boxsize.x - r0.x) / rdir.x;
+	float tx1 = (-boxsize.x - r0.x) / rdir.x;
+	float ty0 = (boxsize.y - r0.y) / rdir.y;
+	float ty1 = (-boxsize.y - r0.y) / rdir.y;
+	float tz0 = (boxsize.z - r0.z) / rdir.z;
+	float tz1 = (-boxsize.z - r0.z) / rdir.z;
+	float tnear = -FLT_MAX;
+	float tfar = FLT_MAX;
 
+	if(tx0 > tx1) 
+		Swap(tx0, tx1);
+	if(ty0 > ty1) 
+		Swap(ty0, ty1);
+	if(tz0 > tz1) 
+		Swap(tz0, tz1);
+
+	if(tnear < tx0)
+		tnear = tx0;
+	if(tfar > tx1)
+		tfar = tx1;
+	if(tnear < ty0)
+		tnear = ty0;
+	if(tfar > ty1)
+		tfar = ty1;
+	if(tnear < tz0)
+		tnear = tz0;
+	if(tfar > tz1)
+		tfar = tz1;
+
+	if(tnear > tfar)
+		return INTERSECT_FAIL;
+	if(tfar < 0)
+		return INTERSECT_FAIL;
+	return tnear;
+
+
+
+	// float txmin = rayplaneintersect(r0, rdir, v3init(boxsize.x, 0, 0) * m.x + m.trans, m.x);
+	// float txmax = rayplaneintersect(r0, rdir, v3init(-boxsize.x, 0, 0) * m.x + m.trans, m.x);
+	// float tymin = rayplaneintersect(r0, rdir, v3init(0, boxsize.y, 0) * m.y + m.trans, m.y);
+	// float tymax = rayplaneintersect(r0, rdir, v3init(0, -boxsize.y, 0) * m.y + m.trans, m.y);
+	// float tzmin = rayplaneintersect(r0, rdir, v3init(0, 0, boxsize.z) * m.z + m.trans, m.z);
+	// float tzmax = rayplaneintersect(r0, rdir, v3init(0, 0, -boxsize.z) * m.z + m.trans, m.z);
+}
 
 v2 v2randir()
 {

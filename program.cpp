@@ -26,15 +26,19 @@ SWorldState g_WorldState;
 
 void DebugRender()
 {
-	for(int i = 0; i < g_WorldState.nNumOccluders; ++i)
+	if(g_WorldState.pSelected)
 	{
-		ZDEBUG_DRAWBOUNDS(g_WorldState.Occluders[i].mObjectToWorld, g_WorldState.Occluders[i].vSize, -1);
-	}
+		ZDEBUG_DRAWBOUNDS(g_WorldState.pSelected->mObjectToWorld, g_WorldState.pSelected->vSize, -1);
 
-	for(int i = 0; i < g_WorldState.nNumWorldObjects; ++i)
-	{
-		ZDEBUG_DRAWBOUNDS(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].vSize, -1);
 	}
+	// for(int i = 0; i < g_WorldState.nNumOccluders; ++i)
+	// {
+	// }
+
+	// for(int i = 0; i < g_WorldState.nNumWorldObjects; ++i)
+	// {
+	// 	ZDEBUG_DRAWBOUNDS(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].vSize, -1);
+	// }
 	//root
 	glBegin(GL_LINES);
 	glColor3f(1,0,0);
@@ -68,6 +72,7 @@ void WorldInit()
 	g_WorldState.WorldObjects[0].vSize = v3init(0.25f, 0.2f, 0.2);
 	
 	g_WorldState.nNumWorldObjects = 1;
+	g_WorldState.pSelected = 0;
 }
 
 int g_nSimulate = 0;
@@ -148,10 +153,45 @@ void WorldRender()
 
 void UpdatePicking()
 {
-	if(g_MouseState.button[0] & BUTTON_RELEASED)
+
+	v3 vMouse = v3init( g_MouseState.position[0], g_MouseState.position[1], 0);
+	v3 vMouseClip = mtransform(g_WorldState.Camera.mviewportinv, vMouse);
+	vMouseClip.z = -0.9f;
+	v4 vMouseView_ = mtransform(g_WorldState.Camera.mprjinv, v4init(vMouseClip, 1.f));
+	v3 vMouseView = vMouseView_.tov3() / vMouseView_.w;
+	v3 vMouseWorld = mtransform(g_WorldState.Camera.mviewinv, vMouseView);
+	uplotfnxt("vMouse %f %f %f", vMouse.x, vMouse.y, vMouse.z);
+	uplotfnxt("vMouseClip %f %f %f", vMouseClip.x, vMouseClip.y, vMouseClip.z);
+	uplotfnxt("vMouseView %f %f %f", vMouseView.x, vMouseView.y, vMouseView.z);
+	uplotfnxt("vMouseWorld %f %f %f", vMouseWorld.x, vMouseWorld.y, vMouseWorld.z);
+	v3 test = g_WorldState.Camera.vPosition + g_WorldState.Camera.vDir * 3.f;
+	v3 t0 = vMouseWorld;
+	ZDEBUG_DRAWLINE(test, t0, -1, 0);
+
+	if(g_MouseState.button[1] & BUTTON_RELEASED)
 	{
 		v3 vPos = g_WorldState.Camera.vPosition;
+		v3 vDir = vMouseWorld - vPos;
+		vDir = v3normalize(vDir);
+		float fNearest = 1e30;
+		SObject* pNearest = 0;
+		int a = []( int b ){ int r=1; while (b>0) r*=b--; return r; }(5); // 5!
 
+		auto Intersect = [&] (SObject* pObject) 
+		{ 
+			float fColi = rayboxintersect(vPos, vDir, pObject->mObjectToWorld, pObject->vSize);
+			if(fColi > g_WorldState.Camera.fNear && fColi < fNearest)
+			{
+				pNearest = pObject;
+				fNearest = fColi;
+			}
+		};
+		for(SObject& Obj : g_WorldState.WorldObjects)
+			Intersect(&Obj);
+
+		for(SObject& Obj : g_WorldState.Occluders)
+			Intersect(&Obj);
+		g_WorldState.pSelected = pNearest;
 	}
 
 
@@ -206,7 +246,7 @@ void UpdateCamera()
 		mousex = g_MouseState.position[0];
 		mousey = g_MouseState.position[1];
 
-		float fRotX = dy * -0.25f;
+		float fRotX = dy * 0.25f;
 		float fRotY = dx * -0.25f;
 		m mrotx = mrotatex(fRotX*TORAD);
 		m mroty = mrotatey(fRotY*TORAD);
@@ -237,6 +277,12 @@ void UpdateCamera()
 	{
 		g_WorldState.Camera.mprj = mperspective(45, ((float)g_Height / (float)g_Width), 0.001f, 100.f);
 	}
+	g_WorldState.Camera.mviewport = mviewport(0,0,g_Width, g_Height);
+
+	g_WorldState.Camera.mviewportinv = minverse(g_WorldState.Camera.mviewport);
+	g_WorldState.Camera.mprjinv = minverse(g_WorldState.Camera.mprj);
+	g_WorldState.Camera.mviewinv = maffineinverse(g_WorldState.Camera.mview);
+
 	uplotfnxt("FPS %4.2f Dir[%5.2f,%5.2f,%5.2f] Pos[%3.2f,%3.2f,%3.2f]" , 1.f, 
 		g_WorldState.Camera.vDir.x,
 		g_WorldState.Camera.vDir.y,
@@ -245,37 +291,6 @@ void UpdateCamera()
 		g_WorldState.Camera.vPosition.y,
 		g_WorldState.Camera.vPosition.z);
 
-
-
-
-	g_WorldState.Camera.mprjinv = minverse(g_WorldState.Camera.mprj);
-	g_WorldState.Camera.mviewinv = maffineinverse(g_WorldState.Camera.mview);
-
-	m identity = mmult(g_WorldState.Camera.mprj, g_WorldState.Camera.mprjinv);
-	m mprj2 = minverse(g_WorldState.Camera.mprjinv);
-
-//	ZBREAK();
-
-	//mouse
-
-	v4 vMouse = v4init( g_MouseState.position[0] / float(g_Height), g_MouseState.position[1] / float(g_Width), 0, 0);
-	vMouse = vMouse * 2.f - 1.f;
-	vMouse.z = 0.2f;
-	vMouse.w = 1;
-	uplotfnxt("MOUSE POS IS %f %f", vMouse.x, vMouse.y);
-	v4 vMouseUnproj = mtransform(g_WorldState.Camera.mprjinv, vMouse);
-	v3 vMouseView = vMouseUnproj.tov3() / vMouseUnproj.w;
-	//	m mviewinv = maffineinverse(g_WorldState.Camera.
-	vMouseView = v3init(1,1,-3);
-	v3 vMouseWorld = mtransform(g_WorldState.Camera.mviewinv, vMouseView);
-	uplotfnxt("Mouse world %f %f %f", vMouseWorld.x, vMouseWorld.y, vMouseWorld.z);
-	//	v3 
-	v3 test = g_WorldState.Camera.vPosition + g_WorldState.Camera.vDir * 3.f;
-	v3 t0 = test;
-	t0.y += 1.f;
-	t0 = vMouseWorld;
-	ZDEBUG_DRAWLINE(test, t0, -1, 0);
-	g_WorldState.Camera.vMouseWorld = vMouseWorld;
 
 }
 void foo()
