@@ -29,11 +29,14 @@ struct SCameraState : SObject
 	v3 vRight;
 	v3 vPosition;
 	m mview;
+	m mviewinv;
 	m mprj;
 	m mprjinv;
-	m mviewinv;
-
-	v3 vMouseWorld;
+	m mviewport;
+	m mviewportinv;
+	
+	float fNear;
+	float fFar;
 };
 
 
@@ -46,6 +49,7 @@ struct SWorldState
 	SWorldObject WorldObjects[MAX_WORLD_OBJECTS];
 	uint32 nNumWorldObjects;
 
+	SObject* pSelected;
 
 	SCameraState Camera;
 };

@@ -49,7 +49,7 @@ void HandleEvent(SDL_Event* pEvt)
 		break;
 	case SDL_MOUSEMOTION:
 		g_MouseState.position[0] = pEvt->motion.x;
-		g_MouseState.position[1] = pEvt->motion.y;
+		g_MouseState.position[1] = g_Height-pEvt->motion.y; // flip to match opengl
 		break;
 	case SDL_MOUSEBUTTONDOWN:
 	case SDL_MOUSEBUTTONUP:

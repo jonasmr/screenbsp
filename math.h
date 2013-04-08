@@ -11,15 +11,9 @@ struct v4;
 
 struct v2
 {
-	// union
-	// {
-	// 	struct
-	// 	{
-			float x;
-			float y;
-	// 	};
-	// 	float v[2];
-	// };
+	float x;
+	float y;
+
 	void operator +=(const v2& r);
 	void operator -=(const v2& r);
 	void operator *=(const v2& r);
@@ -29,28 +23,15 @@ struct v2
 	void operator *=(const float r);
 	void operator /=(const float r);
 
-	// const float operator[](size_t s) const
-	// {
-	// 	return v[s];
-	// }
-	// float& operator[](size_t s)
-	// {
-	// 	return v[s];
-	// }
-
 };
 
 
 
 struct v3
 {
-	// union
-	// {
 	float x;
 	float y;
 	float z;
-		//float v[3];
-	// };
 	void operator +=(const v3& r);
 	void operator -=(const v3& r);
 	void operator *=(const v3& r);
@@ -69,18 +50,10 @@ struct v3
 };
 struct v4
 {
-	// union
-	// {
-	// 	struct
-	// 	{
-			float x;
-			float y;
-			float z;
-			float w;
-	// 	};
-	// 	//float v[4];
-	// };
-
+	float x;
+	float y;
+	float z;
+	float w;
 
 	void operator +=(const v4& r);
 	void operator -=(const v4& r);
@@ -111,7 +84,6 @@ union m
 			v4 w;
 		};
 	};
-	//float m[16];
 };
 
 
@@ -280,6 +252,7 @@ m mrotatex(float fAngle);
 m mrotatey(float fAngle);
 m mrotatez(float fAngle);
 m mtranslate(v3 trans);
+m mviewport(float x, float y, float w, float h);
 m mperspective(float fFovY, float fAspect, float fNear, float fFar);
 m mortho(float fXWidth, float fYWidth, float fZRange);
 
@@ -297,7 +270,12 @@ m minverserotation(m mat);
 m maffineinverse(m mat);
 void ZASSERTAFFINE(m mat);
 
+
 v3 obbtoaabb(m mrotation, v3 vHalfSize);
+#define INTERSECT_FAIL (-FLT_MAX)
+float rayplaneintersect(v3 r0, v3 rdir, v4 plane);
+float rayplaneintersect(v3 r0, v3 rdir, v3 p0, v3 pnormal);
+float rayboxintersect(v3 r0, v3 rdir, m boxtransform, v3 boxsize);
 
 
 float frand();
