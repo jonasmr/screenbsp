@@ -5,7 +5,7 @@ CFLAGS+=-g -O0 -Wno-invalid-offsetof
 CPPFLAGS=$(CFLAGS)
 CPPFLAGS+=-std=c++11 -Wno-lambda-extensions 
 
-CPP_SOURCES = main.cpp math.cpp text.cpp input.cpp program.cpp bsp.cpp debug.cpp
+CPP_SOURCES = main.cpp math.cpp text.cpp input.cpp program.cpp bsp.cpp debug.cpp manipulator.cpp
 C_SOURCES = stb_image.c glew.c
 
 CC=clang
