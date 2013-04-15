@@ -10,7 +10,7 @@
 #include "program.h"
 #include "bsp.h"
 #include "debug.h"
-
+#include "manipulator.h"
 
 extern uint32_t g_Width;
 extern uint32_t g_Height;
@@ -22,24 +22,15 @@ SOccluderBsp* g_Bsp = 0;
 
 
 SWorldState g_WorldState;
-
+SEditorState g_EditorState;
 
 void DebugRender()
 {
-	if(g_WorldState.pSelected)
+	if(g_EditorState.pSelected)
 	{
-		ZDEBUG_DRAWBOUNDS(g_WorldState.pSelected->mObjectToWorld, g_WorldState.pSelected->vSize, -1);
+		ZDEBUG_DRAWBOUNDS(g_EditorState.pSelected->mObjectToWorld, g_EditorState.pSelected->vSize, g_EditorState.bLockSelection ? (0xffffff00) : -1);
 
 	}
-	// for(int i = 0; i < g_WorldState.nNumOccluders; ++i)
-	// {
-	// }
-
-	// for(int i = 0; i < g_WorldState.nNumWorldObjects; ++i)
-	// {
-	// 	ZDEBUG_DRAWBOUNDS(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].vSize, -1);
-	// }
-	//root
 	glBegin(GL_LINES);
 	glColor3f(1,0,0);
 	glVertex3f(0, 0, 0.f);
@@ -54,6 +45,13 @@ void DebugRender()
 
 
 	DebugDrawFlush();
+}
+
+void EditorStateInit()
+{
+	memset(&g_EditorState, 0, sizeof(g_EditorState));
+	g_EditorState.Manipulators[0] = new ManipulatorTranslate();
+	g_EditorState.Manipulators[1] = new ManipulatorRotate();
 }
 
 void WorldInit()
@@ -72,7 +70,7 @@ void WorldInit()
 	g_WorldState.WorldObjects[0].vSize = v3init(0.25f, 0.2f, 0.2);
 	
 	g_WorldState.nNumWorldObjects = 1;
-	g_WorldState.pSelected = 0;
+	g_EditorState.pSelected = 0;
 }
 
 int g_nSimulate = 0;
@@ -150,7 +148,141 @@ void WorldRender()
 	}
 
 }
+void UpdateEditorState()
+{
+	for(int i = 0; i < 10; ++i)
+	{
+		if(g_KeyboardState.keys['0' + i] & BUTTON_RELEASED)
+		{
+			g_EditorState.Mode = i;
+			if(g_EditorState.Dragging != DRAGSTATE_NONE && g_EditorState.DragTarget == DRAGTARGET_TOOL)
+			{
+				if(g_EditorState.Manipulators[g_EditorState.Mode])
+					g_EditorState.Manipulators[g_EditorState.Mode]->DragEnd(g_EditorState.vDragStart, g_EditorState.vDragEnd);
+			}
+			g_EditorState.Dragging = DRAGSTATE_NONE;
 
+		}
+	}
+	uplotfnxt("mode is %d", g_EditorState.Mode);
+	if(g_KeyboardState.keys[SDLK_ESCAPE] & BUTTON_RELEASED)
+	{
+		g_EditorState.pSelected = 0;
+	}
+	if(g_KeyboardState.keys[SDLK_SPACE] & BUTTON_RELEASED)
+	{
+		if(g_EditorState.pSelected)
+		{
+			g_EditorState.bLockSelection = !g_EditorState.bLockSelection;
+		}
+		else
+		{
+			g_EditorState.bLockSelection = false;
+		}
+	}
+
+	{
+		v2 vPos = v2init(g_MouseState.position[0], g_MouseState.position[1]);
+		v3 vDir = DirectionFromScreen(vPos, g_WorldState.Camera);
+		v3 t1 = g_WorldState.Camera.vPosition + vDir * 5.f;//vMouseWorld + v3normalize(vMouseWorld -g_WorldState.Camera.vPosition) *5.f;
+	//	ZDEBUG_DRAWBOX(mid(), t1, v3init(0.2, 0.2, 0.2), -1);
+
+	}
+
+	if(g_MouseState.button[1]&BUTTON_PUSHED)
+	{
+		v2 vPos = v2init(g_MouseState.position[0], g_MouseState.position[1]);
+		if(!g_EditorState.pSelected || !g_EditorState.Manipulators[g_EditorState.Mode] || !g_EditorState.Manipulators[g_EditorState.Mode]->DragBegin(vPos, vPos, g_EditorState.pSelected))
+
+			// ((g_KeyboardState.keys[SDLK_LCTRL]|g_KeyboardState.keys[SDLK_RCTRL]) & BUTTON_DOWN)|| g_EditorState.pSelected == 0)
+		{
+			g_EditorState.DragTarget = DRAGTARGET_CAMERA;
+			uprintf("Drag begin CAMERA\n");
+		}
+		else
+		{
+			g_EditorState.DragTarget = DRAGTARGET_TOOL;
+			uprintf("Drag begin TOOL %d\n", g_EditorState.Mode);
+		}
+
+		{
+
+			g_EditorState.Dragging = DRAGSTATE_BEGIN;
+			g_EditorState.vDragEnd = g_EditorState.vDragStart = v2init(g_MouseState.position[0], g_MouseState.position[1]);
+		}
+	}
+	else if(g_MouseState.button[1]&BUTTON_RELEASED)
+	{
+		g_EditorState.Dragging = DRAGSTATE_END;
+		v2 vPrev = g_EditorState.vDragEnd;
+		g_EditorState.vDragEnd = v2init(g_MouseState.position[0], g_MouseState.position[1]);
+		g_EditorState.vDragDelta = g_EditorState.vDragEnd - vPrev;
+		uprintf("Drag end\n");
+	}
+	else if(g_MouseState.button[1]&BUTTON_DOWN)
+	{
+		g_EditorState.Dragging = DRAGSTATE_UPDATE;
+		v2 vPrev = g_EditorState.vDragEnd;
+		g_EditorState.vDragEnd = v2init(g_MouseState.position[0], g_MouseState.position[1]);
+		g_EditorState.vDragDelta = g_EditorState.vDragEnd - vPrev;
+		uplotfnxt("DRAGGING %f %f ", g_EditorState.vDragEnd.x, g_EditorState.vDragEnd.y);
+	}
+	else
+	{
+		g_EditorState.vDragEnd = g_EditorState.vDragStart = g_EditorState.vDragDelta = v2init(0,0);
+		g_EditorState.Dragging = DRAGSTATE_NONE;
+	}
+
+	switch(g_EditorState.DragTarget)
+	{
+		case DRAGTARGET_CAMERA:
+		{
+			g_WorldState.vCameraRotate = g_EditorState.vDragDelta;
+		}
+		break;
+		case DRAGTARGET_TOOL:
+		{
+			ZASSERT(g_EditorState.pSelected);
+			switch(g_EditorState.Mode)
+			{
+				default:
+				{
+					switch(g_EditorState.Dragging)
+					{
+						case DRAGSTATE_BEGIN:
+						{
+							g_EditorState.mSelected = g_EditorState.pSelected->mObjectToWorld;
+						}
+						break;
+						case DRAGSTATE_UPDATE:
+						{
+							uplotfnxt("DRAG UP");
+							if(g_EditorState.Manipulators[g_EditorState.Mode])
+							{
+								g_EditorState.Manipulators[g_EditorState.Mode]->DragUpdate(g_EditorState.vDragStart, g_EditorState.vDragEnd);
+							}
+						}
+
+					}
+				}
+			}
+		}
+		break;
+	}
+
+	switch(g_EditorState.Mode)
+	{
+		case 0: //translate
+		{
+
+		}
+	}
+
+	if(g_EditorState.Dragging == DRAGSTATE_END)
+	{
+		g_EditorState.DragTarget = DRAGTARGET_NONE;
+	}
+}
 void UpdatePicking()
 {
 
@@ -160,22 +292,24 @@ void UpdatePicking()
 	v4 vMouseView_ = mtransform(g_WorldState.Camera.mprjinv, v4init(vMouseClip, 1.f));
 	v3 vMouseView = vMouseView_.tov3() / vMouseView_.w;
 	v3 vMouseWorld = mtransform(g_WorldState.Camera.mviewinv, vMouseView);
-	uplotfnxt("vMouse %f %f %f", vMouse.x, vMouse.y, vMouse.z);
-	uplotfnxt("vMouseClip %f %f %f", vMouseClip.x, vMouseClip.y, vMouseClip.z);
-	uplotfnxt("vMouseView %f %f %f", vMouseView.x, vMouseView.y, vMouseView.z);
-	uplotfnxt("vMouseWorld %f %f %f", vMouseWorld.x, vMouseWorld.y, vMouseWorld.z);
-	v3 test = g_WorldState.Camera.vPosition + g_WorldState.Camera.vDir * 3.f;
+	// uplotfnxt("vMouse %f %f %f", vMouse.x, vMouse.y, vMouse.z);
+	// uplotfnxt("vMouseClip %f %f %f", vMouseClip.x, vMouseClip.y, vMouseClip.z);
+	// uplotfnxt("vMouseView %f %f %f", vMouseView.x, vMouseView.y, vMouseView.z);
+	// uplotfnxt("vMouseWorld %f %f %f", vMouseWorld.x, vMouseWorld.y, vMouseWorld.z);
+	// v3 test = g_WorldState.Camera.vPosition + g_WorldState.Camera.vDir * 3.f;
+	// ZDEBUG_DRAWBOX(mid(), test, v3init(0.3, 0.3, 0.3), -1);
 	v3 t0 = vMouseWorld;
-	ZDEBUG_DRAWLINE(test, t0, -1, 0);
+	v3 t1 = vMouseWorld + v3normalize(vMouseWorld -g_WorldState.Camera.vPosition) *5.f;
+	//	ZDEBUG_DRAWBOX(mid(), t1, v3init(0.1, 0.1, 0.1), -1);
+	// ZDEBUG_DRAWLINE(test, t0, -1, 0);
 
-	if(g_MouseState.button[1] & BUTTON_RELEASED)
+	if(g_MouseState.button[1] & BUTTON_RELEASED && !g_EditorState.bLockSelection)
 	{
 		v3 vPos = g_WorldState.Camera.vPosition;
 		v3 vDir = vMouseWorld - vPos;
 		vDir = v3normalize(vDir);
 		float fNearest = 1e30;
 		SObject* pNearest = 0;
-		int a = []( int b ){ int r=1; while (b>0) r*=b--; return r; }(5); // 5!
 
 		auto Intersect = [&] (SObject* pObject) 
 		{ 
@@ -191,7 +325,7 @@ void UpdatePicking()
 
 		for(SObject& Obj : g_WorldState.Occluders)
 			Intersect(&Obj);
-		g_WorldState.pSelected = pNearest;
+		g_EditorState.pSelected = pNearest;
 	}
 
 
@@ -204,7 +338,7 @@ void UpdateCamera()
 		g_fOrthoScale *= 0.96;
 	if(g_MouseState.button[SDL_BUTTON_WHEELDOWN] & BUTTON_RELEASED)
 		g_fOrthoScale /= 0.96;
-	uplotfnxt("ORTHO SCALE %f\n", g_fOrthoScale);
+	//uplotfnxt("ORTHO SCALE %f\n", g_fOrthoScale);
 
 
 
@@ -232,19 +366,19 @@ void UpdateCamera()
 	g_WorldState.Camera.vPosition += g_WorldState.Camera.vRight * vDir.x * fSpeed;
 
 
-	static int mousex, mousey;
-	if(g_MouseState.button[1] & BUTTON_PUSHED)
-	{
-		mousex = g_MouseState.position[0];
-		mousey = g_MouseState.position[1];
-	}
+	// static int mousex, mousey;
+	// if(g_MouseState.button[1] & BUTTON_PUSHED)
+	// {
+	// 	mousex = g_MouseState.position[0];
+	// 	mousey = g_MouseState.position[1];
+	// }
 
-	if(g_MouseState.button[1] & BUTTON_DOWN)
+	//if(g_MouseState.button[1] & BUTTON_DOWN)
 	{
-		int dx = g_MouseState.position[0] - mousex;
-		int dy = g_MouseState.position[1] - mousey;
-		mousex = g_MouseState.position[0];
-		mousey = g_MouseState.position[1];
+		int dx = g_WorldState.vCameraRotate.x;//g_MouseState.position[0] - mousex;
+		int dy = g_WorldState.vCameraRotate.y;//g_MouseState.position[1] - mousey;
+		// mousex = g_MouseState.position[0];
+		// mousey = g_MouseState.position[1];
 
 		float fRotX = dy * 0.25f;
 		float fRotY = dx * -0.25f;
@@ -277,8 +411,8 @@ void UpdateCamera()
 	{
 		g_WorldState.Camera.mprj = mperspective(45, ((float)g_Height / (float)g_Width), 0.001f, 100.f);
 	}
+	
 	g_WorldState.Camera.mviewport = mviewport(0,0,g_Width, g_Height);
-
 	g_WorldState.Camera.mviewportinv = minverse(g_WorldState.Camera.mviewport);
 	g_WorldState.Camera.mprjinv = minverse(g_WorldState.Camera.mprj);
 	g_WorldState.Camera.mviewinv = maffineinverse(g_WorldState.Camera.mview);
@@ -307,6 +441,7 @@ void ProgramInit()
 	g_WorldState.Camera.vPosition = g_WorldState.Camera.vDir * -5.f;
 	g_Bsp = BspCreate();
 	WorldInit();
+	EditorStateInit();
 }
 
 int ProgramMain()
@@ -315,6 +450,8 @@ int ProgramMain()
 	if(g_KeyboardState.keys[SDLK_ESCAPE] & BUTTON_RELEASED)
 		return 1;
 
+
+	UpdateEditorState();
 	{
 		UpdateCamera();
 		UpdatePicking();
@@ -339,3 +476,20 @@ int ProgramMain()
 
 	return 0;
 }
+
+
+
+
+v3 DirectionFromScreen(v2 vScreen, SCameraState& Camera)
+{
+	v3 vMouse = v3init(vScreen.x, vScreen.y, 0);
+	v3 vMouseClip = mtransform(Camera.mviewportinv, vMouse);
+	vMouseClip.z = -0.9f;
+	v4 vMouseView_ = mtransform(Camera.mprjinv, v4init(vMouseClip, 1.f));
+	v3 vMouseView = vMouseView_.tov3() / vMouseView_.w;
+	v3 vMouseWorld = mtransform(Camera.mviewinv, vMouseView);
+	return v3normalize(vMouseWorld - Camera.vPosition);
+
+}
+
+

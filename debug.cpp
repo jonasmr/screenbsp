@@ -31,6 +31,7 @@ struct SDebugDrawState
 	TFixedArray<v4, 2048*4> PolyVert;
 
 	TFixedArray<SDebugDrawBounds, 2048> Bounds;
+	TFixedArray<SDebugDrawBounds, 2048> Boxes;
 } g_DebugDrawState;
 
 
@@ -42,10 +43,21 @@ void DebugDrawBounds(m mObjectToWorld, v3 vSize, uint32 nColor)
 	pBounds->mat = mObjectToWorld;
 	pBounds->vSize = vSize;
 	pBounds->nColor = nColor;
+}
+void DebugDrawBox(m rot, v3 pos, v3 size, uint32 nColor)
+{
+	if(g_DebugDrawState.Boxes.Full()) return;
 
+	SDebugDrawBounds * pBox = g_DebugDrawState.Boxes.PushBack();
+
+	pBox->mat = rot;
+	pBox->mat.trans = v4init(pos, 1);
+	pBox->vSize = size;
+	pBox->nColor = nColor;
 
 
 }
+
 void DebugDrawLine(v3 start, v3 end, uint32_t nColor)
 {
 	if(g_DebugDrawState.Lines.Full()) return;
@@ -98,7 +110,65 @@ void DebugDrawFlush()
 			glVertex3fv((float*)&g_DebugDrawState.Lines[i].end);
 		}
 		glEnd();
+		for(SDebugDrawBounds& Box : g_DebugDrawState.Boxes)
+		{
+			glPushMatrix();
+			//glMultMatrixf(&Box.mat.x.x);
+			glTranslatef(Box.mat.trans.x, Box.mat.trans.y, Box.mat.trans.z);
+			v3 vScale = Box.vSize;
+//			vScale = v3max(vScale, 0.1f) * 1.07f;
+			glScalef(vScale.x, vScale.y, vScale.z);
 
+			glBegin(GL_LINES);
+			glColor3ub(Box.nColor>>16, Box.nColor>>8, Box.nColor);
+
+			float f = 1.0f;
+			glVertex3f(f, f, f);
+			glVertex3f(f, f, -f);
+			
+			glVertex3f(-f, f, f);
+			glVertex3f(-f, f, -f);
+
+			glVertex3f(-f, -f, f);
+			glVertex3f(-f, -f, -f);
+			
+			glVertex3f(f, -f, f);
+			glVertex3f(f, -f, -f);
+
+
+
+
+
+			glVertex3f(f, f, f);
+			glVertex3f(f, -f, f);
+			
+			glVertex3f(-f, f, f);
+			glVertex3f(-f, -f, f);
+
+			glVertex3f(-f, f, -f);
+			glVertex3f(-f, -f, -f);
+			
+			glVertex3f(f, f, -f);
+			glVertex3f(f, -f, -f);
+
+
+			glVertex3f(f,  f, f);
+			glVertex3f(-f, f, f);
+			
+			glVertex3f(f,  -f, f);
+			glVertex3f(-f, -f, f);
+
+			glVertex3f(f,  -f, -f);
+			glVertex3f(-f, -f, -f);
+			
+			glVertex3f(f,  f, -f);
+			glVertex3f(-f, f, -f);
+
+
+			glEnd();
+
+			glPopMatrix();
+		}
 		for(SDebugDrawBounds& Bounds : g_DebugDrawState.Bounds)
 		{
 			glPushMatrix();
@@ -208,5 +278,6 @@ void DebugDrawFlush()
 	g_DebugDrawState.Poly.Clear();
 	g_DebugDrawState.PolyVert.Clear();
 	g_DebugDrawState.Bounds.Clear();
+	g_DebugDrawState.Boxes.Clear();
 
 }
