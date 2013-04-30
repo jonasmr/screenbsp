@@ -159,6 +159,8 @@ int SDL_main(int argc, char** argv)
 
 	ProgramInit();
 	
+
+	
 	while(!g_nQuit)
 	{
 		CheckGLError();
