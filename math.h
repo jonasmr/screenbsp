@@ -211,6 +211,10 @@ v3 v3abs(v3 a, v3 b);
 v3 v3splatx(v3 v);
 v3 v3splaty(v3 v);
 v3 v3splatz(v3 v);
+inline
+v3 v3zero(){v3 z = {0,0,0};return z;}
+inline 
+v3 v3rep(float f){ v3 r = {f,f,f}; return r;}
 
 
 
