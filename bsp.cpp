@@ -20,7 +20,7 @@ uint32 g_nOccluderClipLevels = -1;
 
 struct SOccluderPlane
 {
-	v4 p[4];
+	v4 p[5];
 	v3 corners[4];
 	v4 normal;
 };
@@ -28,8 +28,9 @@ struct SOccluderPlane
 struct SOccluderEdgeIndex
 {
 	uint16 	nOccluderIndex;
-	uint8 	nEdge : 4;	//[0-3] edge idx
+	uint8 	nEdge : 4;	//[0-3] edge idx // 5 is normal
 	uint8 	nFlip : 1;
+	uint8 	nNormal : 1;
 };
 
 struct SOccluderBspNode
@@ -748,8 +749,6 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, m
 			v4 p0 = pBsp->Occluders[i].p[j];
 			v4 p1 = pBsp->Occluders[i].p[(j+1)%4];
 			v4 vNormal = pBsp->Occluders[i].normal;
-
-//			v3 BspPlaneIntersection(v4 p0, v4 p1)
 			v3 vIntersect = BspPlaneIntersection(p0,p1, vNormal);
 			ZASSERT(v3length(vIntersect) > 0.001f);
 			ZDEBUG_DRAWBOX(mid(), vIntersect, v3rep(0.01f), 0xffff0000);
@@ -796,4 +795,180 @@ void BspOccluderDebugDraw(v4* pVertexNew, v4* pVertexIn, uint32 nColor, uint32 n
 
 	}
 }
+int BspAddInternal2(SOccluderBsp* pBsp, SOccluderEdgeIndex* Poly, uint32 nVertices, uint32 nLevel);
+void BspAddOccluderRecursive2(SOccluderBsp* pBsp, uint32 nBspIndex, SOccluderEdgeIndex* Poly, uint32 nEdges, uint32 nLevel);
+
+
+
+void BspAddOccluder2(SOccluderBsp* pBsp, SOccluderPlane* pOccluder, uint32 nOccluderIndex)
+{
+	//base poly
+	SOccluderEdgeIndex Poly[ 5 ];
+	memset(&Poly[0], 0xff, sizeof(Poly));
+	for(uint32 i = 0; i < 4; ++i)
+	{
+		Poly[i].nOccluderIndex = nOccluderIndex;
+		Poly[i].nEdge = i;
+		Poly[i].nFlip = 0;
+		Poly[i].nNormal = 0;
+	}
+	Poly[4].nOccluderIndex = nOccluderIndex;
+	Poly[4].nNormal = 1;
+	Poly[4].nFlip = 0;
+	Poly[4].nEdge = 4;
+
+	uint32 nNumNodes = (uint32)pBsp->Nodes.Size();
+	if(pBsp->Nodes.Empty())
+	{
+		uint16 nIndex = (uint16)BspAddInternal2(pBsp, &Poly[0], 5, 1);
+		ZASSERT(nIndex==0);
+	}
+	else
+	{
+		BspAddOccluderRecursive2(pBsp, 0, &Poly[0], 5, 1);
+	}
+}
+
+int BspAddInternal2(SOccluderBsp* pBsp, SOccluderEdgeIndex* Poly, uint32 nVertices, uint32 nLevel)
+{
+	int r = (int)pBsp->Nodes.Size();
+	int nPrev = -1;
+	if(nLevel + 4 > pBsp->nDepth)
+		pBsp->nDepth = nLevel + nVertices;
+	for(uint32 i = 0; i < nVertices; ++i)
+	{
+		int nIndex = (int)pBsp->Nodes.Size();
+		SOccluderBspNode* pNode = pBsp->Nodes.PushBack();
+		pNode->nOutside = OCCLUDER_EMPTY;
+		pNode->nInside = OCCLUDER_LEAF;
+		pNode->nEdge = (uint8)Poly[i].nEdge;
+		pNode->nOccluderIndex = (uint16)Poly[i].nOccluderIndex;
+		pNode->nFlip = Poly[i].nFlip;
+		pNode->bLeaf = Poly[i].nNormal != 0;
+		pBsp->Nodes[nPrev].nInside = i < nVertices-1 ? (uint16)nIndex : OCCLUDER_LEAF;
+	}
+	return r;
+}
+#define OCCLUDER_POLY_MAX 12
+enum ClipPolyResult
+{
+	ECPR_INSIDE,
+	ECPR_OUTSIDE,
+	ECPR_CLIPPED,
+};
+
+ClipPolyResult BspClipPoly(SOccluderBsp* pBsp, v4 vPlane, SOccluderEdgeIndex* Poly, uint32 nVertices, SOccluderEdgeIndex* pPolyOut, uint32& nNumVertexIn, uint32& nNumVertexOut)
+{
+
+	return ECPR_INSIDE;
+}
+
+void BspAddOccluderRecursive2(SOccluderBsp* pBsp, uint32 nBspIndex, SOccluderEdgeIndex* Poly, uint32 nEdges, uint32 nLevel)
+{
+	SOccluderBspNode Node = pBsp->Nodes[nBspIndex];
+	
+
+	SOccluderPlane* pPlane = pBsp->Occluders.Ptr() + Node.nOccluderIndex;
+	v4 vPlane = pPlane->p[Node.nEdge];
+	SOccluderEdgeIndex ClippedPoly[OCCLUDER_POLY_MAX*2];
+	uint32 nNumEdgeIn = 0, nNumEdgeOut = 0;
+	ClipPolyResult CR = BspClipPoly(pBsp, vPlane, Poly, nEdges, &ClippedPoly[0], nNumEdgeIn, nNumEdgeOut);
+
+	if(ECPR_INSIDE == CR)
+	{
+		BspAddOccluderRecursive2(pBsp, Node.nInside, Poly, nEdges, nLevel+1);
+	}
+	else if(ECPR_OUTSIDE == CR)
+	{
+		BspAddOccluderRecursive2(pBsp, Node.nOutside, Poly, nEdges, nLevel+1);
+	}
+	else
+	{
+		ZASSERT(nNumEdgeIn);
+		ZASSERT(nNumEdgeOut);
+		BspAddOccluderRecursive2(pBsp, Node.nInside, &ClippedPoly[0], nNumEdgeIn, nLevel+1);
+		BspAddOccluderRecursive2(pBsp, Node.nOutside, &ClippedPoly[nNumEdgeIn], nNumEdgeOut, nLevel+1);
+
+	}
+
+	// OccluderPoly Inside = ClipInside(a, pOccluder)
+	// OccluderPoly Outside = ClipRight(a, pOccluder)
+	// if(!Empty(Inside))
+	// {
+	// 	bool bOccluded = true;
+	// 	if(!n.bIsLeaf || !OccluderBehindZ(Inside))
+	// 	{
+	// 		if(n.inside == LEAF)
+	// 		{
+	// 			BspAddInternal(Inside);
+	// 		}
+	// 		else
+	// 		{
+	// 			BspAddOccluderRecursive(Inside);
+	// 		}
+	// 	}
+	// }
+	// if(!Empty(Outside))
+	// {
+	// 	if(n.outside == EMPTY)
+	// 		BspAddInternal(Outside);
+	// 	else
+	// 		BspAddInternal(Outside);
+
+
+	// }
+	// SOccluderBspNode Node = pBsp->Nodes[nBspIndex];
+	// ZASSERT(Node.nOccluderIndex != nOccluderIndex);
+	// SOccluderPlane* pPlane = pBsp->Occluders.Ptr() + Node.nOccluderIndex;
+	// uint8 nEdge = Node.nEdge;
+	// v4 vPlane = pPlane->p[nEdge];
+	// int inside[4];
+	// if(nLevel > pBsp->nDepth)
+	// 	pBsp->nDepth = nLevel;
+
+	// for(int i = 0; i < 4; ++i)
+	// 	inside[i] = v4dot(vPlane, pOccluder->corners[i].tov4(1.f)) < -0.01f;
+	// uint32 nNewMaskIn = 0, nNewMaskOut = 0;
+	// int x = 1;
+	// for(int i = 0; i < 4; ++i)
+	// {
+	// 	if(x&nEdgeMask)
+	// 	{
+	// 		if(inside[(i-1)%4] || inside[i])
+	// 			nNewMaskIn |= x;
+	// 		if((!inside[(i-1)%4]) || (!inside[i]))
+	// 			nNewMaskOut |= x;
+	// 	}
+	// 	x <<= 1;
+	// }
+	// if(nNewMaskIn)
+	// {
+	// 	ZASSERT(Node.nInside != OCCLUDER_EMPTY);
+	// 	if(Node.nInside==OCCLUDER_LEAF)
+	// 	{
+	// 		pBsp->Nodes[nBspIndex].nInside = (uint16)BspAddInternal(pBsp, nOccluderIndex, 0xf, nLevel +1);
+	// 	}
+	// 	else
+	// 	{
+	// 		BspAddOccluderRecursive(pBsp, pOccluder, nOccluderIndex, Node.nInside, 0xf, nLevel + 1);
+	// 	}
+	// }
+
+	// if(nNewMaskOut)
+	// {
+	// 	ZASSERT(Node.nOutside != OCCLUDER_LEAF);
+	// 	if(Node.nOutside==OCCLUDER_EMPTY)
+	// 	{
+	// 		pBsp->Nodes[nBspIndex].nOutside = (uint16)BspAddInternal(pBsp, nOccluderIndex, 0xf, nLevel + 1);
+	// 	}
+	// 	else
+	// 	{
+	// 		BspAddOccluderRecursive(pBsp, pOccluder, nOccluderIndex, Node.nOutside, 0xf, nLevel + 1);
+	// 	}
+	// }
+}
+
+
+
+
 
