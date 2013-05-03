@@ -831,6 +831,7 @@ void BspAddOccluder2(SOccluderBsp* pBsp, SOccluderPlane* pOccluder, uint32 nOccl
 
 int BspAddInternal2(SOccluderBsp* pBsp, SOccluderEdgeIndex* Poly, uint32 nVertices, uint32 nLevel)
 {
+	//todo: draw
 	int r = (int)pBsp->Nodes.Size();
 	int nPrev = -1;
 	if(nLevel + 4 > pBsp->nDepth)
@@ -852,9 +853,10 @@ int BspAddInternal2(SOccluderBsp* pBsp, SOccluderEdgeIndex* Poly, uint32 nVertic
 #define OCCLUDER_POLY_MAX 12
 enum ClipPolyResult
 {
-	ECPR_INSIDE,
-	ECPR_OUTSIDE,
-	ECPR_CLIPPED,
+	ECPR_CLIPPED = 0,
+	ECPR_INSIDE = 0x1,
+	ECPR_OUTSIDE = 0x2,
+	ECPR_BOTH = 0x3,
 };
 
 ClipPolyResult BspClipPoly(SOccluderBsp* pBsp, v4 vPlane, SOccluderEdgeIndex* Poly, uint32 nVertices, SOccluderEdgeIndex* pPolyOut, uint32& nNumVertexIn, uint32& nNumVertexOut)
@@ -873,23 +875,47 @@ void BspAddOccluderRecursive2(SOccluderBsp* pBsp, uint32 nBspIndex, SOccluderEdg
 	SOccluderEdgeIndex ClippedPoly[OCCLUDER_POLY_MAX*2];
 	uint32 nNumEdgeIn = 0, nNumEdgeOut = 0;
 	ClipPolyResult CR = BspClipPoly(pBsp, vPlane, Poly, nEdges, &ClippedPoly[0], nNumEdgeIn, nNumEdgeOut);
+	ZASSERT(Node.nInside != OCCLUDER_EMPTY);
+	ZASSERT(Node.nInside != OCCLUDER_LEAF);
+	SOccluderEdgeIndex* pPolyInside = ECPR_BOTH == CR ? &ClippedPoly[0] : Poly;
+	uint32 nPolyEdgeIn = ECPR_BOTH == CR ? nNumEdgeIn : nEdges;
+	SOccluderEdgeIndex* pPolyOutside= ECPR_BOTH == CR ? &ClippedPoly[nNumEdgeIn] : Poly;
+	uint32 nPolyEdgeOut = ECPR_BOTH == CR ? nNumEdgeOut : nEdges;
 
-	if(ECPR_INSIDE == CR)
+	if((ECPR_INSIDE & CR) != 0)
 	{
-		BspAddOccluderRecursive2(pBsp, Node.nInside, Poly, nEdges, nLevel+1);
+		if(Node.nInside == OCCLUDER_LEAF)
+		{
+			int nIndex = BspAddInternal2(pBsp, pPolyInside, nPolyEdgeIn, nLevel + 1);
+			pBsp->Nodes[nBspIndex].nInside = nIndex;
+		}
+		else
+		{
+			BspAddOccluderRecursive2(pBsp, Node.nInside, pPolyInside, nPolyEdgeIn, nLevel+1);
+		}
 	}
-	else if(ECPR_OUTSIDE == CR)
+	
+	if((ECPR_OUTSIDE & CR) != 0)
 	{
-		BspAddOccluderRecursive2(pBsp, Node.nOutside, Poly, nEdges, nLevel+1);
+		if(Node.nOutside == OCCLUDER_EMPTY)
+		{
+			int nIndex = BspAddInternal2(pBsp, pPolyOutside, nPolyEdgeOut, nLevel + 1);
+			pBsp->Nodes[nBspIndex].nOutside = nIndex;
+		}
+		else
+		{
+			BspAddOccluderRecursive2(pBsp, Node.nOutside, pPolyOutside, nPolyEdgeOut, nLevel+1);
+		}
 	}
-	else
-	{
-		ZASSERT(nNumEdgeIn);
-		ZASSERT(nNumEdgeOut);
-		BspAddOccluderRecursive2(pBsp, Node.nInside, &ClippedPoly[0], nNumEdgeIn, nLevel+1);
-		BspAddOccluderRecursive2(pBsp, Node.nOutside, &ClippedPoly[nNumEdgeIn], nNumEdgeOut, nLevel+1);
+}
 
-	}
+
+
+
+
+
+
+
 
 	// OccluderPoly Inside = ClipInside(a, pOccluder)
 	// OccluderPoly Outside = ClipRight(a, pOccluder)
@@ -966,9 +992,3 @@ void BspAddOccluderRecursive2(SOccluderBsp* pBsp, uint32 nBspIndex, SOccluderEdg
 	// 		BspAddOccluderRecursive(pBsp, pOccluder, nOccluderIndex, Node.nOutside, 0xf, nLevel + 1);
 	// 	}
 	// }
-}
-
-
-
-
-
