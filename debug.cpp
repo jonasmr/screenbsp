@@ -71,6 +71,14 @@ void DebugDrawLine(v4 start, v4 end, uint32_t nColor)
 	return DebugDrawLine(start.tov3(), end.tov3(), nColor);
 }
 
+void DebugDrawPoly(v3* pVertex, uint32 nNumVertex, uint32_t nColor)
+{
+	v4* pArray = (v4*)alloca(sizeof(v4)*nNumVertex);
+	for(uint32 i = 0; i < nNumVertex; ++i)
+		pArray[i] = v4init(pVertex[i],1.f);
+	DebugDrawPoly(pArray, nNumVertex, nColor);
+}
+
 void DebugDrawPoly(v4* pVertex, uint32 nNumVertex, uint32_t nColor)
 {
 	if(g_DebugDrawState.Poly.Full() || g_DebugDrawState.PolyVert.Capacity() - g_DebugDrawState.PolyVert.Size() < nNumVertex)
