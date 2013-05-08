@@ -1309,3 +1309,58 @@ uint64_t rand64(uint64_t)
 	return rand();
 }
 
+v3 hsvtorgb(v3 hsv)
+{
+	float h = hsv.x;
+	float s = hsv.y;
+	float v = hsv.z;
+	int hi = int(h*6);
+	float f = h*6 - hi;
+	float p = v * (1 - s);
+	float q = v * (1 - f * s);
+	float t = v * (1 - (1 - f) * s);
+	switch(hi)
+	{
+	case 0: return v3init(v, t, p);
+	case 1: return v3init(q, v, p);
+	case 2: return v3init(p, v, t);
+	case 3: return v3init(p, q, v);
+	case 4: return v3init(t, p, v);
+	default: return v3init(v, p, q);
+	}
+
+}
+
+v3 v3randcolor()
+{
+	return hsvtorgb(v3init(frandrange(0,1), 0.5, 0.95f));
+}
+uint32 randcolor()
+{
+	v3 c = v3randcolor();
+	uint32 r = 0;
+	r |= (0xff&uint32(c.x * 255.f)) << 16;
+	r |= (0xff&uint32(c.y * 255.f)) << 8;
+	r |= (0xff&uint32(c.z * 255.f));
+	return r;
+}
+// # HSV values in [0..1[
+// # returns [r, g, b] values from 0 to 255
+// def hsv_to_rgb(h, s, v)
+//   h_i = (h*6).to_i
+//   f = h*6 - h_i
+//   p = v * (1 - s)
+//   q = v * (1 - f*s)
+//   t = v * (1 - (1 - f) * s)
+//   r, g, b = v, t, p if h_i==0
+//   r, g, b = q, v, p if h_i==1
+//   r, g, b = p, v, t if h_i==2
+//   r, g, b = p, q, v if h_i==3
+//   r, g, b = t, p, v if h_i==4
+//   r, g, b = v, p, q if h_i==5
+//   [(r*256).to_i, (g*256).to_i, (b*256).to_i]
+// end
+// # using HSV with variable hue
+// gen_html { hsv_to_rgb(rand, 0.5, 0.95) }
+
+

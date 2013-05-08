@@ -287,6 +287,7 @@ int32_t randrange(int32_t nmin, int32_t nmax);
 float frandrange(float fmin, float fmax);
 v2 v2randir();
 v2 v2randdisc();
+uint32 randcolor();
 
 uint64_t rand64();
 uint64_t rand64(uint64_t nPrev);

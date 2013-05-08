@@ -62,7 +62,7 @@ void WorldInit()
 
 	g_WorldState.Occluders[1].mObjectToWorld = mrotatey(90*TORAD);
 	g_WorldState.Occluders[1].mObjectToWorld.trans = v4init(2.f,0.f,-1.f, 1.f);
-	g_WorldState.Occluders[1].vSize = v3init(0.65f, 1.9f, 0);
+	g_WorldState.Occluders[1].vSize = v3init(0.25f, 0.25f, 0);
 	g_WorldState.nNumOccluders = 2;
 
 	g_WorldState.WorldObjects[0].mObjectToWorld = mrotatey(90*TORAD);

@@ -10,6 +10,7 @@ extern uint32 g_lShowDebug;
 void DebugDrawLine(v4 start, v4 end, uint32_t nColor);
 void DebugDrawLine(v3 start, v3 end, uint32_t nColor);
 void DebugDrawBounds(v3 vmin, v3 vmax, uint32_t nColor);
+void DebugDrawPoly(v3* pVertex, uint32 nNumVertex, uint32_t nColor);
 void DebugDrawPoly(v4* pVertex, uint32 nNumVertex, uint32_t nColor);
 void DebugDrawBounds(m mObjectToWorld, v3 vSize, uint32 nColor);
 void DebugDrawBox(m rot, v3 pos, v3 size, uint32 nColor);
