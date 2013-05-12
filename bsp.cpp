@@ -568,7 +568,11 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, m
 		}
 		Plane.normal = MakePlane(vCorners[0], vNormal);
 		Plane.p[4] = Plane.normal;
+
+		//todo: kill corners.
 	}
+
+	//TOOD: add per thread block in occluder array
 
 	pBsp->Nodes.Clear();
 	if(!pBsp->Occluders.Size())
@@ -908,6 +912,37 @@ bool BspCullObject(SOccluderBsp* pBsp, SWorldObject* pObject)
 	// ZDEBUG_DRAWLINE(v1*5.f, v3zero(), 0, true);
 	// ZDEBUG_DRAWLINE(v2*5.f, v3zero(), 0, true);
 	// ZDEBUG_DRAWLINE(p3*5.f, v3zero(), 0, true);
+	uint32 nSize = pBsp->Occluders.Size();
+	pBsp->Occluders.Resize(nSize+1);//TODO use thread specific blocks
+
+	SOccluderPlane* pPlanes = pBsp->Occluders.Ptr() + nSize;
+	v3 vCameraPosition = v3init(0,0,0);
+	v4 n0 = v3normalize(v3cross(v0, v0 - v1));
+	v4 n1 = v3normalize(v3cross(v1, v1 - v2));
+	v4 n2 = v3normalize(v3cross(v2, v2 - v3));
+	v4 n3 = v3normalize(v3cross(v3, v3 - v0));
+	pPlanes[0].p[0] = MakePlane(v0, n0);
+	pPlanes[0].p[1] = MakePlane(v1, n1);
+	pPlanes[0].p[2] = MakePlane(v2, n2);
+	pPlanes[0].p[3] = MakePlane(v3, n3);
+	pPlanes[0].p[4] = MakePlane(v3, v3normalize(vToCenter));
+
+		// for(uint32 i = 0; i < 4; ++i)
+		// {
+		// 	v3 v0 = vCorners[i];
+		// 	v3 v1 = vCorners[(i+1) % 4];
+		// 	v3 v2 = vCameraPosition;
+		// 	v3 vCenter = (v0 + v1 + v2) / v3init(3.f);
+		// 	v3 vNormal = v3normalize(v3cross(v3normalize(v1 - v0), v3normalize(v2 - v0)));
+		// 	v3 vEnd = vCenter + vNormal;
+		// 	Plane.p[i] = MakePlane(vCorners[i], vNormal);
+		// 	Plane.corners[i] = vCorners[i];
+		// 	ZDEBUG_DRAWLINE(v0, v1, (uint32)-1, true);
+		// 	ZDEBUG_DRAWLINE(v1, v2, (uint32)-1, true);
+		// 	ZDEBUG_DRAWLINE(v2, v0, (uint32)-1, true);
+		// }
+
+	pBsp->Occluders.Resize(nSize);
 
 	return true;
 }
