@@ -109,15 +109,6 @@ void DebugDrawFlush()
 {
 	if(g_lShowDebug)
 	{
-		glBegin(GL_LINES);
-		for(uint32_t i = 0; i < g_DebugDrawState.Lines.Size(); ++i)
-		{
-			uint32_t nColor = g_DebugDrawState.Lines[i].nColor;
-			glColor3ub(nColor >> 16, nColor >> 8, nColor);
-			glVertex3fv((float*)&g_DebugDrawState.Lines[i].start);
-			glVertex3fv((float*)&g_DebugDrawState.Lines[i].end);
-		}
-		glEnd();
 		for(SDebugDrawBounds& Box : g_DebugDrawState.Boxes)
 		{
 			glPushMatrix();
@@ -261,7 +252,9 @@ void DebugDrawFlush()
 
 
 		v4* pVert = g_DebugDrawState.PolyVert.Ptr();
-		glEnable(GL_BLEND);
+		// glEnable(GL_DEPTH_TEST);
+		// glDepthMasth(G
+		//glEnable(GL_BLEND);
 		glBlendEquation(GL_FUNC_ADD);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 		for(uint32 i = 0; i < g_DebugDrawState.Poly.Size(); ++i)
@@ -280,6 +273,17 @@ void DebugDrawFlush()
 			glEnd();
 		}
 		glDisable(GL_BLEND);
+
+		glBegin(GL_LINES);
+		for(uint32_t i = 0; i < g_DebugDrawState.Lines.Size(); ++i)
+		{
+			uint32_t nColor = g_DebugDrawState.Lines[i].nColor;
+			glColor3ub(nColor >> 16, nColor >> 8, nColor);
+			glVertex3fv((float*)&g_DebugDrawState.Lines[i].start);
+			glVertex3fv((float*)&g_DebugDrawState.Lines[i].end);
+		}
+		glEnd();
+	
 
 	}
 	g_DebugDrawState.Lines.Clear();
