@@ -864,34 +864,51 @@ bool BspCullObject(SOccluderBsp* pBsp, SWorldObject* pObject)
 	v3 vHalfSize = pObject->vSize;
 	v4 vCenterWorld_ = pObject->mObjectToWorld.trans;
 	v3 vCenterWorld = v3init(vCenterWorld_);
-	v3 vCameraPos = v3zero();
-	v3 AABB = obbtoaabb(mObjectToWorld, vHalfSize);
-	float fLen = v3length(AABB);
+	v3 vCameraPos = v3zero();//replace with camera pos
 	v3 vToCenter = v3normalize(vCenterWorld - vCameraPos);
-	v3 vUp = v3init(0.f,1.f, 0.f);
-	v3 vRight = v3cross(vToCenter, vUp);
+	v3 vUp = v3init(0.f,1.f, 0.f);//replace with camera up.
+	v3 vRight = v3normalize(v3cross(vToCenter, vUp));
+	m mbox = mcreate(vToCenter, vRight, vCenterWorld);
+	m mboxinv = maffineinverse(mbox);
+	m mcomposite = mmult(mbox, mObjectToWorld);
+	v3 AABB = obbtoaabb(mcomposite, vHalfSize);
+	
+	vRight = mgetxaxis(mboxinv);
+	vUp = mgetyaxis(mboxinv);
 
-	v3 v0 = vCenterWorld + vUp * fLen + vRight * fLen;
-	v3 v1 = vCenterWorld + vUp * -fLen + vRight * fLen;
-	v3 v2 = vCenterWorld + vUp * -fLen + vRight * -fLen;
-	v3 v3 = vCenterWorld + vUp * fLen + vRight * -fLen;
+	v3 vCenterQuad = vCenterWorld - vToCenter * AABB.z;
+	v3 v0 = vCenterQuad + vRight * AABB.x + vUp * AABB.y;
+	v3 v1 = vCenterQuad + vRight * -AABB.x + vUp * AABB.y;
+	v3 v2 = vCenterQuad + vRight * -AABB.x + vUp * -AABB.y;
+	v3 p3 = vCenterQuad + vRight * AABB.x + vUp * -AABB.y;
+
+
 	ZDEBUG_DRAWLINE(v0, v1, 0xff00ff00, true);
 	ZDEBUG_DRAWLINE(v2, v1, 0xff00ff00, true);
-	ZDEBUG_DRAWLINE(v3, v2, 0xff00ff00, true);
-	ZDEBUG_DRAWLINE(v0, v3, 0xff00ff00, true);
+	ZDEBUG_DRAWLINE(p3, v2, 0xff00ff00, true);
+	ZDEBUG_DRAWLINE(v0, p3, 0xff00ff00, true);
 
-	// v4 vCenterPoly = vCenterWorld - v4init(AABB.x, 0.f, 0.f, 0.f);
-	// v4 vDir0 = v4init(0.f,  AABB.y,  AABB.z, 0.f);
-	// v4 vDir1 = v4init(0.f, -AABB.y,  AABB.z, 0.f);
-	// v4 vDir2 = v4init(0.f, -AABB.y, -AABB.z, 0.f);
-	// v4 vDir3 = v4init(0.f,  AABB.y, -AABB.z, 0.f);
+	// vCenterQuad += vToCenter * 2*AABB.z;
+	// v3 v0_ = vCenterQuad + vRight * AABB.x + vUp * AABB.y;
+	// v3 v1_ = vCenterQuad + vRight * -AABB.x + vUp * AABB.y;
+	// v3 v2_ = vCenterQuad + vRight * -AABB.x + vUp * -AABB.y;
+	// v3 v3_ = vCenterQuad + vRight * AABB.x + vUp * -AABB.y;
 
+	// ZDEBUG_DRAWLINE(v0_, v1_, 0xff00ff00, true);
+	// ZDEBUG_DRAWLINE(v2_, v1_, 0xff00ff00, true);
+	// ZDEBUG_DRAWLINE(v3_, v2_, 0xff00ff00, true);
+	// ZDEBUG_DRAWLINE(v0_, v3_, 0xff00ff00, true);
 
-	// v4 v0 = vCenterPoly + vDir0;
-	// v4 v1 = vCenterPoly + vDir1;
-	// v4 v2 = vCenterPoly + vDir2;
-	// v4 v3 = vCenterPoly + vDir3;
-	// return BspClipQuad(pBsp, v0, v1, v2, v3);
+	// ZDEBUG_DRAWLINE(v0, v0_, 0xff00ff00, true);
+	// ZDEBUG_DRAWLINE(v1, v1_, 0xff00ff00, true);
+	// ZDEBUG_DRAWLINE(v2, v2_, 0xff00ff00, true);
+	// ZDEBUG_DRAWLINE(p3, v3_, 0xff00ff00, true);
+
+	// ZDEBUG_DRAWLINE(v0*5.f, v3zero(), 0, true);
+	// ZDEBUG_DRAWLINE(v1*5.f, v3zero(), 0, true);
+	// ZDEBUG_DRAWLINE(v2*5.f, v3zero(), 0, true);
+	// ZDEBUG_DRAWLINE(p3*5.f, v3zero(), 0, true);
+
 	return true;
 }
 
