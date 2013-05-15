@@ -608,11 +608,17 @@ bool BspCullObjectR(SOccluderBsp* pBsp, uint32 Index, SBspEdgeIndex* Poly, uint3
 		}
 
 		ZASSERT(Node.nInside != OCCLUDER_EMPTY);
-		if((Node.nInside == OCCLUDER_LEAF || !BspCullObjectR(pBsp, Node.nInside, pIn, nIn)))
+		if(Node.nInside == OCCLUDER_LEAF)
+		{
+			ZASSERT(Node.nEdge == 4);
+			//culled
+		}
+		else if(!BspCullObjectR(pBsp, Node.nInside, pIn, nIn))
 		{
 			if(!g_nBspOccluderDebugDraw)
 				return false;
 			bFail = true;
+			uplotfnxt("FAIL INSIDE");
 		}
 	}
 	if(CR & ECPR_OUTSIDE)
@@ -625,6 +631,7 @@ bool BspCullObjectR(SOccluderBsp* pBsp, uint32 Index, SBspEdgeIndex* Poly, uint3
 		ZASSERT(Node.nOutside != OCCLUDER_LEAF);
 		if((Node.nOutside == OCCLUDER_EMPTY || !BspCullObjectR(pBsp, Node.nOutside, pOut, nOut)))
 		{
+			uplotfnxt("FAIL OUTSIDE");
 			return false;
 		}
 
