@@ -100,9 +100,8 @@ void WorldRender()
 	for(uint32 i = 0; i < nNumObjects; ++i)
 	{
 		bCulled[i] = BspCullObject(g_Bsp, &g_WorldState.WorldObjects[i]);
-
+		uplotfnxt("culled %d:%d", i, bCulled[0] ? 1: 0);
 	}
-	uplotfnxt("culled %d", bCulled[0] ? 1: 0);
 
 	for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
 	{
