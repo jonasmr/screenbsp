@@ -1335,6 +1335,11 @@ v3 v3randcolor()
 {
 	return hsvtorgb(v3init(frandrange(0,1), 0.5, 0.95f));
 }
+
+v3 v3randredcolor()
+{
+	return hsvtorgb(v3init(0, 0.5, frandrange(0.5, 0.95f)));
+}
 uint32 randcolor()
 {
 	v3 c = v3randcolor();
@@ -1344,6 +1349,17 @@ uint32 randcolor()
 	r |= (0xff&uint32(c.z * 255.f));
 	return r;
 }
+
+uint32 randredcolor()
+{
+	v3 c = v3randredcolor();
+	uint32 r = 0;
+	r |= (0xff&uint32(c.x * 255.f)) << 16;
+	r |= (0xff&uint32(c.y * 255.f)) << 8;
+	r |= (0xff&uint32(c.z * 255.f));
+	return r;
+}
+
 // # HSV values in [0..1[
 // # returns [r, g, b] values from 0 to 255
 // def hsv_to_rgb(h, s, v)

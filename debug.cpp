@@ -109,6 +109,7 @@ void DebugDrawFlush()
 {
 	if(g_lShowDebug)
 	{
+		glDisable(GL_CULL_FACE);
 		for(SDebugDrawBounds& Box : g_DebugDrawState.Boxes)
 		{
 			glPushMatrix();
