@@ -7,7 +7,7 @@ struct SOccluderBsp;
 
 SOccluderBsp* BspCreate();
 void BspDestroy(SOccluderBsp* pBsp);
-void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, m mWorldToView);
+void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, v3 vOrigin, v3 vDirection);
 bool BspCullObject(SOccluderBsp* pBsp, SWorldObject* pObject);
 
 

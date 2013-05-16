@@ -16,8 +16,9 @@ extern uint32_t g_Width;
 extern uint32_t g_Height;
 uint32 g_nUseOrtho = 0;
 float g_fOrthoScale = 10;
-
 SOccluderBsp* g_Bsp = 0;
+uint32 g_nUseDebugCameraPos = 2;
+v3 vLockedCamPos = v3init(0,0,0);
 
 
 
@@ -94,7 +95,27 @@ void WorldRender()
 	}
 
 	uint32 nNumOccluders = g_WorldState.nNumOccluders;
-	BspBuild(g_Bsp, &g_WorldState.Occluders[0], nNumOccluders, mid());
+	static float foo = 0;
+	foo += 0.01f;
+	v3 vPos = v3rep(0);
+	switch(g_nUseDebugCameraPos)
+	{
+		case 2:
+			vPos = v3init(0,sin(foo), 0);
+			break;
+		case 0:
+			vPos = g_WorldState.Camera.vPosition;
+			vLockedCamPos = vPos;
+			break;
+		case 1:
+			vPos = vLockedCamPos;
+			break;
+	}
+		
+	v3 vDir = v3init(0,0,-1);
+	ZDEBUG_DRAWBOX(mid(), vPos, v3rep(0.02f), -1);
+	BspBuild(g_Bsp, &g_WorldState.Occluders[0], nNumOccluders, vPos, vDir);
+
 	uint32 nNumObjects = g_WorldState.nNumWorldObjects;
 	bool* bCulled = (bool*)alloca(nNumObjects);
 	for(uint32 i = 0; i < nNumObjects; ++i)
@@ -455,7 +476,10 @@ int ProgramMain()
 	if(g_KeyboardState.keys[SDLK_ESCAPE] & BUTTON_RELEASED)
 		return 1;
 
-
+	if(g_KeyboardState.keys[SDLK_SPACE] & BUTTON_RELEASED)
+	{
+		g_nUseDebugCameraPos = ! g_nUseDebugCameraPos;
+	}
 	UpdateEditorState();
 	{
 		UpdateCamera();

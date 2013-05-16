@@ -1333,7 +1333,7 @@ v3 hsvtorgb(v3 hsv)
 
 v3 v3randcolor()
 {
-	return hsvtorgb(v3init(frandrange(0,1), 0.5, 0.95f));
+	return hsvtorgb(v3init(frandrange(0.1,0.9), 0.5, 0.95f));
 }
 
 v3 v3randredcolor()
