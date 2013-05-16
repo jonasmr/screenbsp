@@ -12,9 +12,8 @@
 
 
 uint32 g_nOccluderDebug=1; //0:nothing, 1:show non clipped, 2: show all non rejected steps
-uint32 g_nOccluderClipLevels = -1;
-uint32 g_nUseNew = 1;
 uint32 g_nBspOccluderDebugDraw = 1;
+
 struct SOccluderPlane;
 struct SBspEdgeIndex;
 struct SOccluderBspNode;
@@ -47,6 +46,8 @@ struct SOccluderBspNode
 
 struct SOccluderBsp
 {
+	v3 vDirection;
+	v3 vOrigin;
 	uint32 nDepth;
 	TFixedArray<SOccluderPlane, 1024> Occluders;
 	TFixedArray<SOccluderBspNode, 1024> Nodes;
@@ -230,22 +231,18 @@ void BspDestroy(SOccluderBsp* pBsp)
 {
 	delete pBsp;
 }
-void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, m mWorldToView)
+void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, v3 vOrigin, v3 vDirection)
 {
 	if(g_KeyboardState.keys[SDLK_F3]&BUTTON_RELEASED)
 	{
 		g_nOccluderDebug = (g_nOccluderDebug+1)%3;
 	}
 
-	if(g_KeyboardState.keys[SDLK_F7]&BUTTON_RELEASED)
+	if(g_KeyboardState.keys[SDLK_F4]&BUTTON_RELEASED)
 	{
-		g_nOccluderClipLevels = (g_nOccluderClipLevels-1);
+		g_nBspOccluderDebugDraw = (g_nBspOccluderDebugDraw+1)%3;
 	}
-	if(g_KeyboardState.keys[SDLK_F8]&BUTTON_RELEASED)
-	{
-		g_nOccluderClipLevels = (g_nOccluderClipLevels+1);
-	}
-	uplotfnxt("OCC VIS %d", g_nOccluderClipLevels);
+
 
 	long seed = rand();
 	srand(42);
@@ -253,11 +250,11 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, m
 	pBsp->nDepth = 0;
 	pBsp->Nodes.Clear();
 	pBsp->Occluders.Clear();
+	pBsp->vOrigin = vOrigin;
+	pBsp->vDirection = vDirection;
 	// 	SOccluderPlane* pPlanes = new SOccluderPlane[nNumOccluders];
 	pBsp->Occluders.Resize(nNumOccluders);
 	SOccluderPlane* pPlanes = pBsp->Occluders.Ptr();
-	v3 vCameraPosition = v3init(0,0,0);
-
 	for(uint32 i = 0; i < nNumOccluders; ++i)
 	{
 		v3 vCorners[4];
@@ -276,7 +273,7 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, m
 		{
 			v3 v0 = vCorners[i];
 			v3 v1 = vCorners[(i+1) % 4];
-			v3 v2 = vCameraPosition;
+			v3 v2 = vOrigin;
 			v3 vCenter = (v0 + v1 + v2) / v3init(3.f);
 			v3 vNormal = v3normalize(v3cross(v3normalize(v1 - v0), v3normalize(v2 - v0)));
 			v3 vEnd = vCenter + vNormal;
@@ -602,10 +599,10 @@ bool BspCullObjectR(SOccluderBsp* pBsp, uint32 Index, SBspEdgeIndex* Poly, uint3
 	bool bFail = false;
 	if(CR & ECPR_INSIDE)
 	{
-		if(g_nBspOccluderDebugDraw && Node.nInside == OCCLUDER_LEAF)
-		{
-			//BspDrawPoly(pBsp, pIn, nIn, 0xffff00ff, 0, 1);
-		}
+		// if(g_nBspOccluderDebugDraw && Node.nInside == OCCLUDER_LEAF)
+		// {
+		// 	BspDrawPoly(pBsp, pIn, nIn, 0xffff00ff, 0, 1);
+		// }
 
 		ZASSERT(Node.nInside != OCCLUDER_EMPTY);
 		if(Node.nInside == OCCLUDER_LEAF)
@@ -648,8 +645,8 @@ bool BspCullObject(SOccluderBsp* pBsp, SWorldObject* pObject)
 	v3 vHalfSize = pObject->vSize;
 	v4 vCenterWorld_ = pObject->mObjectToWorld.trans;
 	v3 vCenterWorld = v3init(vCenterWorld_);
-	v3 vCameraPos = v3zero();//replace with camera pos
-	v3 vToCenter = v3normalize(vCenterWorld - vCameraPos);
+	v3 vOrigin = pBsp->vOrigin;
+	v3 vToCenter = v3normalize(vCenterWorld - vOrigin);
 	v3 vUp = v3init(0.f,1.f, 0.f);//replace with camera up.
 	v3 vRight = v3normalize(v3cross(vToCenter, vUp));
 	m mbox = mcreate(vToCenter, vRight, vCenterWorld);
@@ -696,7 +693,6 @@ bool BspCullObject(SOccluderBsp* pBsp, SWorldObject* pObject)
 	pBsp->Occluders.Resize(nSize+1);//TODO use thread specific blocks
 
 	SOccluderPlane* pPlanes = pBsp->Occluders.Ptr() + nSize;
-	v3 vCameraPosition = v3init(0,0,0);
 	v3 n0 = v3normalize(v3cross(v0, v0 - v1));
 	v3 n1 = v3normalize(v3cross(v1, v1 - v2));
 	v3 n2 = v3normalize(v3cross(v2, v2 - p3));
