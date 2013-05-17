@@ -21,7 +21,7 @@ struct SOccluderBspNode;
 struct SOccluderPlane
 {
 	v4 p[5];
-	v3 corners[4];
+//	v3 corners[4];
 	v4 normal;
 };
 
@@ -138,40 +138,40 @@ v4 BspGetPlane(SOccluderBsp* pBsp, uint32 nOccluderIndex, uint32 nEdge, uint32 n
 uint32 g_nBspFlipMask = 0;
 uint32 g_nBspDrawMask = -1;
 
-typedef TFixedArray<v4, 1024> DebugArray;
-void DrawBspRecursive(SOccluderBsp* pBsp, uint32 nOccluderIndex, uint32 nFlipMask, uint32 nDrawMask, float fOffset, DebugArray& DEBUG)
-{
-	SOccluderBspNode Node = pBsp->Nodes[nOccluderIndex];
-	SOccluderPlane* pPlane = pBsp->Occluders.Ptr() + Node.nOccluderIndex;
-	v4 vOffset = v4init(fOffset, 0.f, 0.f, 0.f);
-	v4 v0 = v4init(pPlane->corners[(Node.nEdge+3) %4],1.f);
-	v4 v1 = v4init(pPlane->corners[(Node.nEdge) %4],1.f);
-	DEBUG.PushBack(v0);
-	DEBUG.PushBack(v1);
-	if(1)
-	{
-		for(uint32 i = 0; i < DEBUG.Size(); i += 2)
-		{
-			v4 v0 = DEBUG[i] + vOffset;
-			v4 v1 = DEBUG[i+1] + vOffset;
-			ZDEBUG_DRAWLINE(v0, v1, 0xffff44ff, true);
-		}
-	}
-	if(0 == (nFlipMask&1))
-	{
-		if((Node.nInside&0x8000) == 0)
-		{
-			DrawBspRecursive(pBsp, Node.nInside, nFlipMask>>1, nDrawMask>>1, fOffset - 2.0f, DEBUG);
-		}
-	}
-	else
-	{
-		if((Node.nOutside&0x8000) == 0)
-		{
-			DrawBspRecursive(pBsp, Node.nOutside, nFlipMask>>1, nDrawMask>>1, fOffset - 2.0f, DEBUG);
-		}
-	}
-}
+// typedef TFixedArray<v4, 1024> DebugArray;
+// void DrawBspRecursive(SOccluderBsp* pBsp, uint32 nOccluderIndex, uint32 nFlipMask, uint32 nDrawMask, float fOffset, DebugArray& DEBUG)
+// {
+// 	SOccluderBspNode Node = pBsp->Nodes[nOccluderIndex];
+// 	SOccluderPlane* pPlane = pBsp->Occluders.Ptr() + Node.nOccluderIndex;
+// 	v4 vOffset = v4init(fOffset, 0.f, 0.f, 0.f);
+// 	v4 v0 = v4init(pPlane->corners[(Node.nEdge+3) %4],1.f);
+// 	v4 v1 = v4init(pPlane->corners[(Node.nEdge) %4],1.f);
+// 	DEBUG.PushBack(v0);
+// 	DEBUG.PushBack(v1);
+// 	if(1)
+// 	{
+// 		for(uint32 i = 0; i < DEBUG.Size(); i += 2)
+// 		{
+// 			v4 v0 = DEBUG[i] + vOffset;
+// 			v4 v1 = DEBUG[i+1] + vOffset;
+// 			ZDEBUG_DRAWLINE(v0, v1, 0xffff44ff, true);
+// 		}
+// 	}
+// 	if(0 == (nFlipMask&1))
+// 	{
+// 		if((Node.nInside&0x8000) == 0)
+// 		{
+// 			DrawBspRecursive(pBsp, Node.nInside, nFlipMask>>1, nDrawMask>>1, fOffset - 2.0f, DEBUG);
+// 		}
+// 	}
+// 	else
+// 	{
+// 		if((Node.nOutside&0x8000) == 0)
+// 		{
+// 			DrawBspRecursive(pBsp, Node.nOutside, nFlipMask>>1, nDrawMask>>1, fOffset - 2.0f, DEBUG);
+// 		}
+// 	}
+// }
 
 #define DEBUG_OFFSET 0.4f
 
@@ -189,12 +189,12 @@ const char* Spaces(int n)
 	return &buf[0];
 }
 
-void DrawPlane(SOccluderPlane* pOccluder, int nEdge)
-{
-	v3 p0 = pOccluder->corners[(nEdge+1)%4]*1.05f;
-	v3 p1 = pOccluder->corners[nEdge]*1.05f;
-	ZDEBUG_DRAWLINE(p0, p1, 0, true);
-}
+// void DrawPlane(SOccluderPlane* pOccluder, int nEdge)
+// {
+// 	v3 p0 = pOccluder->corners[(nEdge+1)%4]*1.05f;
+// 	v3 p1 = pOccluder->corners[nEdge]*1.05f;
+// 	ZDEBUG_DRAWLINE(p0, p1, 0, true);
+// }
 
 v4 MakePlane(v3 p, v3 normal)
 {
@@ -254,7 +254,6 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, c
 	pBsp->Occluders.Clear();
 	pBsp->Desc = Desc;
 	v3 vOrigin = pBsp->Desc.vOrigin;
-	// 	SOccluderPlane* pPlanes = new SOccluderPlane[nNumOccluders];
 	pBsp->Occluders.Resize(nNumOccluders);
 	SOccluderPlane* pPlanes = pBsp->Occluders.Ptr();
 	for(uint32 i = 0; i < nNumOccluders; ++i)
@@ -280,7 +279,7 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, c
 			v3 vNormal = v3normalize(v3cross(v3normalize(v1 - v0), v3normalize(v2 - v0)));
 			v3 vEnd = vCenter + vNormal;
 			Plane.p[i] = MakePlane(vCorners[i], vNormal);
-			Plane.corners[i] = vCorners[i];
+//			Plane.corners[i] = vCorners[i];
 			ZDEBUG_DRAWLINE(v0, v1, (uint32)-1, true);
 			ZDEBUG_DRAWLINE(v1, v2, (uint32)-1, true);
 			ZDEBUG_DRAWLINE(v2, v0, (uint32)-1, true);
