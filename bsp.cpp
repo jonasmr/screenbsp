@@ -197,6 +197,7 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, c
 	pBsp->Occluders.Clear();
 	pBsp->Desc = Desc;
 	v3 vOrigin = pBsp->Desc.vOrigin;
+	v3 vDirection = pBsp->Desc.vDirection;
 	pBsp->Occluders.Resize(nNumOccluders);
 	SOccluderPlane* pPlanes = pBsp->Occluders.Ptr();
 	for(uint32 i = 0; i < nNumOccluders; ++i)
@@ -212,6 +213,14 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, c
 		vCorners[2] = vCenter - vUp * Occ.vSize.y - vLeft * Occ.vSize.x;
 		vCorners[3] = vCenter + vUp * Occ.vSize.y - vLeft * Occ.vSize.x;
 		SOccluderPlane& Plane = pPlanes[i];
+		v3 vInnerNormal = v3normalize(v3cross(vCorners[1]-vCorners[0], vCorners[3]-vCorners[0]));
+		bool bFlip = false;
+		if(v3dot(vInnerNormal, vDirection)<0.f)
+		{
+			bFlip = true;
+			vInnerNormal = -vInnerNormal;
+		}
+
 
 		for(uint32 i = 0; i < 4; ++i)
 		{
@@ -222,11 +231,14 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, c
 			v3 vNormal = v3normalize(v3cross(v3normalize(v1 - v0), v3normalize(v2 - v0)));
 			v3 vEnd = vCenter + vNormal;
 			Plane.p[i] = MakePlane(vCorners[i], vNormal);
+			if(bFlip)
+				Plane.p[i] = -Plane.p[i];
 			ZDEBUG_DRAWLINE(v0, v1, (uint32)-1, true);
 			ZDEBUG_DRAWLINE(v1, v2, (uint32)-1, true);
 			ZDEBUG_DRAWLINE(v2, v0, (uint32)-1, true);
 		}
-		Plane.p[4] = MakePlane(vCorners[0], vNormal);
+		Plane.p[4] = MakePlane(vCorners[0], vInnerNormal);
+		ZDEBUG_DRAWLINE(vCorners[0], vCorners[0] + vInnerNormal, 0xffff0000, true);
 	}
 
 	//TOOD: add per thread block in occluder array
