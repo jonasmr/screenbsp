@@ -12,8 +12,9 @@
 #define OCCLUDER_CLIP_MAX 0x100
 
 
-uint32 g_nOccluderDebug=1; //0:nothing, 1:show non clipped, 2: show all non rejected steps
-uint32 g_nBspOccluderDebugDraw = 1;
+uint32 g_nBspOccluderDebugDrawClipResult = 1;
+uint32 g_nBspOccluderDrawEdges = 2;
+uint32 g_nBspOccluderDrawOccluders = 1;
 
 struct SOccluderPlane;
 struct SBspEdgeIndex;
@@ -119,16 +120,16 @@ v4 BspGetPlane(SOccluderBsp* pBsp, uint32 nOccluderIndex, uint32 nEdge, uint32 n
 
 
 
-uint32 g_nBspFlipMask = 0;
-uint32 g_nBspDrawMask = -1;
+// uint32 g_nBspFlipMask = 0;
+// uint32 g_nBspDrawMask = -1;
 
-#define DEBUG_OFFSET 0.4f
+// #define DEBUG_OFFSET 0.4f
 
-float g_OFFSET = DEBUG_OFFSET;
-v3 g_Offset = v3init(1,0,0);
-v3 g_DepthOffset = v3init(0.4f, 0.f, 0.f);
-v3 g_XOffset = v3init(0.0f, 0.0f, 0.f);
-const char* Spaces(int n)
+// float g_OFFSET = DEBUG_OFFSET;
+// v3 g_Offset = v3init(1,0,0);
+// v3 g_DepthOffset = v3init(0.4f, 0.f, 0.f);
+// v3 g_XOffset = v3init(0.0f, 0.0f, 0.f);
+static const char* Spaces(int n)
 {
 	static char buf[256];
 	ZASSERT(n<sizeof(buf)-1);
@@ -180,13 +181,24 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, c
 {
 	if(g_KeyboardState.keys[SDLK_F3]&BUTTON_RELEASED)
 	{
-		g_nOccluderDebug = (g_nOccluderDebug+1)%3;
+		g_nBspOccluderDrawOccluders = (g_nBspOccluderDrawOccluders+1)%2;
 	}
 
 	if(g_KeyboardState.keys[SDLK_F4]&BUTTON_RELEASED)
 	{
-		g_nBspOccluderDebugDraw = (g_nBspOccluderDebugDraw+1)%3;
+		g_nBspOccluderDebugDrawClipResult = (g_nBspOccluderDebugDrawClipResult+1)%2;
 	}
+
+	if(g_KeyboardState.keys[SDLK_F5]&BUTTON_RELEASED)
+	{
+		g_nBspOccluderDrawEdges = (g_nBspOccluderDrawEdges+1)%4;
+	}
+
+
+
+
+	uplotfnxt("OCCLUDER Occluders:(f3)%d Clipresult:(f4)%d Edges:(f5)%d", g_nBspOccluderDrawOccluders, g_nBspOccluderDebugDrawClipResult, g_nBspOccluderDrawEdges);
+
 
 
 	long seed = rand();
@@ -233,15 +245,15 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, c
 			Plane.p[i] = MakePlane(vCorners[i], vNormal);
 			if(bFlip)
 				Plane.p[i] = -Plane.p[i];
-			ZDEBUG_DRAWLINE(v0, v1, (uint32)-1, true);
-			ZDEBUG_DRAWLINE(v1, v2, (uint32)-1, true);
-			ZDEBUG_DRAWLINE(v2, v0, (uint32)-1, true);
+			if(g_nBspOccluderDrawEdges&1)
+			{
+				ZDEBUG_DRAWLINE(v0, v1, (uint32)-1, true);
+				ZDEBUG_DRAWLINE(v1, v2, (uint32)-1, true);
+				ZDEBUG_DRAWLINE(v2, v0, (uint32)-1, true);
+			}
 		}
 		Plane.p[4] = MakePlane(vCorners[0], vInnerNormal);
-		ZDEBUG_DRAWLINE(vCorners[0], vCorners[0] + vInnerNormal, 0xffff0000, true);
 	}
-
-	//TOOD: add per thread block in occluder array
 
 	pBsp->Nodes.Clear();
 	if(!pBsp->Occluders.Size())
@@ -270,15 +282,17 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, c
 
 
 
-
-		ZDEBUG_DRAWLINE(vOrigin, vFrustumCorners[0], 0, true);
-		ZDEBUG_DRAWLINE(vOrigin, vFrustumCorners[1], 0, true);
-		ZDEBUG_DRAWLINE(vOrigin, vFrustumCorners[2], 0, true);
-		ZDEBUG_DRAWLINE(vOrigin, vFrustumCorners[3], 0, true);
-		ZDEBUG_DRAWLINE(vFrustumCorners[0], vFrustumCorners[1], 0, true);
-		ZDEBUG_DRAWLINE(vFrustumCorners[1], vFrustumCorners[2], 0, true);
-		ZDEBUG_DRAWLINE(vFrustumCorners[2], vFrustumCorners[3], 0, true);
-		ZDEBUG_DRAWLINE(vFrustumCorners[3], vFrustumCorners[0], 0, true);
+		if(g_nBspOccluderDrawEdges&2)
+		{
+			ZDEBUG_DRAWLINE(vOrigin, vFrustumCorners[0], 0, true);
+			ZDEBUG_DRAWLINE(vOrigin, vFrustumCorners[1], 0, true);
+			ZDEBUG_DRAWLINE(vOrigin, vFrustumCorners[2], 0, true);
+			ZDEBUG_DRAWLINE(vOrigin, vFrustumCorners[3], 0, true);
+			ZDEBUG_DRAWLINE(vFrustumCorners[0], vFrustumCorners[1], 0, true);
+			ZDEBUG_DRAWLINE(vFrustumCorners[1], vFrustumCorners[2], 0, true);
+			ZDEBUG_DRAWLINE(vFrustumCorners[2], vFrustumCorners[3], 0, true);
+			ZDEBUG_DRAWLINE(vFrustumCorners[3], vFrustumCorners[0], 0, true);
+		}
 	}
 
 
@@ -289,17 +303,15 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, c
 	{
 		BspAddOccluder(pBsp, &pBsp->Occluders[i], i);
 
-		for(uint j = 0; j < 4; ++j)
-		{
-			v4 p0 = pBsp->Occluders[i].p[j];
-			v4 p1 = pBsp->Occluders[i].p[(j+1)%4];
-			v4 vNormal = pBsp->Occluders[i].p[4];
-			v3 vIntersect = BspPlaneIntersection(p0,p1, vNormal);
-			ZASSERT(v3length(vIntersect) > 0.001f);
-			ZDEBUG_DRAWBOX(mid(), vIntersect, v3rep(0.01f), 0xffff0000);
-
-
-		}
+		// for(uint j = 0; j < 4; ++j)
+		// {
+		// 	v4 p0 = pBsp->Occluders[i].p[j];
+		// 	v4 p1 = pBsp->Occluders[i].p[(j+1)%4];
+		// 	v4 vNormal = pBsp->Occluders[i].p[4];
+		// 	v3 vIntersect = BspPlaneIntersection(p0,p1, vNormal);
+		// 	ZASSERT(v3length(vIntersect) > 0.001f);
+		// 	ZDEBUG_DRAWBOX(mid(), vIntersect, v3rep(0.01f), 0xffff0000);
+		// }
 	}
 
 
@@ -427,7 +439,10 @@ int BspAddInternal(SOccluderBsp* pBsp, SBspEdgeIndex* Poly, uint32 nVertices, ui
 		}
 	}
 
-	BspDrawPoly(pBsp, Poly, nVertices, 0x88000000 | randcolor(), 0xffff0000);
+	if(g_nBspOccluderDrawOccluders)
+	{
+		BspDrawPoly(pBsp, Poly, nVertices, 0x88000000 | randcolor(), 0xffff0000);
+	}
 
 	return r;
 }
@@ -586,7 +601,7 @@ bool BspCullObjectR(SOccluderBsp* pBsp, uint32 Index, SBspEdgeIndex* Poly, uint3
 		}
 		else if(!BspCullObjectR(pBsp, Node.nInside, pIn, nIn))
 		{
-			if(!g_nBspOccluderDebugDraw)
+			if(!g_nBspOccluderDebugDrawClipResult)
 				return false;
 			bFail = true;
 		//	uplotfnxt("FAIL INSIDE");
@@ -594,7 +609,7 @@ bool BspCullObjectR(SOccluderBsp* pBsp, uint32 Index, SBspEdgeIndex* Poly, uint3
 	}
 	if(CR & ECPR_OUTSIDE)
 	{
-		if(g_nBspOccluderDebugDraw && Node.nOutside == OCCLUDER_EMPTY)
+		if(g_nBspOccluderDebugDrawClipResult && Node.nOutside == OCCLUDER_EMPTY)
 		{
 			BspDrawPoly(pBsp, pOut, nOut, 0xff000000|randredcolor(), 0, 1);
 		}
@@ -640,11 +655,13 @@ bool BspCullObject(SOccluderBsp* pBsp, SWorldObject* pObject)
 	v3 p3 = vCenterQuad + vRight * AABB.x + vUp * -AABB.y;
 
 
-	ZDEBUG_DRAWLINE(v0, v1, 0xff00ff00, true);
-	ZDEBUG_DRAWLINE(v2, v1, 0xff00ff00, true);
-	ZDEBUG_DRAWLINE(p3, v2, 0xff00ff00, true);
-	ZDEBUG_DRAWLINE(v0, p3, 0xff00ff00, true);
-
+	if(g_nBspOccluderDebugDrawClipResult)
+	{
+		ZDEBUG_DRAWLINE(v0, v1, 0xff00ff00, true);
+		ZDEBUG_DRAWLINE(v2, v1, 0xff00ff00, true);
+		ZDEBUG_DRAWLINE(p3, v2, 0xff00ff00, true);
+		ZDEBUG_DRAWLINE(v0, p3, 0xff00ff00, true);
+	}
 	// vCenterQuad += vToCenter * 2*AABB.z;
 	// v3 v0_ = vCenterQuad + vRight * AABB.x + vUp * AABB.y;
 	// v3 v1_ = vCenterQuad + vRight * -AABB.x + vUp * AABB.y;
