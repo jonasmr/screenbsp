@@ -447,11 +447,6 @@ uint32 BspClipPoly(SOccluderBsp* pBsp, SBspEdgeIndex PlaneIndex, SBspEdgeIndex* 
 		vCorners[i] = BspPlaneIntersection(v0, v1, vNormalPlane);
 		bBehindCorner[i] = v4dot(v4init(vCorners[i],1.f), vPlane) >= 0.f;
 	}
-	// uplotfnxt("bBehind %02d..%02d   :: %d %d %d %d", PlaneIndex.nOccluderIndex, PlaneIndex.nEdge,
-	// 	bBehindCorner[0]?1:0,
-	// 	bBehindCorner[1]?1:0, 
-	// 	bBehindCorner[2]?1:0, 
-	// 	bBehindCorner[3]?1:0);
 	PlaneIndex.nSkip = 1;
 	uint32 nOutIndex = 0;
 	for(uint32 i = 0; i < nRealEdges; ++i)
@@ -615,6 +610,8 @@ bool BspCullObject(SOccluderBsp* pBsp, SWorldObject* pObject)
 	v3 vOrigin = pBsp->Desc.vOrigin;
 	v3 vToCenter = v3normalize(vCenterWorld - vOrigin);
 	v3 vUp = v3init(0.f,1.f, 0.f);//replace with camera up.
+	if(v3dot(vUp, vToCenter) > 0.9f)
+		vUp = v3init(1.f, 0, 0);
 	v3 vRight = v3normalize(v3cross(vToCenter, vUp));
 	m mbox = mcreate(vToCenter, vRight, vCenterWorld);
 	m mboxinv = maffineinverse(mbox);
