@@ -6,7 +6,7 @@
 enum
 {
 	MAX_OCCLUDERS = 100,
-	MAX_WORLD_OBJECTS = 1024,
+	MAX_WORLD_OBJECTS = 2048,
 };
 
 struct SObject

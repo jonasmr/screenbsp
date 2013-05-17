@@ -4,6 +4,7 @@
 #include "text.h"
 #include "program.h"
 #include "input.h"
+#include "bsp.h"
 
 
 #define OCCLUDER_EMPTY (0xc000)
@@ -46,14 +47,13 @@ struct SOccluderBspNode
 
 struct SOccluderBsp
 {
-	v3 vDirection;
-	v3 vOrigin;
+	SOccluderBspViewDesc Desc;
 	uint32 nDepth;
 	TFixedArray<SOccluderPlane, 1024> Occluders;
 	TFixedArray<SOccluderBspNode, 1024> Nodes;
 };
 void BspOccluderDebugDraw(v4* pVertexNew, v4* pVertexIn, uint32 nColor, uint32 nFill = 0) ;
-void BspAddOccluder2(SOccluderBsp* pBsp, SOccluderPlane* pOccluder, uint32 nOccluderIndex);
+void BspAddOccluder(SOccluderBsp* pBsp, SOccluderPlane* pOccluder, uint32 nOccluderIndex);
 
 SBspEdgeIndex::SBspEdgeIndex(const SOccluderBspNode& node)
 :nOccluderIndex(node.nOccluderIndex)
@@ -231,7 +231,7 @@ void BspDestroy(SOccluderBsp* pBsp)
 {
 	delete pBsp;
 }
-void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, v3 vOrigin, v3 vDirection)
+void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, const SOccluderBspViewDesc& Desc)
 {
 	if(g_KeyboardState.keys[SDLK_F3]&BUTTON_RELEASED)
 	{
@@ -250,8 +250,8 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, v
 	pBsp->nDepth = 0;
 	pBsp->Nodes.Clear();
 	pBsp->Occluders.Clear();
-	pBsp->vOrigin = vOrigin;
-	pBsp->vDirection = vDirection;
+	pBsp->Desc = Desc;
+	v3 vOrigin = pBsp->Desc.vOrigin;
 	// 	SOccluderPlane* pPlanes = new SOccluderPlane[nNumOccluders];
 	pBsp->Occluders.Resize(nNumOccluders);
 	SOccluderPlane* pPlanes = pBsp->Occluders.Ptr();
@@ -301,7 +301,7 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, v
 
 	for(uint32 i = 0; i < pBsp->Occluders.Size(); ++i)
 	{
-		BspAddOccluder2(pBsp, &pBsp->Occluders[i], i);
+		BspAddOccluder(pBsp, &pBsp->Occluders[i], i);
 
 		for(uint j = 0; j < 4; ++j)
 		{
@@ -355,12 +355,12 @@ void BspOccluderDebugDraw(v4* pVertexNew, v4* pVertexIn, uint32 nColor, uint32 n
 
 	}
 }
-int BspAddInternal2(SOccluderBsp* pBsp, SBspEdgeIndex* Poly, uint32 nVertices, uint32 nLevel);
+int BspAddInternal(SOccluderBsp* pBsp, SBspEdgeIndex* Poly, uint32 nVertices, uint32 nLevel);
 void BspAddOccluderRecursive2(SOccluderBsp* pBsp, uint32 nBspIndex, SBspEdgeIndex* Poly, uint32 nEdges, uint32 nLevel);
 
 
 
-void BspAddOccluder2(SOccluderBsp* pBsp, SOccluderPlane* pOccluder, uint32 nOccluderIndex)
+void BspAddOccluder(SOccluderBsp* pBsp, SOccluderPlane* pOccluder, uint32 nOccluderIndex)
 {
 	//base poly
 	SBspEdgeIndex Poly[ 5 ];
@@ -376,7 +376,7 @@ void BspAddOccluder2(SOccluderBsp* pBsp, SOccluderPlane* pOccluder, uint32 nOccl
 	uint32 nNumNodes = (uint32)pBsp->Nodes.Size();
 	if(pBsp->Nodes.Empty())
 	{
-		uint16 nIndex = (uint16)BspAddInternal2(pBsp, &Poly[0], 5, 1);
+		uint16 nIndex = (uint16)BspAddInternal(pBsp, &Poly[0], 5, 1);
 		ZASSERT(nIndex==0);
 	}
 	else
@@ -419,7 +419,7 @@ void BspDrawPoly(SOccluderBsp* pBsp, SBspEdgeIndex* Poly, uint32 nVertices, uint
 }
 
 
-int BspAddInternal2(SOccluderBsp* pBsp, SBspEdgeIndex* Poly, uint32 nVertices, uint32 nLevel)
+int BspAddInternal(SOccluderBsp* pBsp, SBspEdgeIndex* Poly, uint32 nVertices, uint32 nLevel)
 {
 	int r = (int)pBsp->Nodes.Size();
 	int nPrev = -1;
@@ -572,7 +572,7 @@ void BspAddOccluderRecursive2(SOccluderBsp* pBsp, uint32 nBspIndex, SBspEdgeInde
 	{
 		if(Node.nOutside == OCCLUDER_EMPTY)
 		{
-			int nIndex = BspAddInternal2(pBsp, pPolyOutside, nPolyEdgeOut, nLevel + 1);
+			int nIndex = BspAddInternal(pBsp, pPolyOutside, nPolyEdgeOut, nLevel + 1);
 			pBsp->Nodes[nBspIndex].nOutside = nIndex;
 		}
 		else
@@ -645,7 +645,7 @@ bool BspCullObject(SOccluderBsp* pBsp, SWorldObject* pObject)
 	v3 vHalfSize = pObject->vSize;
 	v4 vCenterWorld_ = pObject->mObjectToWorld.trans;
 	v3 vCenterWorld = v3init(vCenterWorld_);
-	v3 vOrigin = pBsp->vOrigin;
+	v3 vOrigin = pBsp->Desc.vOrigin;
 	v3 vToCenter = v3normalize(vCenterWorld - vOrigin);
 	v3 vUp = v3init(0.f,1.f, 0.f);//replace with camera up.
 	v3 vRight = v3normalize(v3cross(vToCenter, vUp));
