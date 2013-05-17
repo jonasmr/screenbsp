@@ -54,6 +54,8 @@ struct SOccluderBsp
 };
 void BspOccluderDebugDraw(v4* pVertexNew, v4* pVertexIn, uint32 nColor, uint32 nFill = 0) ;
 void BspAddOccluder(SOccluderBsp* pBsp, SOccluderPlane* pOccluder, uint32 nOccluderIndex);
+int BspAddInternal(SOccluderBsp* pBsp, SBspEdgeIndex* Poly, uint32 nVertices, uint32 nLevel);
+void BspAddOccluderRecursive(SOccluderBsp* pBsp, uint32 nBspIndex, SBspEdgeIndex* Poly, uint32 nEdges, uint32 nLevel);
 
 SBspEdgeIndex::SBspEdgeIndex(const SOccluderBspNode& node)
 :nOccluderIndex(node.nOccluderIndex)
@@ -64,20 +66,20 @@ SBspEdgeIndex::SBspEdgeIndex(const SOccluderBspNode& node)
 }
 
 
-v3 BspPlaneIntersection(v4 p0, v4 p1)
-{
-	if(fabs(p0.z) < 1e-5)
-		Swap(p0, p1);
-	float denominator = p1.y * p0.z - p0.y * p1.z;
-	if(fabs(denominator) < 1e-6)
-		return v3zero();
-	float rden = 1.f / denominator;
-	ZASSERT(fabs(p0.z) >= 1e-5);
-	float numeratory = -p1.w * p0.z + p0.w * p1.z + p0.x * p1.z - p1.x * p0.z;
-	float numeratorz = p1.w * p0.y - p0.w * p1.y - p0.x * p1.y + p1.x * p0.y;
-	return v3init(1,numeratory * rden, numeratorz * rden);
+// v3 BspPlaneIntersection(v4 p0, v4 p1)
+// {
+// 	if(fabs(p0.z) < 1e-5)
+// 		Swap(p0, p1);
+// 	float denominator = p1.y * p0.z - p0.y * p1.z;
+// 	if(fabs(denominator) < 1e-6)
+// 		return v3zero();
+// 	float rden = 1.f / denominator;
+// 	ZASSERT(fabs(p0.z) >= 1e-5);
+// 	float numeratory = -p1.w * p0.z + p0.w * p1.z + p0.x * p1.z - p1.x * p0.z;
+// 	float numeratorz = p1.w * p0.y - p0.w * p1.y - p0.x * p1.y + p1.x * p0.y;
+// 	return v3init(1,numeratory * rden, numeratorz * rden);
 
-}
+// }
 v3 BspPlaneIntersection(v4 p0, v4 p1, v4 p2)
 {
 
@@ -355,8 +357,6 @@ void BspOccluderDebugDraw(v4* pVertexNew, v4* pVertexIn, uint32 nColor, uint32 n
 
 	}
 }
-int BspAddInternal(SOccluderBsp* pBsp, SBspEdgeIndex* Poly, uint32 nVertices, uint32 nLevel);
-void BspAddOccluderRecursive2(SOccluderBsp* pBsp, uint32 nBspIndex, SBspEdgeIndex* Poly, uint32 nEdges, uint32 nLevel);
 
 
 
@@ -381,7 +381,7 @@ void BspAddOccluder(SOccluderBsp* pBsp, SOccluderPlane* pOccluder, uint32 nOcclu
 	}
 	else
 	{
-		BspAddOccluderRecursive2(pBsp, 0, &Poly[0], 5, 1);
+		BspAddOccluderRecursive(pBsp, 0, &Poly[0], 5, 1);
 	}
 }
 
@@ -534,7 +534,7 @@ ClipPolyResult BspClipPoly(SOccluderBsp* pBsp, SBspEdgeIndex ClipPlane, SBspEdge
 	return ClipPolyResult((nIn?0x1:0)| (nOut?0x2:0));
 }
 
-void BspAddOccluderRecursive2(SOccluderBsp* pBsp, uint32 nBspIndex, SBspEdgeIndex* Poly, uint32 nEdges, uint32 nLevel)
+void BspAddOccluderRecursive(SOccluderBsp* pBsp, uint32 nBspIndex, SBspEdgeIndex* Poly, uint32 nEdges, uint32 nLevel)
 {
 	SOccluderBspNode Node = pBsp->Nodes[nBspIndex];
 	
@@ -564,7 +564,7 @@ void BspAddOccluderRecursive2(SOccluderBsp* pBsp, uint32 nBspIndex, SBspEdgeInde
 		}
 		else
 		{
-			BspAddOccluderRecursive2(pBsp, Node.nInside, pPolyInside, nPolyEdgeIn, nLevel+1);
+			BspAddOccluderRecursive(pBsp, Node.nInside, pPolyInside, nPolyEdgeIn, nLevel+1);
 		}
 	}
 	
@@ -577,7 +577,7 @@ void BspAddOccluderRecursive2(SOccluderBsp* pBsp, uint32 nBspIndex, SBspEdgeInde
 		}
 		else
 		{
-			BspAddOccluderRecursive2(pBsp, Node.nOutside, pPolyOutside, nPolyEdgeOut, nLevel+1);
+			BspAddOccluderRecursive(pBsp, Node.nOutside, pPolyOutside, nPolyEdgeOut, nLevel+1);
 		}
 	}
 }
