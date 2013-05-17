@@ -293,7 +293,9 @@ uint32 randredcolor();
 uint64_t rand64();
 uint64_t rand64(uint64_t nPrev);
 
-#define ZASSERTNORMALIZED(v) ZASSERT(fabs(v2length(vPlayerDir)-1.f) < 1e-4f)
+#define ZASSERTNORMALIZED2(v) ZASSERT(fabs(v2length(v)-1.f) < 1e-4f)
+#define ZASSERTNORMALIZED3(v) ZASSERT(fabs(v3length(v)-1.f) < 1e-4f)
+#define ZASSERTNORMALIZED4(v) ZASSERT(fabs(v4length(v)-1.f) < 1e-4f)
 
 inline float signf(float f) { return f<0.0f ? -1.0f : 1.0f; }
 

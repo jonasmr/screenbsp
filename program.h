@@ -38,6 +38,7 @@ struct SCameraState : SObject
 	
 	float fNear;
 	float fFar;
+	float fFovY;
 };
 
 v3 DirectionFromScreen(v2 vScreen, SCameraState& Camera);
