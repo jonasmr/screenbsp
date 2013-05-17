@@ -19,6 +19,8 @@ float g_fOrthoScale = 10;
 SOccluderBsp* g_Bsp = 0;
 uint32 g_nUseDebugCameraPos = 2;
 v3 vLockedCamPos = v3init(0,0,0);
+v3 vLockedCamRight = v3init(0,-1,0);
+v3 vLockedCamDir = v3init(1,0,0);
 
 
 
@@ -74,28 +76,30 @@ void WorldInit()
 	g_WorldState.WorldObjects[0].mObjectToWorld = mrotatey(90*TORAD);
 	g_WorldState.WorldObjects[0].mObjectToWorld.trans = v4init(3.f,0.f,-0.5f, 1.f);
 	g_WorldState.WorldObjects[0].vSize = v3init(0.25f, 0.2f, 0.2); 
-	int idx = 0;
-	#define GRID_SIZE 3
-	for(uint32 i = 0; i < GRID_SIZE; i++)
+	g_WorldState.nNumWorldObjects = 1;
+	if(0)
 	{
-	for(uint32 j = 0; j < GRID_SIZE; j++)
-	{
-	for(uint32 k = 0; k < GRID_SIZE; k++)
-	{
-		v3 vPos = v3init(i,j,k) / (GRID_SIZE-1.f);
-		vPos -= 0.5f;
-		vPos *= 5.f;
-		vPos += 0.03f;
-		vPos.x += 3.4f;
-		g_WorldState.WorldObjects[idx].mObjectToWorld = mid();
-		g_WorldState.WorldObjects[idx].mObjectToWorld.trans = v4init(vPos,1.f);
-		g_WorldState.WorldObjects[idx].vSize = v3init(0.25f, 0.2f, 0.2); 
+		int idx = 0;
+		#define GRID_SIZE 3
+		for(uint32 i = 0; i < GRID_SIZE; i++)
+		{
+		for(uint32 j = 0; j < GRID_SIZE; j++)
+		{
+		for(uint32 k = 0; k < GRID_SIZE; k++)
+		{
+			v3 vPos = v3init(i,j,k) / (GRID_SIZE-1.f);
+			vPos -= 0.5f;
+			vPos *= 5.f;
+			vPos += 0.03f;
+			vPos.x += 3.4f;
+			g_WorldState.WorldObjects[idx].mObjectToWorld = mid();
+			g_WorldState.WorldObjects[idx].mObjectToWorld.trans = v4init(vPos,1.f);
+			g_WorldState.WorldObjects[idx].vSize = v3init(0.25f, 0.2f, 0.2); 
 
-		idx++;
-	}}}
-
-
-	g_WorldState.nNumWorldObjects = idx;
+			idx++;
+		}}}
+		g_WorldState.nNumWorldObjects = idx;
+	}
 	g_EditorState.pSelected = 0;
 }
 
@@ -118,29 +122,41 @@ void WorldRender()
 	uint32 nNumOccluders = g_WorldState.nNumOccluders;
 	static float foo = 0;
 	foo += 0.01f;
-	v3 vPos = v3rep(0);
+	v3 vPos = vLockedCamPos;
+	v3 vDir = vLockedCamDir;
+	v3 vRight = vLockedCamRight;
 	switch(g_nUseDebugCameraPos)
 	{
 		case 2:
 			vPos = v3init(0,sin(foo), 0);
+			vDir = v3normalize(v3init(3,0,0) - vPos);
+			vRight = v3init(0,-1,0);
+			{
+				v3 vUp = v3normalize(v3cross(vRight, vDir));
+				vRight = v3normalize(v3cross(vDir, vUp));
+			}
 			break;
 		case 0:
 			vPos = g_WorldState.Camera.vPosition;
+			vDir = g_WorldState.Camera.vDir;
+			vRight = g_WorldState.Camera.vRight;
 			vLockedCamPos = vPos;
+			vLockedCamDir = vDir;
+			vLockedCamRight = vRight;
 			break;
 		case 1:
-			vPos = vLockedCamPos;
+			//locked.
 			break;
 	}
 		
-	v3 vDir = v3init(0,0,-1);
+	
 	ZDEBUG_DRAWBOX(mid(), vPos, v3rep(0.02f), -1);
 	SOccluderBspViewDesc ViewDesc;
 	ViewDesc.vOrigin = vPos;
 	ViewDesc.vDirection = vDir;
-	ViewDesc.vRight = g_WorldState.Camera.vRight;
-	ViewDesc.fFovY = 90;
-	ViewDesc.fAspect = 1.f;
+	ViewDesc.vRight = vRight;
+	ViewDesc.fFovY = g_WorldState.Camera.fFovY;
+	ViewDesc.fAspect = (float)g_Height / (float)g_Width;
 
 
 	BspBuild(g_Bsp, &g_WorldState.Occluders[0], nNumOccluders, ViewDesc);
@@ -150,7 +166,7 @@ void WorldRender()
 	for(uint32 i = 0; i < nNumObjects; ++i)
 	{
 		bCulled[i] = BspCullObject(g_Bsp, &g_WorldState.WorldObjects[i]);
-		uplotfnxt("culled %d:%d", i, bCulled[0] ? 1: 0);
+	//	uplotfnxt("culled %d:%d", i, bCulled[0] ? 1: 0);
 	}
 
 	for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
@@ -445,8 +461,9 @@ void UpdateCamera()
 		v3 vNewDir = mtransform(mrotx, v3init(0,0,-1));
 		g_WorldState.Camera.vDir = mtransform(mviewinv, vNewDir);
 
-
 	}
+	ZASSERTNORMALIZED3(g_WorldState.Camera.vDir);
+	ZASSERTNORMALIZED3(g_WorldState.Camera.vRight);
 
 
 
@@ -462,7 +479,7 @@ void UpdateCamera()
 	}
 	else
 	{
-		g_WorldState.Camera.mprj = mperspective(45, ((float)g_Height / (float)g_Width), 0.001f, 100.f);
+		g_WorldState.Camera.mprj = mperspective(g_WorldState.Camera.fFovY, ((float)g_Height / (float)g_Width), 0.001f, 100.f);
 	}
 	
 	g_WorldState.Camera.mviewport = mviewport(0,0,g_Width, g_Height);
@@ -493,6 +510,7 @@ void ProgramInit()
 	g_WorldState.Camera.vDir = mtransform(mroty, v3init(0,0,-1));
 	g_WorldState.Camera.vRight = mtransform(mroty, v3init(1,0,0));
 	g_WorldState.Camera.vPosition = g_WorldState.Camera.vDir * -5.f;
+	g_WorldState.Camera.fFovY = 45.f;
 	g_Bsp = BspCreate();
 	WorldInit();
 	EditorStateInit();

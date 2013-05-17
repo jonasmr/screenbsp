@@ -1100,7 +1100,7 @@ m mviewport(float x, float y, float w, float h)
 	return r;
 }
 
-m mperspective(float fFovY, float fAspect, float fNear, float fFar)\
+m mperspective(float fFovY, float fAspect, float fNear, float fFar)
 {
 	m r = mid();
 	float fAngle = (fFovY * PI / 180.f)/2.f;
