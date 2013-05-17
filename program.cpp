@@ -66,15 +66,36 @@ void WorldInit()
 	g_WorldState.Occluders[1].vSize = v3init(0.25f, 0.25f, 0);
 
 	g_WorldState.Occluders[2].mObjectToWorld = mrotatey(90*TORAD);
-	g_WorldState.Occluders[2].mObjectToWorld.trans = v4init(2.5f,0.f,-0.5f, 1.f);
+	g_WorldState.Occluders[2].mObjectToWorld.trans = v4init(2.6f,0.f,-0.5f, 1.f);
 	g_WorldState.Occluders[2].vSize = v3init(0.25f, 0.25f, 0);
 	g_WorldState.nNumOccluders = 3;
 
+
 	g_WorldState.WorldObjects[0].mObjectToWorld = mrotatey(90*TORAD);
 	g_WorldState.WorldObjects[0].mObjectToWorld.trans = v4init(3.f,0.f,-0.5f, 1.f);
-	g_WorldState.WorldObjects[0].vSize = v3init(0.25f, 0.2f, 0.2);
-	
-	g_WorldState.nNumWorldObjects = 1;
+	g_WorldState.WorldObjects[0].vSize = v3init(0.25f, 0.2f, 0.2); 
+	int idx = 0;
+	#define GRID_SIZE 3
+	for(uint32 i = 0; i < GRID_SIZE; i++)
+	{
+	for(uint32 j = 0; j < GRID_SIZE; j++)
+	{
+	for(uint32 k = 0; k < GRID_SIZE; k++)
+	{
+		v3 vPos = v3init(i,j,k) / (GRID_SIZE-1.f);
+		vPos -= 0.5f;
+		vPos *= 5.f;
+		vPos += 0.03f;
+		vPos.x += 3.4f;
+		g_WorldState.WorldObjects[idx].mObjectToWorld = mid();
+		g_WorldState.WorldObjects[idx].mObjectToWorld.trans = v4init(vPos,1.f);
+		g_WorldState.WorldObjects[idx].vSize = v3init(0.25f, 0.2f, 0.2); 
+
+		idx++;
+	}}}
+
+
+	g_WorldState.nNumWorldObjects = idx;
 	g_EditorState.pSelected = 0;
 }
 
@@ -114,7 +135,15 @@ void WorldRender()
 		
 	v3 vDir = v3init(0,0,-1);
 	ZDEBUG_DRAWBOX(mid(), vPos, v3rep(0.02f), -1);
-	BspBuild(g_Bsp, &g_WorldState.Occluders[0], nNumOccluders, vPos, vDir);
+	SOccluderBspViewDesc ViewDesc;
+	ViewDesc.vOrigin = vPos;
+	ViewDesc.vDirection = vDir;
+	ViewDesc.vRight = g_WorldState.Camera.vRight;
+	ViewDesc.fFovY = 90;
+	ViewDesc.fAspect = 1.f;
+
+
+	BspBuild(g_Bsp, &g_WorldState.Occluders[0], nNumOccluders, ViewDesc);
 
 	uint32 nNumObjects = g_WorldState.nNumWorldObjects;
 	bool* bCulled = (bool*)alloca(nNumObjects);
@@ -478,7 +507,7 @@ int ProgramMain()
 
 	if(g_KeyboardState.keys[SDLK_SPACE] & BUTTON_RELEASED)
 	{
-		g_nUseDebugCameraPos = ! g_nUseDebugCameraPos;
+		g_nUseDebugCameraPos = (g_nUseDebugCameraPos+1)%3;
 	}
 	UpdateEditorState();
 	{
