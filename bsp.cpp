@@ -95,45 +95,6 @@ v4 BspGetPlane(SOccluderBsp* pBsp, uint32 nOccluderIndex, uint32 nEdge, uint32 n
 		return vPlane;
 }
 
-
-/*
-	dot(p0, (1, y, z, 1)) = 0
-	p0.x + p0.w + y * p0.y + z * p0.z = 0
-	z * p0.z = -(p0.x + p0.w + y * p0.y)
-	z = -(p0.x + p0.w + y * p0.y) / p0.z
-
-	p1.x + p1.w + y * p1.y + z * p1.z = 0
-	solve p0.x + p0.w + y * p0.y + z * p0.z = 0, p1.x + p1.w + y * p1.y + z * p1.z = 0 for x,y
-
-	solve x0 + w0 + y * y0 + z * z0 = 0, x2 + w2 + y * y2 + z * z2 = 0 for z,y
-	y = (-p1.x + p1.w + (-(p0.x + p0.w + y * p0.y) / p0.z) * p1.z) / p1.y
-
-
-	dot(p0, (x, y, z, 1)) = 0
-	dot(p1, (x, y, z, 1)) = 0
-	dot(p2, (x, y, z, 1)) = 0
-	x0 * x + y0 + y + z0 * z + w0 = 0
-	x1 * x + y1 + y + z1 * z + w1 = 0
-	x2 * x + y2 + y + z2 * z + w2 = 0
-
-
-	solve x0 * x + y0 + y + z0 * z + f0 = 0, x1 * x + y1 + y + z1 * z + f1 = 0, x2 * x + y2 + y + z2 * z + f2 = 0, for x,y,z
-
-
-*/
-
-
-
-
-// uint32 g_nBspFlipMask = 0;
-// uint32 g_nBspDrawMask = -1;
-
-// #define DEBUG_OFFSET 0.4f
-
-// float g_OFFSET = DEBUG_OFFSET;
-// v3 g_Offset = v3init(1,0,0);
-// v3 g_DepthOffset = v3init(0.4f, 0.f, 0.f);
-// v3 g_XOffset = v3init(0.0f, 0.0f, 0.f);
 static const char* Spaces(int n)
 {
 	static char buf[256];
@@ -311,12 +272,21 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 		bool bFlip = false;
 		v4 vNormalPlane = MakePlane(vCorners[0], vInnerNormal);
 		{
+			float fMinDot = v3dot(vCorners[0]-vOrigin, vDirection);
+			fMinDot = Min(fMinDot, v3dot(vCorners[1]-vOrigin, vDirection));
+			fMinDot = Min(fMinDot, v3dot(vCorners[2]-vOrigin, vDirection));
+			fMinDot = Min(fMinDot, v3dot(vCorners[3]-vOrigin, vDirection));
+
 			//project origin onto plane
 			float fDist = v4dot(vNormalPlane, v4init(vOrigin, 1.f));
-			if(fabs(fDist) < Desc.fZNear)
+
+			if(fabs(fDist) < Desc.fZNear)//if plane is very close to camera origin, discard to avoid intersection with near plane
 			{
-				//could be accepted if all points are in front..
-				continue;
+				if(fMinDot < 1.5 * Desc.fZNear) // _unless_
+				{
+					continue;
+				}
+				
 			}
 			v3 vPointOnPlane = vOrigin - fDist * vNormalPlane.tov3();
 			float fFoo = v4dot(vNormalPlane, v4init(vPointOnPlane, 1.f));
@@ -356,25 +326,6 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 	ZASSERT(nOccluderIndex <= pBsp->Occluders.Size());
 
 
-
-
-	// for(uint32 i = 1; i < pBsp->Occluders.Size(); ++i)
-	// {
-	// 	BspAddOccluder(pBsp, &pBsp->Occluders[i], i);
-
-	// 	// for(uint j = 0; j < 4; ++j)
-	// 	// {
-	// 	// 	v4 p0 = pBsp->Occluders[i].p[j];
-	// 	// 	v4 p1 = pBsp->Occluders[i].p[(j+1)%4];
-	// 	// 	v4 vNormal = pBsp->Occluders[i].p[4];
-	// 	// 	v3 vIntersect = BspPlaneIntersection(p0,p1, vNormal);
-	// 	// 	ZASSERT(v3length(vIntersect) > 0.001f);
-	// 	// 	ZDEBUG_DRAWBOX(mid(), vIntersect, v3rep(0.01f), 0xffff0000);
-	// 	// }
-	// }
-
-
-
 	if(g_KeyboardState.keys[SDLK_F10] & BUTTON_RELEASED)
 	{
 		BspDump(pBsp, 0, 0);
@@ -383,37 +334,6 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 	uplotfnxt("BSP: NODES[%03d] OCCLUDERS[%03d] DEPTH[%03d]", pBsp->Nodes.Size(), pBsp->Occluders.Size(), pBsp->nDepth);
 	srand(seed);
 }
-
-
-void BspOccluderDebugDraw(v4* pVertexNew, v4* pVertexIn, uint32 nColor, uint32 nFill)
-{
-	//if(nFill)
-	{
-		ZDEBUG_DRAWPOLY(pVertexNew, pVertexIn - pVertexNew, nColor);
-		// v4* last = pVertexIn-1;
-		// for(v4* v = pVertexNew; v < pVertexIn; ++v)
-		// {
-		// 	v3 v0 = v[0].tov3() + v3init(-0.01f,0,0);
-		// 	v3 v1 = (*last).tov3()+ v3init(-0.01f,0,0);
-		// 	last = v;
-		// 	ZDEBUG_DRAWLINE(v0, v1, nColor,true);
-		// }
-	}
-	//else
-	{
-		v4* last = pVertexIn-1;
-		for(v4* v = pVertexNew; v < pVertexIn; ++v)
-		{
-			v3 v0 = v[0].tov3() + v3init(-0.01f,0,0);
-			v3 v1 = (*last).tov3()+ v3init(-0.01f,0,0);
-			last = v;
-			ZDEBUG_DRAWLINE(v0, v1, nColor,true);
-		}
-
-	}
-}
-
-
 
 void BspAddOccluder(SOccluderBsp* pBsp, SOccluderPlane* pOccluder, uint32 nOccluderIndex)
 {
@@ -454,7 +374,6 @@ void BspDrawPoly(SOccluderBsp* pBsp, SBspEdgeIndex* Poly, uint32 nVertices, uint
 		vCorners[i] = BspPlaneIntersection(v0, v1, vNormalPlane);
 		if(nBoxes)
 		{
-///						ZDEBUG_DRAWBOX(mid(), vIntersect, v3rep(0.01f), 0xffff0000);
 			ZDEBUG_DRAWBOX(mid(), vCorners[i], v3rep(0.01f), 0xffff0000);
 		}
 	}
