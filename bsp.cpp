@@ -218,8 +218,8 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, c
 	pBsp->Occluders.Clear();
 
 	pBsp->Desc = Desc;
-	v3 vOrigin = pBsp->Desc.vOrigin;
-	v3 vDirection = pBsp->Desc.vDirection;
+	const v3 vOrigin = pBsp->Desc.vOrigin;
+	const v3 vDirection = pBsp->Desc.vDirection;
 	pBsp->Occluders.Resize(1+nNumOccluders);
 	SOccluderPlane* pPlanes = pBsp->Occluders.Ptr();
 
@@ -312,11 +312,37 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, c
 		SOccluderPlane& Plane = pPlanes[i];
 		v3 vInnerNormal = v3normalize(v3cross(vCorners[1]-vCorners[0], vCorners[3]-vCorners[0]));
 		bool bFlip = false;
-		if(v3dot(vInnerNormal, vDirection)<0.f)
+
+
+		v4 vNormalPlane = MakePlane(vCorners[0], vInnerNormal);
+		Plane.p[4] = vNormalPlane;
 		{
-			bFlip = true;
-			vInnerNormal = -vInnerNormal;
+			//project origin onto plane
+			float fDist = v4dot(vNormalPlane, v4init(vOrigin, 1.f));
+			if(fabs(fDist) < Desc.fZNear)
+			{
+				uprintf("FAIL, OCCLUDER SHOULD BE REJECTED!!!\n");
+			}
+			v3 vPointOnPlane = vOrigin - fDist * vNormalPlane.tov3();
+			float fFoo = v4dot(vNormalPlane, v4init(vPointOnPlane, 1.f));
+			ZASSERT(fabs(fFoo) < 1e-4f);
+
+			if(fDist>0)
+			{
+				bFlip = true;
+				vInnerNormal = -vInnerNormal;
+			}
 		}
+
+
+
+
+
+		// if(v3dot(vInnerNormal, vDirection)<0.f)
+		// {
+		// 	bFlip = true;
+		// 	vInnerNormal = -vInnerNormal;
+		// }
 		uplotfnxt("FLIP %d==%d", i, bFlip?1:0);
 
 
@@ -338,7 +364,6 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, c
 				ZDEBUG_DRAWLINE(v2, v0, (uint32)-1, true);
 			}
 		}
-		Plane.p[4] = MakePlane(vCorners[0], vInnerNormal);
 	}
 
 	if(!pBsp->Occluders.Size())

@@ -158,7 +158,7 @@ void WorldRender()
 	ViewDesc.vRight = vRight;
 	ViewDesc.fFovY = g_WorldState.Camera.fFovY;
 	ViewDesc.fAspect = (float)g_Height / (float)g_Width;
-
+	ViewDesc.fZNear = g_WorldState.Camera.fNear;
 
 	BspBuild(g_Bsp, &g_WorldState.Occluders[0], nNumOccluders, ViewDesc);
 
@@ -512,6 +512,7 @@ void ProgramInit()
 	g_WorldState.Camera.vRight = mtransform(mroty, v3init(1,0,0));
 	g_WorldState.Camera.vPosition = g_WorldState.Camera.vDir * -5.f;
 	g_WorldState.Camera.fFovY = 45.f;
+	g_WorldState.Camera.fNear = 0.1f;
 	g_Bsp = BspCreate();
 	WorldInit();
 	EditorStateInit();
