@@ -798,7 +798,9 @@ bool BspCullObject(SOccluderBsp* pBsp, SWorldObject* pObject)
 }
 
 
-#define TESS_FACT 8
+#define PLANE_DEBUG_TESSELATION 20
+#define PLANE_DEBUG_SIZE 5
+
 void BspDebugDrawHalfspace(v3 vNormal, v3 vPosition)
 {
 	v3 vLeft = v3cross(vNormal, v3init(1,0,0));
@@ -811,24 +813,24 @@ void BspDebugDrawHalfspace(v3 vNormal, v3 vPosition)
 	vLeft = v3normalize(vLeft);
 	v3 vUp = v3normalize(v3cross(vNormal, vLeft));
 	vLeft = v3normalize(v3cross(vUp, vNormal));
-	v3 vPoints[TESS_FACT * TESS_FACT];
-	for(int i = 0; i < TESS_FACT; ++i)
+	v3 vPoints[PLANE_DEBUG_TESSELATION * PLANE_DEBUG_TESSELATION];
+	for(int i = 0; i < PLANE_DEBUG_TESSELATION; ++i)
 	{
-		float x = 3 * (((float)i / (TESS_FACT-1)) - 0.5f);
-		for(int j = 0; j < TESS_FACT; ++j)
+		float x = PLANE_DEBUG_SIZE * (((float)i / (PLANE_DEBUG_TESSELATION-1)) - 0.5f);
+		for(int j = 0; j < PLANE_DEBUG_TESSELATION; ++j)
 		{
-			float y = 3 * (((float)j / (TESS_FACT-1)) - 0.5f);
-			vPoints[i*TESS_FACT+j] = vPosition + vUp * x + vLeft * y;
+			float y = PLANE_DEBUG_SIZE * (((float)j / (PLANE_DEBUG_TESSELATION-1)) - 0.5f);
+			vPoints[i*PLANE_DEBUG_TESSELATION+j] = vPosition + vUp * x + vLeft * y;
 		}
 	}
 
-	for(int i = 0; i < TESS_FACT-1; ++i)
+	for(int i = 0; i < PLANE_DEBUG_TESSELATION-1; ++i)
 	{
-		for(int j = 0; j < TESS_FACT-1; ++j)
+		for(int j = 0; j < PLANE_DEBUG_TESSELATION-1; ++j)
 		{
-			ZDEBUG_DRAWLINE(vPoints[i*TESS_FACT+j],vPoints[i*TESS_FACT+j+1], 0xffff0000, true);
-			ZDEBUG_DRAWLINE(vPoints[(1+i)*TESS_FACT+j],vPoints[i*TESS_FACT+j], 0xffff0000, true);
-			ZDEBUG_DRAWLINE(vPoints[i*TESS_FACT+j],vPoints[i*TESS_FACT+j] + vNormal * 0.03, 0xff00ff00, true);
+			ZDEBUG_DRAWLINE(vPoints[i*PLANE_DEBUG_TESSELATION+j],vPoints[i*PLANE_DEBUG_TESSELATION+j+1], 0xffff0000, true);
+			ZDEBUG_DRAWLINE(vPoints[(1+i)*PLANE_DEBUG_TESSELATION+j],vPoints[i*PLANE_DEBUG_TESSELATION+j], 0xffff0000, true);
+			ZDEBUG_DRAWLINE(vPoints[i*PLANE_DEBUG_TESSELATION+j],vPoints[i*PLANE_DEBUG_TESSELATION+j] + vNormal * 0.03, 0xff00ff00, true);
 		}
 	}
 
