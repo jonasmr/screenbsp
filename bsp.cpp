@@ -315,12 +315,12 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, c
 
 
 		v4 vNormalPlane = MakePlane(vCorners[0], vInnerNormal);
-		Plane.p[4] = vNormalPlane;
 		{
 			//project origin onto plane
 			float fDist = v4dot(vNormalPlane, v4init(vOrigin, 1.f));
 			if(fabs(fDist) < Desc.fZNear)
 			{
+				//either reject or do sth fancy to detect that its okay to use the occluder
 				uprintf("FAIL, OCCLUDER SHOULD BE REJECTED!!!\n");
 			}
 			v3 vPointOnPlane = vOrigin - fDist * vNormalPlane.tov3();
@@ -331,18 +331,11 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, c
 			{
 				bFlip = true;
 				vInnerNormal = -vInnerNormal;
+				vNormalPlane = -vNormalPlane;
 			}
 		}
+		Plane.p[4] = vNormalPlane;
 
-
-
-
-
-		// if(v3dot(vInnerNormal, vDirection)<0.f)
-		// {
-		// 	bFlip = true;
-		// 	vInnerNormal = -vInnerNormal;
-		// }
 		uplotfnxt("FLIP %d==%d", i, bFlip?1:0);
 
 
