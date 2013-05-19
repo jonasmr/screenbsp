@@ -13,6 +13,7 @@ struct SOccluderBspViewDesc
 	v3 vRight;
 	float fFovY;
 	float fAspect;
+	float fZNear;
 };
 
 
