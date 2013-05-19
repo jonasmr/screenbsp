@@ -13,8 +13,8 @@
 
 
 SDL_Surface* g_Surface;
-uint32_t g_BaseWidth =  1280;
-uint32_t g_BaseHeight =  720;
+uint32_t g_BaseWidth =  800;
+uint32_t g_BaseHeight =  600;
 uint32_t g_Width = g_BaseWidth;
 uint32_t g_Height =  g_BaseHeight;
 uint32_t g_nQuit = 0;
