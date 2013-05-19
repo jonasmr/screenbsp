@@ -538,6 +538,11 @@ int ProgramMain()
 	glLineWidth(1.f);
 	glClearColor(0.3,0.4,0.6,0);
 	glViewport(0, 0, g_Width, g_Height);
+
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
+	glDepthFunc(GL_LEQUAL);
+
 	glMatrixMode(GL_PROJECTION);
 	glLoadMatrixf(&g_WorldState.Camera.mprj.x.x);
 

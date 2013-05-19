@@ -256,8 +256,8 @@ void DebugDrawFlush()
 		// glEnable(GL_DEPTH_TEST);
 		// glDepthMasth(G
 		//glEnable(GL_BLEND);
-		glBlendEquation(GL_FUNC_ADD);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		// glBlendEquation(GL_FUNC_ADD);
+		// glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 		for(uint32 i = 0; i < g_DebugDrawState.Poly.Size(); ++i)
 		{
 			glBegin(GL_POLYGON);
@@ -273,7 +273,7 @@ void DebugDrawFlush()
 
 			glEnd();
 		}
-		glDisable(GL_BLEND);
+		//glDisable(GL_BLEND);
 
 		glBegin(GL_LINES);
 		for(uint32_t i = 0; i < g_DebugDrawState.Lines.Size(); ++i)
