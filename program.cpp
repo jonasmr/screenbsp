@@ -71,7 +71,7 @@ void WorldInit()
 	g_WorldState.Occluders[2].mObjectToWorld = mrotatey(90*TORAD);
 	g_WorldState.Occluders[2].mObjectToWorld.trans = v4init(2.6f,0.f,-0.5f, 1.f);
 	g_WorldState.Occluders[2].vSize = v3init(0.25f, 0.25f, 0);
-	g_WorldState.nNumOccluders = 3;
+	g_WorldState.nNumOccluders = 1;
 
 
 	g_WorldState.WorldObjects[0].mObjectToWorld = mrotatey(90*TORAD);
@@ -81,7 +81,7 @@ void WorldInit()
 	if(0)
 	{
 		int idx = 0;
-		#define GRID_SIZE 3
+		#define GRID_SIZE 10
 		for(uint32 i = 0; i < GRID_SIZE; i++)
 		{
 		for(uint32 j = 0; j < GRID_SIZE; j++)
@@ -90,9 +90,9 @@ void WorldInit()
 		{
 			v3 vPos = v3init(i,j,k) / (GRID_SIZE-1.f);
 			vPos -= 0.5f;
-			vPos *= 5.f;
+			vPos *= 8.f;
 			vPos += 0.03f;
-			vPos.x += 3.4f;
+			vPos.x += 2.0f;
 			g_WorldState.WorldObjects[idx].mObjectToWorld = mid();
 			g_WorldState.WorldObjects[idx].mObjectToWorld.trans = v4init(vPos,1.f);
 			g_WorldState.WorldObjects[idx].vSize = v3init(0.25f, 0.2f, 0.2); 
