@@ -282,7 +282,7 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 
 			if(fabs(fDist) < Desc.fZNear)//if plane is very close to camera origin, discard to avoid intersection with near plane
 			{
-				if(fMinDot < 1.5 * Desc.fZNear) // _unless_
+				if(fMinDot < 1.5 * Desc.fZNear) // _unless_ all 4 points clearly in front
 				{
 					continue;
 				}
