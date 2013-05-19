@@ -182,7 +182,7 @@ void BspDestroy(SOccluderBsp* pBsp)
 {
 	delete pBsp;
 }
-void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, const SOccluderBspViewDesc& Desc)
+void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders, const SOccluderBspViewDesc& Desc)
 {
 	if(g_KeyboardState.keys[SDLK_F3]&BUTTON_RELEASED)
 	{
@@ -291,16 +291,13 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, c
 
 
 
+	uint32 nOccluderIndex = 1; // first is frustum
 
 
-
-
-
-
-	for(uint32 i = 1; i < nNumOccluders+1; ++i)
+	for(uint32 k = 0; k < nNumOccluders; ++k)
 	{
 		v3 vCorners[4];
-		SOccluder Occ = pOccluders[i-1];
+		SOccluder Occ = pOccluderDesc[k];
 		v3 vNormal = Occ.mObjectToWorld.z.tov3();
 		v3 vUp = Occ.mObjectToWorld.y.tov3();
 		v3 vLeft = v3cross(vNormal, vUp);
@@ -309,19 +306,17 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, c
 		vCorners[1] = vCenter - vUp * Occ.vSize.y + vLeft * Occ.vSize.x;
 		vCorners[2] = vCenter - vUp * Occ.vSize.y - vLeft * Occ.vSize.x;
 		vCorners[3] = vCenter + vUp * Occ.vSize.y - vLeft * Occ.vSize.x;
-		SOccluderPlane& Plane = pPlanes[i];
+		SOccluderPlane& Plane = pPlanes[nOccluderIndex];
 		v3 vInnerNormal = v3normalize(v3cross(vCorners[1]-vCorners[0], vCorners[3]-vCorners[0]));
 		bool bFlip = false;
-
-
 		v4 vNormalPlane = MakePlane(vCorners[0], vInnerNormal);
 		{
 			//project origin onto plane
 			float fDist = v4dot(vNormalPlane, v4init(vOrigin, 1.f));
 			if(fabs(fDist) < Desc.fZNear)
 			{
-				//either reject or do sth fancy to detect that its okay to use the occluder
-				uprintf("FAIL, OCCLUDER SHOULD BE REJECTED!!!\n");
+				//could be accepted if all points are in front..
+				continue;
 			}
 			v3 vPointOnPlane = vOrigin - fDist * vNormalPlane.tov3();
 			float fFoo = v4dot(vNormalPlane, v4init(vPointOnPlane, 1.f));
@@ -335,8 +330,6 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, c
 			}
 		}
 		Plane.p[4] = vNormalPlane;
-
-		uplotfnxt("FLIP %d==%d", i, bFlip?1:0);
 
 
 		for(uint32 i = 0; i < 4; ++i)
@@ -357,29 +350,28 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, c
 				ZDEBUG_DRAWLINE(v2, v0, (uint32)-1, true);
 			}
 		}
+		BspAddOccluder(pBsp, &pBsp->Occluders[nOccluderIndex], nOccluderIndex);
+		nOccluderIndex++;
 	}
-
-	if(!pBsp->Occluders.Size())
-		return;
+	ZASSERT(nOccluderIndex <= pBsp->Occluders.Size());
 
 
 
 
+	// for(uint32 i = 1; i < pBsp->Occluders.Size(); ++i)
+	// {
+	// 	BspAddOccluder(pBsp, &pBsp->Occluders[i], i);
 
-	for(uint32 i = 1; i < pBsp->Occluders.Size(); ++i)
-	{
-		BspAddOccluder(pBsp, &pBsp->Occluders[i], i);
-
-		// for(uint j = 0; j < 4; ++j)
-		// {
-		// 	v4 p0 = pBsp->Occluders[i].p[j];
-		// 	v4 p1 = pBsp->Occluders[i].p[(j+1)%4];
-		// 	v4 vNormal = pBsp->Occluders[i].p[4];
-		// 	v3 vIntersect = BspPlaneIntersection(p0,p1, vNormal);
-		// 	ZASSERT(v3length(vIntersect) > 0.001f);
-		// 	ZDEBUG_DRAWBOX(mid(), vIntersect, v3rep(0.01f), 0xffff0000);
-		// }
-	}
+	// 	// for(uint j = 0; j < 4; ++j)
+	// 	// {
+	// 	// 	v4 p0 = pBsp->Occluders[i].p[j];
+	// 	// 	v4 p1 = pBsp->Occluders[i].p[(j+1)%4];
+	// 	// 	v4 vNormal = pBsp->Occluders[i].p[4];
+	// 	// 	v3 vIntersect = BspPlaneIntersection(p0,p1, vNormal);
+	// 	// 	ZASSERT(v3length(vIntersect) > 0.001f);
+	// 	// 	ZDEBUG_DRAWBOX(mid(), vIntersect, v3rep(0.01f), 0xffff0000);
+	// 	// }
+	// }
 
 
 
