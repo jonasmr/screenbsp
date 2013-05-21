@@ -4,11 +4,13 @@
 enum EShaderVS
 {
 	VS_DEFAULT,
+	VS_FOO,
 	VS_SIZE,
 };
 enum EShaderPS
 {
 	PS_FLAT_LIT,
+	PS_FOO,
 	PS_SIZE,
 };
 

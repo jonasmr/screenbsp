@@ -131,14 +131,15 @@ void ShaderInit()
 	memset(&g_ShaderState, 0, sizeof(g_ShaderState));
 	g_ShaderState.PS[PS_FLAT_LIT] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "flat.ps");
 	g_ShaderState.VS[VS_DEFAULT] = CreateProgram(GL_VERTEX_SHADER_ARB, "basic.vs");
-	ShaderUse(VS_DEFAULT, PS_FLAT_LIT);
-	ShaderDisable();
+//	ShaderUse(VS_DEFAULT, PS_FLAT_LIT);
+//	ShaderDisable();
 }
 void ShaderUse(EShaderVS vs, EShaderPS ps)
 {
 	if(vs == VS_SIZE || ps == PS_SIZE)
 	{
 		glUseProgramObjectARB(0);
+		return;
 	}
 	uint32 nIndex = ps * VS_SIZE + vs;
 	if(!g_ShaderState.LinkedPrograms[nIndex])
@@ -156,6 +157,5 @@ void ShaderUse(EShaderVS vs, EShaderPS ps)
 	CheckGLError();
 	glUseProgramObjectARB(g_ShaderState.LinkedPrograms[nIndex]);
 	CheckGLError();
-	glUseProgramObjectARB(0);
 
 }

@@ -178,7 +178,6 @@ void WorldRender()
 	{
 		glPushMatrix();
 		glMultMatrixf(&g_WorldState.WorldObjects[i].mObjectToWorld.x.x);
-
 		MeshDraw(GetBaseMesh(MESH_BOX), g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].vSize);
 
 
