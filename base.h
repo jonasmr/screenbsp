@@ -53,3 +53,7 @@ do{\
 #define snprintf _snprintf
 #endif
 
+
+void uprintf(const char* fmt, ...);
+
+

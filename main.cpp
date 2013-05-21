@@ -10,7 +10,8 @@
 #include "text.h"
 #include "math.h"
 #include "debug.h"
-
+#include "mesh.h"
+#include "shader.h"
 
 SDL_Surface* g_Surface;
 uint32_t g_BaseWidth =  800;
@@ -30,6 +31,7 @@ void CheckGLError()
 	{
 	    errString = gluErrorString(errCode);
 		   uprintf ("UHOH: OpenGL Error: %s\n", errString);
+		   ZBREAK();
 	}
 }
 
@@ -150,12 +152,15 @@ int SDL_main(int argc, char** argv)
 	{
 		ZBREAK();
 	}
+	if(!GLEW_ARB_separate_shader_objects)
+	{
+		ZBREAK();
+	}
 
 	InputInit();
 	TextInit();
-
-
-
+	MeshInit();
+	ShaderInit();
 
 	ProgramInit();
 	
