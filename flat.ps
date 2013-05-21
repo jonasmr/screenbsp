@@ -1,10 +1,9 @@
 uniform sampler2D tex1; 
 
-varying vec2 TexCoord;
+varying vec3 COL;
 
 void main(void)  
 {  
-	vec4 outC = vec4(1.0, 1.0, 0.001 * TexCoord.x, 1.0);
-
-	gl_FragColor = outC;
+	gl_FragColor.xyz = COL;
+	gl_FragColor.w = 1.0;
 }

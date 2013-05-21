@@ -31,7 +31,7 @@ static
 void InitBoxQuadList(uint16* pQuads)
 {
 	int idx = 0;
-	//front
+	//front (X)
 	pQuads[idx++] = 0;
 	pQuads[idx++] = 1;
 	pQuads[idx++] = 2;
@@ -41,21 +41,21 @@ void InitBoxQuadList(uint16* pQuads)
 	pQuads[idx++] = 6;
 	pQuads[idx++] = 5;
 	pQuads[idx++] = 4;
-	//left
-	pQuads[idx++] = 1;
-	pQuads[idx++] = 2;
+	//left (Y)
+	pQuads[idx++] = 5;
 	pQuads[idx++] = 6;
-	pQuads[idx++] = 5;		
+	pQuads[idx++] = 2;
+	pQuads[idx++] = 1;		
 	//right
 	pQuads[idx++] = 0;
 	pQuads[idx++] = 3;
 	pQuads[idx++] = 7;
 	pQuads[idx++] = 4;		
-	//top
-	pQuads[idx++] = 0;
-	pQuads[idx++] = 1;
+	//top (Z)
+	pQuads[idx++] = 4;
 	pQuads[idx++] = 5;
-	pQuads[idx++] = 4;		
+	pQuads[idx++] = 1;
+	pQuads[idx++] = 0;		
 	//bottom
 	pQuads[idx++] = 3;
 	pQuads[idx++] = 2;
@@ -231,7 +231,45 @@ Mesh* CreateSphereMesh(int nSubDivs)
 
 Mesh* CreateFlatMesh(Mesh* pMesh)
 {
-	return 0;
+	//explode new mesh
+	uint32 nNewVertices = pMesh->nIndices;
+	const Vertex* pSrcVertices = pMesh->pVertices;
+	const uint16* pSrcIndices = pMesh->pIndices;
+	Vertex* pVertices = new Vertex[nNewVertices];
+	uint16* pIndices = new uint16[nNewVertices];
+	int idx = 0;
+
+	for(uint32 i = 0; i < pMesh->nIndices; i += 3)
+	{
+		//1-0 > up y  [0]
+		//1-2 > down z [1]
+		Vertex v0 = pSrcVertices[ pSrcIndices[i] ];
+		Vertex v1 = pSrcVertices[ pSrcIndices[i+1] ];
+		Vertex v2 = pSrcVertices[ pSrcIndices[i+2] ];
+
+		v3 d0 = v0.Position - v1.Position;
+		v3 d1 = v2.Position - v1.Position;
+		v3 normal = v3normalize(v3cross(d1,d0));
+		uprintf("NORMAL IS %f %f %f ::: %f\n", normal.x, normal.y, normal.z, v3dot(normal, v0.Normal));
+		pVertices[idx] = v0;
+		pVertices[idx].Normal = normal;
+		pVertices[idx+1] = v1;
+		pVertices[idx+1].Normal = normal;
+		pVertices[idx+2] = v2;
+		pVertices[idx+2].Normal = normal;
+		pIndices[idx] = idx;
+		idx++;
+		pIndices[idx] = idx;
+		idx++;
+		pIndices[idx] = idx;
+		idx++;
+	}
+	Mesh* pMeshOut = new Mesh;
+	pMeshOut->pVertices = pVertices;
+	pMeshOut->pIndices = pIndices;
+	pMeshOut->nIndices = nNewVertices;
+	pMeshOut->nVertices = nNewVertices;
+	return pMeshOut;
 }
 
 
@@ -254,7 +292,8 @@ void MeshInit()
 
 	for(int i = 0; i < MESH_SIZE; ++i)
 	{
-		MeshCreateBuffers(g_MeshState.Base[i]);
+		if(g_MeshState.Base[i])
+			MeshCreateBuffers(g_MeshState.Base[i]);
 	}
 }
 
