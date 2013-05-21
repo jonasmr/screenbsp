@@ -1,5 +1,10 @@
 #include "mesh.h"
+#include "glinc.h"
 
+
+
+void MeshCreateBuffers(Mesh* pMesh);
+void MeshDestroyBuffers(Mesh* pMesh);
 
 struct MeshState
 {
@@ -224,14 +229,32 @@ Mesh* CreateSphereMesh(int nSubDivs)
 }
 
 
+Mesh* CreateFlatMesh(Mesh* pMesh)
+{
+	return 0;
+}
+
+
 
 void MeshInit()
 {
 	memset(&g_MeshState.Base[0], 0, sizeof(g_MeshState.Base));
 	g_MeshState.Base[MESH_BOX] = CreateBoxMesh();
+
 	for(int i = 0; i < 8; ++i)
 	{
 		g_MeshState.Base[i+MESH_SPHERE_1] = CreateSphereMesh(i+1);
+	}
+
+	for(int i = 0; i <= MESH_SPHERE_8; ++i)
+	{
+		g_MeshState.Base[i + MESH_BOX_FLAT] = CreateFlatMesh(g_MeshState.Base[i]);
+	}
+
+
+	for(int i = 0; i < MESH_SIZE; ++i)
+	{
+		MeshCreateBuffers(g_MeshState.Base[i]);
 	}
 }
 
@@ -240,7 +263,13 @@ void MeshDestroy()
 {
 	for(int i = 0; i < MESH_SIZE; ++i)
 	{
-		delete g_MeshState.Base[i];
+		if(g_MeshState.Base[i])
+		{
+			MeshDestroyBuffers(g_MeshState.Base[i]);
+			delete g_MeshState.Base[i]->pVertices;
+			delete g_MeshState.Base[i]->pIndices;
+			delete g_MeshState.Base[i];
+		}
 	}
 }
 const Mesh* GetBaseMesh(EBaseMesh type)
@@ -248,9 +277,54 @@ const Mesh* GetBaseMesh(EBaseMesh type)
 	return g_MeshState.Base[type];
 }
 
+//GL specific shit below here
+void MeshCreateBuffers(Mesh* pMesh)
+{
+	ZASSERT(pMesh);
+	glGenBuffers(1, &pMesh->VertexBuffer);
+	glGenBuffers(1, &pMesh->IndexBuffer);
+
+	glBindBuffer(GL_ARRAY_BUFFER, pMesh->VertexBuffer);
+	glBufferData(GL_ARRAY_BUFFER, pMesh->nVertices * sizeof(Vertex), pMesh->pVertices, GL_STATIC_DRAW);
+	
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, pMesh->IndexBuffer);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, pMesh->nIndices * sizeof(uint16), pMesh->pIndices, GL_STATIC_DRAW);
+ 
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+}
+
+void MeshDestroyBuffers(Mesh* pMesh)
+{
+	ZASSERT(pMesh);
+}
+
 
 
 void MeshDraw(const Mesh* pMesh, m mObjectToWorld, v3 vSize)
 {
 
+	glBindBuffer(GL_ARRAY_BUFFER, pMesh->VertexBuffer);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, pMesh->IndexBuffer);
+
+	glVertexPointer(3, GL_FLOAT, sizeof(Vertex), 0);
+	glNormalPointer(GL_FLOAT, sizeof(Vertex), (const void*)offsetof(Vertex, Normal));
+	glColorPointer(3, GL_UNSIGNED_BYTE, sizeof(Vertex), (const void*)offsetof(Vertex,Color));
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_NORMAL_ARRAY);
+	glEnableClientState(GL_COLOR_ARRAY);
+
+
+
+
+
+	glDrawElements(GL_TRIANGLES, pMesh->nIndices, GL_UNSIGNED_SHORT, (const void*)0);
+
+
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glDisableClientState(GL_NORMAL_ARRAY);
+	glDisableClientState(GL_COLOR_ARRAY);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }

@@ -86,53 +86,11 @@ GLuint CreateProgram(int nType, const char* pFile)
 	return handle;
 }
 
-// GLuint CreateProgram(const char *vertFile, const char *fragFile)
-// {
-//     GLhandleARB v,f,p;
-//     FILE *vf,*ff;
-//     char *vs,*fs;
-
-//     v = glCreateShaderObjectARB(GL_VERTEX_SHADER_ARB);
-//     f = glCreateShaderObjectARB(GL_FRAGMENT_SHADER_ARB);   
-
-//     vf = ReadTextFile(vertFile, vs);
-//     ff = ReadTextFile(fragFile, fs);
-
-//     glShaderSourceARB(v, 1, (const GLcharARB**) &vs, NULL);
-//     glShaderSourceARB(f, 1, (const GLcharARB**) &fs, NULL);
-
-//     FreeTextFileAndBuf(vf, vs);
-//     FreeTextFileAndBuf(ff, fs);
-
-//     glCompileShaderARB(v);
-//     uprintf("GLSL: compiling vertex %s with fragment %s combo\n", vertFile, fragFile);
-//   	PrintGLLog(v, "VERT: ");
-//     glCompileShaderARB(f);
-//   	PrintGLLog(f, "FRAG: ");
-
-//     // create a program object to link the shaders together
-//     p = glCreateProgramObjectARB();
-
-//     // attach shader objects and link together
-//     glAttachObjectARB(p,v);
-//     glAttachObjectARB(p,f);
-//     glLinkProgramARB(p);
-
-//   	//PrintGLLog(p, "Link: ");
-
-//     glUseProgramObjectARB(p);
-
-// 	return p; 
-// }
-
-
 void ShaderInit()
 {
 	memset(&g_ShaderState, 0, sizeof(g_ShaderState));
 	g_ShaderState.PS[PS_FLAT_LIT] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "flat.ps");
-	g_ShaderState.VS[VS_DEFAULT] = CreateProgram(GL_VERTEX_SHADER_ARB, "basic.vs");
-//	ShaderUse(VS_DEFAULT, PS_FLAT_LIT);
-//	ShaderDisable();
+	g_ShaderState.VS[VS_DEFAULT] = CreateProgram(GL_VERTEX_SHADER_ARB, "default.vs");
 }
 void ShaderUse(EShaderVS vs, EShaderPS ps)
 {
