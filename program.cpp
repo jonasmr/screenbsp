@@ -173,14 +173,14 @@ void WorldRender()
 	}
 
 
-	ShaderUse(VS_DEFAULT, PS_FLAT_LIT);
 	for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
 	{
 		glPushMatrix();
 		glMultMatrixf(&g_WorldState.WorldObjects[i].mObjectToWorld.x.x);
-		MeshDraw(GetBaseMesh(MESH_BOX), g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].vSize);
-
-
+		ShaderUse(VS_DEFAULT, PS_FLAT_LIT);
+		//MeshDraw(GetBaseMesh(MESH_BOX_FLAT), g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].vSize);
+		MeshDraw(GetBaseMesh(MESH_SPHERE_1_FLAT), g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].vSize);
+		ShaderDisable();
 		float x = g_WorldState.WorldObjects[i].vSize.x;
 		float y = g_WorldState.WorldObjects[i].vSize.y;
 		float z = g_WorldState.WorldObjects[i].vSize.z;
@@ -223,7 +223,7 @@ void WorldRender()
 
 		glPopMatrix();
 	}
-	ShaderDisable();
+	
 
 }
 void UpdateEditorState()

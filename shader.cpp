@@ -110,6 +110,8 @@ void ShaderUse(EShaderVS vs, EShaderPS ps)
 		glLinkProgramARB(prg);
 		g_ShaderState.LinkedPrograms[nIndex] = prg;
 		DumpGlLog(prg);
+		DumpGlLog(g_ShaderState.PS[ps]);
+		DumpGlLog(g_ShaderState.VS[vs]);
 	}
 	//use
 	CheckGLError();
