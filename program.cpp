@@ -80,7 +80,7 @@ void WorldInit()
 	g_WorldState.WorldObjects[0].mObjectToWorld.trans = v4init(3.f,0.f,-0.5f, 1.f);
 	g_WorldState.WorldObjects[0].vSize = v3init(0.25f, 0.2f, 0.2); 
 	g_WorldState.nNumWorldObjects = 1;
-	if(0)
+	if(1)
 	{
 		int idx = 0;
 		#define GRID_SIZE 10
@@ -153,7 +153,7 @@ void WorldRender()
 	}
 		
 	
-	ZDEBUG_DRAWBOX(mid(), vPos, v3rep(0.02f), -1);
+	ZDEBUG_DRAWBOX(mid(), vPos, v3rep(0.02f), -1,1);
 	SOccluderBspViewDesc ViewDesc;
 	ViewDesc.vOrigin = vPos;
 	ViewDesc.vDirection = vDir;
@@ -169,7 +169,6 @@ void WorldRender()
 	for(uint32 i = 0; i < nNumObjects; ++i)
 	{
 		bCulled[i] = BspCullObject(g_Bsp, &g_WorldState.WorldObjects[i]);
-	//	uplotfnxt("culled %d:%d", i, bCulled[0] ? 1: 0);
 	}
 
 
@@ -177,49 +176,16 @@ void WorldRender()
 	{
 		glPushMatrix();
 		glMultMatrixf(&g_WorldState.WorldObjects[i].mObjectToWorld.x.x);
-		ShaderUse(VS_DEFAULT, PS_FLAT_LIT);
-		//MeshDraw(GetBaseMesh(MESH_BOX_FLAT), g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].vSize);
-		MeshDraw(GetBaseMesh(MESH_SPHERE_1_FLAT), g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].vSize);
-		ShaderDisable();
-		float x = g_WorldState.WorldObjects[i].vSize.x;
-		float y = g_WorldState.WorldObjects[i].vSize.y;
-		float z = g_WorldState.WorldObjects[i].vSize.z;
-		glBegin(GL_LINE_STRIP);
-		if(!bCulled[i])
-			glColor3f(0,1,0);
+		if(bCulled[i])
+		{
+			ZDEBUG_DRAWBOX(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].mObjectToWorld.w.tov3(), g_WorldState.WorldObjects[i].vSize, 0xffff0000, 0);
+		}
 		else
-			glColor3f(1,0,0);
-
-		glVertex3f(x, y, z);
-		glVertex3f(x, -y, z);
-		glVertex3f(-x, -y, z);
-		glVertex3f(-x, y, z);
-		glVertex3f(x, y, z);
-		glEnd();
-
-		glBegin(GL_LINE_STRIP);
-		//glColor3f(0,1,0);
-		glVertex3f(x, y, -z);
-		glVertex3f(x, -y, -z);
-		glVertex3f(-x, -y, -z);
-		glVertex3f(-x, y, -z);
-		glVertex3f(x, y, -z);
-		glEnd();
-
-		glBegin(GL_LINES);
-		//glColor3f(0,1,0);
-		glVertex3f(x, y, -z);
-		glVertex3f(x, y, z);
-		glVertex3f(x, -y, -z);
-		glVertex3f(x, -y, z);
-		glVertex3f(-x, -y, -z);
-		glVertex3f(-x, -y, z);
-		glVertex3f(-x, y, -z);
-		glVertex3f(-x, y, z);
-		glVertex3f(x, y, -z);
-		glVertex3f(x, y, z);
-		glEnd();
-
+		{
+			ShaderUse(VS_DEFAULT, PS_FLAT_LIT);
+			MeshDraw(GetBaseMesh(MESH_SPHERE_2_FLAT), g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].vSize);
+			ShaderDisable();
+		}
 
 		glPopMatrix();
 	}
@@ -553,10 +519,12 @@ int ProgramMain()
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadMatrixf(&g_WorldState.Camera.mprj.x.x);
+	glMultMatrixf(&g_WorldState.Camera.mview.x.x);
 
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
-	glLoadMatrixf(&g_WorldState.Camera.mview.x.x);
+	glLoadIdentity();
+	//glLoadMatrixf(&g_WorldState.Camera.mview.x.x);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	CheckGLError();
 	WorldRender();

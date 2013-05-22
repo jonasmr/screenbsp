@@ -1,5 +1,6 @@
 #pragma once
 #include "base.h"
+#include "math.h"
 
 enum EShaderVS
 {
@@ -16,5 +17,7 @@ enum EShaderPS
 
 void ShaderInit();
 void ShaderUse(EShaderVS vs, EShaderPS ps);
+void ShaderSetSize(v3 vSize);
+
 #define ShaderDisable() ShaderUse(VS_SIZE,PS_SIZE)
 

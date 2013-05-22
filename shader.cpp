@@ -119,3 +119,9 @@ void ShaderUse(EShaderVS vs, EShaderPS ps)
 	CheckGLError();
 
 }
+void ShaderSetSize(v3 vSize)
+{
+	GLuint loc = glGetUniformLocation(g_ShaderState.LinkedPrograms[0], "Size");
+	glUniform3fv(loc, 1, &vSize.x);
+
+}
