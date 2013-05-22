@@ -374,7 +374,7 @@ void BspDrawPoly(SOccluderBsp* pBsp, SBspEdgeIndex* Poly, uint32 nVertices, uint
 		vCorners[i] = BspPlaneIntersection(v0, v1, vNormalPlane);
 		if(nBoxes)
 		{
-			ZDEBUG_DRAWBOX(mid(), vCorners[i], v3rep(0.01f), 0xffff0000);
+			ZDEBUG_DRAWBOX(mid(), vCorners[i], v3rep(0.01f), 0xffff0000, 1);
 		}
 	}
 	if(nPolyEdges)

@@ -1,6 +1,6 @@
 #include "mesh.h"
 #include "glinc.h"
-
+#include "shader.h"
 
 
 void MeshCreateBuffers(Mesh* pMesh);
@@ -70,7 +70,7 @@ Mesh* CreateBoxMesh()
 	const uint32 nIndices = 6 * 2 * 3;
 	Vertex* pVertices = new Vertex[nVertices];
 	uint16* pIndices = new uint16[nIndices];
-	float f = 0.5f;
+	float f = 1.0f;
 
 	pVertices[0].Position = v3init(f,f,f);
 	pVertices[0].Normal = v3init(f,f,f);
@@ -98,7 +98,7 @@ Mesh* CreateBoxMesh()
 	pVertices[7].Color = (uint32)-1;
 	for(uint32 i = 0; i < 8; ++i)
 	{
-		pVertices[i].Position = v3normalize(pVertices[i].Position)*0.5f;
+//		pVertices[i].Position = v3normalize(pVertices[i].Position);
 		pVertices[i].Normal = v3normalize(pVertices[i].Normal);
 	}
 
@@ -119,7 +119,7 @@ Mesh* CreateBoxMesh()
 Vertex SphereAvg(Vertex a, Vertex b)
 {
 	Vertex r;
-	r.Position = 0.5f * v3normalize(a.Position + b.Position);
+	r.Position = v3normalize(a.Position + b.Position);
 	r.Normal = v3normalize(a.Normal + b.Normal);
 	r.Color = a.Color;
 	return r;
@@ -140,6 +140,10 @@ void SubDivSphere(const Vertex* pVertices_, const uint16* pQuads_, uint32 nQuads
 		Vertex* pVertex = new Vertex[nNumVertices];
 		uint16* pQuads = new uint16[nNumQuads * 4];
 		memcpy(pVertex, pSrcVertex, nSrcVertices * sizeof(Vertex));
+		for(uint32 j = 0; j < nSrcVertices; ++j)
+		{
+			pVertex[j].Position = v3normalize(pVertex[j].Position);
+		}
 		int qidx = 0;
 		int vidx = nSrcVertices;
 		for(uint32 i = 0; i < nSrcQuads; ++i)
@@ -279,12 +283,12 @@ void MeshInit()
 	memset(&g_MeshState.Base[0], 0, sizeof(g_MeshState.Base));
 	g_MeshState.Base[MESH_BOX] = CreateBoxMesh();
 
-	for(int i = 0; i < 8; ++i)
+	for(int i = 0; i < 5; ++i)
 	{
 		g_MeshState.Base[i+MESH_SPHERE_1] = CreateSphereMesh(i+1);
 	}
 
-	for(int i = 0; i <= MESH_SPHERE_8; ++i)
+	for(int i = 0; i < MESH_SPHERE_5; ++i)
 	{
 		g_MeshState.Base[i + MESH_BOX_FLAT] = CreateFlatMesh(g_MeshState.Base[i]);
 	}
@@ -353,6 +357,9 @@ void MeshDraw(const Mesh* pMesh, m mObjectToWorld, v3 vSize)
 	glEnableClientState(GL_NORMAL_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
 
+
+
+	ShaderSetSize(vSize);
 
 
 

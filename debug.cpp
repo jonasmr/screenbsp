@@ -22,6 +22,7 @@ struct SDebugDrawBounds
 	m mat;
 	v3 vSize;
 	uint32 nColor;
+	uint32 nUseZ;
 };
 
 struct SDebugDrawState
@@ -44,7 +45,7 @@ void DebugDrawBounds(m mObjectToWorld, v3 vSize, uint32 nColor)
 	pBounds->vSize = vSize;
 	pBounds->nColor = nColor;
 }
-void DebugDrawBox(m rot, v3 pos, v3 size, uint32 nColor)
+void DebugDrawBox(m rot, v3 pos, v3 size, uint32 nColor, uint32 nUseZ)
 {
 	if(g_DebugDrawState.Boxes.Full()) return;
 
@@ -54,6 +55,7 @@ void DebugDrawBox(m rot, v3 pos, v3 size, uint32 nColor)
 	pBox->mat.trans = v4init(pos, 1);
 	pBox->vSize = size;
 	pBox->nColor = nColor;
+	pBox->nUseZ = nUseZ;
 
 
 }
@@ -105,73 +107,62 @@ void DebugDrawBounds(v3 vmin, v3 vmax, uint32_t nColor)
 	DebugDrawLine(p3, p2, nColor);
 	DebugDrawLine(p2, p0, nColor);
 }
-void DebugDrawFlush()
+namespace
 {
-	if(g_lShowDebug)
+	void DebugDrawBox(const SDebugDrawBounds& Box)
 	{
-		glDisable(GL_CULL_FACE);
-		for(SDebugDrawBounds& Box : g_DebugDrawState.Boxes)
-		{
-			glPushMatrix();
-			//glMultMatrixf(&Box.mat.x.x);
-			glTranslatef(Box.mat.trans.x, Box.mat.trans.y, Box.mat.trans.z);
-			v3 vScale = Box.vSize;
-//			vScale = v3max(vScale, 0.1f) * 1.07f;
-			glScalef(vScale.x, vScale.y, vScale.z);
+		glPushMatrix();
+		//glMultMatrixf(&Box.mat.x.x);
+		glTranslatef(Box.mat.trans.x, Box.mat.trans.y, Box.mat.trans.z);
+		v3 vScale = Box.vSize;
+		glScalef(vScale.x, vScale.y, vScale.z);
+		glBegin(GL_LINES);
+		glColor3ub(Box.nColor>>16, Box.nColor>>8, Box.nColor);
+		float f = 1.0f;
+		glVertex3f(f, f, f);
+		glVertex3f(f, f, -f);
+		
+		glVertex3f(-f, f, f);
+		glVertex3f(-f, f, -f);
 
-			glBegin(GL_LINES);
-			glColor3ub(Box.nColor>>16, Box.nColor>>8, Box.nColor);
+		glVertex3f(-f, -f, f);
+		glVertex3f(-f, -f, -f);
+		
+		glVertex3f(f, -f, f);
+		glVertex3f(f, -f, -f);
 
-			float f = 1.0f;
-			glVertex3f(f, f, f);
-			glVertex3f(f, f, -f);
-			
-			glVertex3f(-f, f, f);
-			glVertex3f(-f, f, -f);
+		glVertex3f(f, f, f);
+		glVertex3f(f, -f, f);
+		
+		glVertex3f(-f, f, f);
+		glVertex3f(-f, -f, f);
 
-			glVertex3f(-f, -f, f);
-			glVertex3f(-f, -f, -f);
-			
-			glVertex3f(f, -f, f);
-			glVertex3f(f, -f, -f);
-
-
-
-
-
-			glVertex3f(f, f, f);
-			glVertex3f(f, -f, f);
-			
-			glVertex3f(-f, f, f);
-			glVertex3f(-f, -f, f);
-
-			glVertex3f(-f, f, -f);
-			glVertex3f(-f, -f, -f);
-			
-			glVertex3f(f, f, -f);
-			glVertex3f(f, -f, -f);
+		glVertex3f(-f, f, -f);
+		glVertex3f(-f, -f, -f);
+		
+		glVertex3f(f, f, -f);
+		glVertex3f(f, -f, -f);
 
 
-			glVertex3f(f,  f, f);
-			glVertex3f(-f, f, f);
-			
-			glVertex3f(f,  -f, f);
-			glVertex3f(-f, -f, f);
+		glVertex3f(f,  f, f);
+		glVertex3f(-f, f, f);
+		
+		glVertex3f(f,  -f, f);
+		glVertex3f(-f, -f, f);
 
-			glVertex3f(f,  -f, -f);
-			glVertex3f(-f, -f, -f);
-			
-			glVertex3f(f,  f, -f);
-			glVertex3f(-f, f, -f);
+		glVertex3f(f,  -f, -f);
+		glVertex3f(-f, -f, -f);
+		
+		glVertex3f(f,  f, -f);
+		glVertex3f(-f, f, -f);
 
 
-			glEnd();
+		glEnd();
 
-			glPopMatrix();
-		}
-		for(SDebugDrawBounds& Bounds : g_DebugDrawState.Bounds)
-		{
-			glPushMatrix();
+		glPopMatrix();
+	}
+	void DebugDrawBounds(const SDebugDrawBounds& Bounds)
+	{			glPushMatrix();
 			glMultMatrixf(&Bounds.mat.x.x);
 			v3 vScale = Bounds.vSize;
 			vScale = v3max(vScale, 0.1f) * 1.07f;
@@ -248,16 +239,27 @@ void DebugDrawFlush()
 
 
 			glPopMatrix();
+	}
+}
+
+
+void DebugDrawFlush()
+{
+	if(g_lShowDebug)
+	{
+		glDisable(GL_CULL_FACE);
+
+		glEnable(GL_DEPTH_TEST);
+
+		for(SDebugDrawBounds& Box : g_DebugDrawState.Boxes)
+		{
+			if(Box.nUseZ)
+			{
+				DebugDrawBox(Box);
+			}
 		}
 
-
-
 		v4* pVert = g_DebugDrawState.PolyVert.Ptr();
-		// glEnable(GL_DEPTH_TEST);
-		// glDepthMasth(G
-		//glEnable(GL_BLEND);
-		// glBlendEquation(GL_FUNC_ADD);
-		// glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 		for(uint32 i = 0; i < g_DebugDrawState.Poly.Size(); ++i)
 		{
 			glBegin(GL_POLYGON);
@@ -267,13 +269,30 @@ void DebugDrawFlush()
 			glColor4ub(nColor >> 16, nColor >> 8, nColor, nColor>>24);
 			for(uint32 j = 0; j < nVertices; ++j)
 			{
-				v4 v = pVert[nStart+j];// + v4init(i * 0.5f,0,0,0);
+				v4 v = pVert[nStart+j];
 				glVertex3fv(&v.x);
 			}
 
 			glEnd();
 		}
-		//glDisable(GL_BLEND);
+
+
+		glDisable(GL_DEPTH_TEST);
+		glDepthMask(0);
+		for(SDebugDrawBounds& Box : g_DebugDrawState.Boxes)
+		{
+			if(!Box.nUseZ)
+			{
+				DebugDrawBox(Box);
+			}
+		}
+
+		for(SDebugDrawBounds& Bounds : g_DebugDrawState.Bounds)
+		{
+			DebugDrawBounds(Bounds);
+
+		}
+
 
 		glBegin(GL_LINES);
 		for(uint32_t i = 0; i < g_DebugDrawState.Lines.Size(); ++i)
@@ -292,5 +311,8 @@ void DebugDrawFlush()
 	g_DebugDrawState.PolyVert.Clear();
 	g_DebugDrawState.Bounds.Clear();
 	g_DebugDrawState.Boxes.Clear();
+
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(1);
 
 }
