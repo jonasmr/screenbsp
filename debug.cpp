@@ -250,6 +250,7 @@ void DebugDrawFlush()
 		glDisable(GL_CULL_FACE);
 
 		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LEQUAL);
 
 		for(SDebugDrawBounds& Box : g_DebugDrawState.Boxes)
 		{

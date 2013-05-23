@@ -6,6 +6,8 @@
 #include "input.h"
 #include "bsp.h"
 
+#include <algorithm>
+
 
 #define OCCLUDER_EMPTY (0xc000)
 #define OCCLUDER_LEAF (0x8000)
@@ -56,6 +58,7 @@ struct SOccluderBsp
 };
 void BspOccluderDebugDraw(v4* pVertexNew, v4* pVertexIn, uint32 nColor, uint32 nFill = 0) ;
 void BspAddOccluder(SOccluderBsp* pBsp, SOccluderPlane* pOccluder, uint32 nOccluderIndex);
+bool BspAddOccluder(SOccluderBsp* pBsp, v3* vCorners, uint32 nNumCorners);
 int BspAddInternal(SOccluderBsp* pBsp, SBspEdgeIndex* Poly, uint32 nVertices, uint32 nLevel);
 void BspAddOccluderRecursive(SOccluderBsp* pBsp, uint32 nBspIndex, SBspEdgeIndex* Poly, uint32 nEdges, uint32 nLevel);
 void BspDebugDrawHalfspace(v3 vNormal, v3 vPosition);
@@ -143,7 +146,7 @@ void BspDestroy(SOccluderBsp* pBsp)
 {
 	delete pBsp;
 }
-void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders, const SOccluderBspViewDesc& Desc)
+void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders, SWorldObject* pWorldObjects, uint32 nNumWorldObjects, const SOccluderBspViewDesc& Desc)
 {
 	if(g_KeyboardState.keys[SDLK_F3]&BUTTON_RELEASED)
 	{
@@ -181,8 +184,8 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 	pBsp->Desc = Desc;
 	const v3 vOrigin = pBsp->Desc.vOrigin;
 	const v3 vDirection = pBsp->Desc.vDirection;
-	pBsp->Occluders.Resize(1+nNumOccluders);
-	SOccluderPlane* pPlanes = pBsp->Occluders.Ptr();
+//	pBsp->Occluders.Resize(1+nNumOccluders);
+//	SOccluderPlane* pPlanes = pBsp->Occluders.Ptr();
 
 
 	//FRUSTUM
@@ -206,7 +209,7 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 		ZASSERTNORMALIZED3(Desc.vDirection);
 		ZASSERTNORMALIZED3(Desc.vRight);
 		ZASSERTNORMALIZED3(vUp);
-		SOccluderPlane& Plane = pPlanes[0];
+		SOccluderPlane& Plane = *pBsp->Occluders.PushBack();
 		int nPrev = -1;
 		for(uint32 i = 0; i < 4; ++i)
 		{
@@ -232,9 +235,6 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 			}
 		}
 		Plane.p[4] = v4init(0.f);
-		//Plane.p[4].w = 1.f; 
-
-
 
 		if(g_nBspOccluderDrawEdges&2)
 		{
@@ -247,6 +247,30 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 			ZDEBUG_DRAWLINE(vFrustumCorners[2], vFrustumCorners[3], 0, true);
 			ZDEBUG_DRAWLINE(vFrustumCorners[3], vFrustumCorners[0], 0, true);
 		}
+	}
+	{
+		struct SSortKey
+		{
+			float fDistance;
+			int nIndex;
+			bool operator < (const SSortKey& other) const
+			{
+				return fDistance < other.fDistance;
+			}
+		};
+		SSortKey* pKeys = (SSortKey*)alloca(nNumWorldObjects*sizeof(SSortKey));
+		int n = 0;
+		for(uint32 i = 0; i < nNumWorldObjects; ++i)
+		{
+			v3 vEyeToObject = pWorldObjects[i].mObjectToWorld.trans.tov3() - Desc.vOrigin;
+			float fDist = v3dot(vDirection, vEyeToObject);
+			if(fDist > 0)
+			{
+				pKeys[n].nIndex = i;
+				pKeys[n++].fDistance = fDist;
+			}
+		}
+		std::sort(pKeys, pKeys + nNumWorldObjects);
 	}
 
 
@@ -267,63 +291,64 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 		vCorners[1] = vCenter - vUp * Occ.vSize.y + vLeft * Occ.vSize.x;
 		vCorners[2] = vCenter - vUp * Occ.vSize.y - vLeft * Occ.vSize.x;
 		vCorners[3] = vCenter + vUp * Occ.vSize.y - vLeft * Occ.vSize.x;
-		SOccluderPlane& Plane = pPlanes[nOccluderIndex];
-		v3 vInnerNormal = v3normalize(v3cross(vCorners[1]-vCorners[0], vCorners[3]-vCorners[0]));
-		bool bFlip = false;
-		v4 vNormalPlane = MakePlane(vCorners[0], vInnerNormal);
-		{
-			float fMinDot = v3dot(vCorners[0]-vOrigin, vDirection);
-			fMinDot = Min(fMinDot, v3dot(vCorners[1]-vOrigin, vDirection));
-			fMinDot = Min(fMinDot, v3dot(vCorners[2]-vOrigin, vDirection));
-			fMinDot = Min(fMinDot, v3dot(vCorners[3]-vOrigin, vDirection));
+		BspAddOccluder(pBsp, &vCorners[0], 4);
+		// SOccluderPlane& Plane = pPlanes[nOccluderIndex];
+		// v3 vInnerNormal = v3normalize(v3cross(vCorners[1]-vCorners[0], vCorners[3]-vCorners[0]));
+		// bool bFlip = false;
+		// v4 vNormalPlane = MakePlane(vCorners[0], vInnerNormal);
+		// {
+		// 	float fMinDot = v3dot(vCorners[0]-vOrigin, vDirection);
+		// 	fMinDot = Min(fMinDot, v3dot(vCorners[1]-vOrigin, vDirection));
+		// 	fMinDot = Min(fMinDot, v3dot(vCorners[2]-vOrigin, vDirection));
+		// 	fMinDot = Min(fMinDot, v3dot(vCorners[3]-vOrigin, vDirection));
 
-			//project origin onto plane
-			float fDist = v4dot(vNormalPlane, v4init(vOrigin, 1.f));
+		// 	//project origin onto plane
+		// 	float fDist = v4dot(vNormalPlane, v4init(vOrigin, 1.f));
 
-			if(fabs(fDist) < Desc.fZNear)//if plane is very close to camera origin, discard to avoid intersection with near plane
-			{
-				if(fMinDot < 1.5 * Desc.fZNear) // _unless_ all 4 points clearly in front
-				{
-					continue;
-				}
+		// 	if(fabs(fDist) < Desc.fZNear)//if plane is very close to camera origin, discard to avoid intersection with near plane
+		// 	{
+		// 		if(fMinDot < 1.5 * Desc.fZNear) // _unless_ all 4 points clearly in front
+		// 		{
+		// 			continue;
+		// 		}
 				
-			}
-			v3 vPointOnPlane = vOrigin - fDist * vNormalPlane.tov3();
-			float fFoo = v4dot(vNormalPlane, v4init(vPointOnPlane, 1.f));
-			ZASSERT(fabs(fFoo) < 1e-4f);
+		// 	}
+		// 	v3 vPointOnPlane = vOrigin - fDist * vNormalPlane.tov3();
+		// 	float fFoo = v4dot(vNormalPlane, v4init(vPointOnPlane, 1.f));
+		// 	ZASSERT(fabs(fFoo) < 1e-4f);
 
-			if(fDist>0)
-			{
-				bFlip = true;
-				vInnerNormal = -vInnerNormal;
-				vNormalPlane = -vNormalPlane;
-			}
-		}
-		Plane.p[4] = vNormalPlane;
+		// 	if(fDist>0)
+		// 	{
+		// 		bFlip = true;
+		// 		vInnerNormal = -vInnerNormal;
+		// 		vNormalPlane = -vNormalPlane;
+		// 	}
+		// }
+		// Plane.p[4] = vNormalPlane;
 
 
-		for(uint32 i = 0; i < 4; ++i)
-		{
-			v3 v0 = vCorners[i];
-			v3 v1 = vCorners[(i+1) % 4];
-			v3 v2 = vOrigin;
-			v3 vCenter = (v0 + v1 + v2) / v3init(3.f);
-			v3 vNormal = v3normalize(v3cross(v3normalize(v1 - v0), v3normalize(v2 - v0)));
-			v3 vEnd = vCenter + vNormal;
-			Plane.p[i] = MakePlane(vCorners[i], vNormal);
-			if(bFlip)
-				Plane.p[i] = -Plane.p[i];
-			if(g_nBspOccluderDrawEdges&1)
-			{
-				ZDEBUG_DRAWLINE(v0, v1, (uint32)-1, true);
-				ZDEBUG_DRAWLINE(v1, v2, (uint32)-1, true);
-				ZDEBUG_DRAWLINE(v2, v0, (uint32)-1, true);
-			}
-		}
-		BspAddOccluder(pBsp, &pBsp->Occluders[nOccluderIndex], nOccluderIndex);
-		nOccluderIndex++;
+		// for(uint32 i = 0; i < 4; ++i)
+		// {
+		// 	v3 v0 = vCorners[i];
+		// 	v3 v1 = vCorners[(i+1) % 4];
+		// 	v3 v2 = vOrigin;
+		// 	v3 vCenter = (v0 + v1 + v2) / v3init(3.f);
+		// 	v3 vNormal = v3normalize(v3cross(v3normalize(v1 - v0), v3normalize(v2 - v0)));
+		// 	v3 vEnd = vCenter + vNormal;
+		// 	Plane.p[i] = MakePlane(vCorners[i], vNormal);
+		// 	if(bFlip)
+		// 		Plane.p[i] = -Plane.p[i];
+		// 	if(g_nBspOccluderDrawEdges&1)
+		// 	{
+		// 		ZDEBUG_DRAWLINE(v0, v1, (uint32)-1, true);
+		// 		ZDEBUG_DRAWLINE(v1, v2, (uint32)-1, true);
+		// 		ZDEBUG_DRAWLINE(v2, v0, (uint32)-1, true);
+		// 	}
+		// }
+		// BspAddOccluder(pBsp, &pBsp->Occluders[nOccluderIndex], nOccluderIndex);
+		// nOccluderIndex++;
 	}
-	ZASSERT(nOccluderIndex <= pBsp->Occluders.Size());
+//	ZASSERT(nOccluderIndex <= pBsp->Occluders.Size());
 
 
 	if(g_KeyboardState.keys[SDLK_F10] & BUTTON_RELEASED)
@@ -359,6 +384,71 @@ void BspAddOccluder(SOccluderBsp* pBsp, SOccluderPlane* pOccluder, uint32 nOcclu
 		BspAddOccluderRecursive(pBsp, 0, &Poly[0], 5, 1);
 	}
 }
+
+
+bool BspAddOccluder(SOccluderBsp* pBsp, v3* vCorners, uint32 nNumCorners)
+{
+	ZASSERT(nNumCorners == 4);
+	const v3 vOrigin = pBsp->Desc.vOrigin;
+	const v3 vDirection = pBsp->Desc.vDirection;
+	uint32 nIndex = pBsp->Occluders.Size();
+	SOccluderPlane* pPlane = pBsp->Occluders.PushBack();
+	v3 vInnerNormal = v3normalize(v3cross(vCorners[1]-vCorners[0], vCorners[3]-vCorners[0]));
+	bool bFlip = false;
+	v4 vNormalPlane = MakePlane(vCorners[0], vInnerNormal);
+	{
+		float fMinDot = v3dot(vCorners[0]-vOrigin, vDirection);
+		fMinDot = Min(fMinDot, v3dot(vCorners[1]-vOrigin, vDirection));
+		fMinDot = Min(fMinDot, v3dot(vCorners[2]-vOrigin, vDirection));
+		fMinDot = Min(fMinDot, v3dot(vCorners[3]-vOrigin, vDirection));
+		//project origin onto plane
+		float fDist = v4dot(vNormalPlane, v4init(vOrigin, 1.f));
+		if(fabs(fDist) < pBsp->Desc.fZNear)//if plane is very close to camera origin, discard to avoid intersection with near plane
+		{
+			if(fMinDot < 1.5 * pBsp->Desc.fZNear) // _unless_ all 4 points clearly in front
+			{
+				pBsp->Occluders.PopBack();
+				return false;
+			}
+			
+		}
+		v3 vPointOnPlane = vOrigin - fDist * vNormalPlane.tov3();
+		float fFoo = v4dot(vNormalPlane, v4init(vPointOnPlane, 1.f));
+		ZASSERT(fabs(fFoo) < 1e-4f);
+
+		if(fDist>0)
+		{
+			bFlip = true;
+			vInnerNormal = -vInnerNormal;
+			vNormalPlane = -vNormalPlane;
+		}
+	}
+	pPlane->p[4] = vNormalPlane;
+
+
+	for(uint32 i = 0; i < 4; ++i)
+	{
+		v3 v0 = vCorners[i];
+		v3 v1 = vCorners[(i+1) % 4];
+		v3 v2 = vOrigin;
+		v3 vCenter = (v0 + v1 + v2) / v3init(3.f);
+		v3 vNormal = v3normalize(v3cross(v3normalize(v1 - v0), v3normalize(v2 - v0)));
+		v3 vEnd = vCenter + vNormal;
+		pPlane->p[i] = MakePlane(vCorners[i], vNormal);
+		if(bFlip)
+			pPlane->p[i] = -pPlane->p[i];
+		if(g_nBspOccluderDrawEdges&1)
+		{
+			ZDEBUG_DRAWLINE(v0, v1, (uint32)-1, true);
+			ZDEBUG_DRAWLINE(v1, v2, (uint32)-1, true);
+			ZDEBUG_DRAWLINE(v2, v0, (uint32)-1, true);
+		}
+	}
+	BspAddOccluder(pBsp, pPlane, nIndex);
+	return true;
+
+}
+
 
 void BspDrawPoly(SOccluderBsp* pBsp, SBspEdgeIndex* Poly, uint32 nVertices, uint32 nColorPoly, uint32 nColorEdges, uint32 nBoxes = 0)
 {
