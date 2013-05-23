@@ -57,7 +57,8 @@ struct SOccluderBsp
 	TFixedArray<SOccluderBspNode, 1024> Nodes;
 };
 void BspOccluderDebugDraw(v4* pVertexNew, v4* pVertexIn, uint32 nColor, uint32 nFill = 0) ;
-void BspAddOccluder(SOccluderBsp* pBsp, SOccluderPlane* pOccluder, uint32 nOccluderIndex);
+void BspAddOccluderInternal(SOccluderBsp* pBsp, SOccluderPlane* pOccluder, uint32 nOccluderIndex);
+bool BspAddOccluder(SOccluderBsp* pBsp, v3 vCenter, v3 vNormal, v3 vUp, float fUpSize, v3 vLeft, float fLeftSize);
 bool BspAddOccluder(SOccluderBsp* pBsp, v3* vCorners, uint32 nNumCorners);
 int BspAddInternal(SOccluderBsp* pBsp, SBspEdgeIndex* Poly, uint32 nVertices, uint32 nLevel);
 void BspAddOccluderRecursive(SOccluderBsp* pBsp, uint32 nBspIndex, SBspEdgeIndex* Poly, uint32 nEdges, uint32 nLevel);
@@ -270,15 +271,34 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 				pKeys[n++].fDistance = fDist;
 			}
 		}
-		std::sort(pKeys, pKeys + nNumWorldObjects);
+		std::sort(pKeys, pKeys + n);
+		for(uint32 i = 0; i < n; ++i)
+		{
+			SWorldObject* pObject = pKeys[i].nIndex + pWorldObjects;
+			m mat = pObject->mObjectToWorld;
+			v3 vSize = pObject->vSize;
+			v3 vCenter = mat.trans.tov3();
+			v3 vX = mat.y.tov3();
+			v3 vY = mat.x.tov3();
+			v3 vZ = mat.z.tov3();
+			vX = v3dot(vX, vDirection) < 0.f ? vX : -vX;
+			vY = v3dot(vY, vDirection) < 0.f ? vY : -vY;
+			vZ = v3dot(vZ, vDirection) < 0.f ? vZ : -vZ;
+			//uprintf("DOT %i %i %i\n", v3dot(vX, vDirection) < 0.f, v3dot(vY, vDirection) < 0.f, v3dot(vZ, vDirection) < 0.f);
+			BspAddOccluder(pBsp, vCenter + vX * vSize.x, vX, vY, vSize.y, vZ, vSize.z);
+			BspAddOccluder(pBsp, vCenter + vY * vSize.y, vY, vZ, vSize.z, vX, vSize.x);
+			BspAddOccluder(pBsp, vCenter + vZ * vSize.z, vZ, vY, vSize.y, vX, vSize.x);
+			if(pBsp->Occluders.Size()>150 || pBsp->Nodes.Size() > 300)
+				break;
+		}
 	}
 
 
 
 
-	uint32 nOccluderIndex = 1; // first is frustum
+//	uint32 nOccluderIndex = 1; // first is frustum
 
-
+#if 0
 	for(uint32 k = 0; k < nNumOccluders; ++k)
 	{
 		v3 vCorners[4];
@@ -348,6 +368,7 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 		// BspAddOccluder(pBsp, &pBsp->Occluders[nOccluderIndex], nOccluderIndex);
 		// nOccluderIndex++;
 	}
+#endif
 //	ZASSERT(nOccluderIndex <= pBsp->Occluders.Size());
 
 
@@ -360,7 +381,7 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 	srand(seed);
 }
 
-void BspAddOccluder(SOccluderBsp* pBsp, SOccluderPlane* pOccluder, uint32 nOccluderIndex)
+void BspAddOccluderInternal(SOccluderBsp* pBsp, SOccluderPlane* pOccluder, uint32 nOccluderIndex)
 {
 	//base poly
 	SBspEdgeIndex Poly[ 5 ];
@@ -385,6 +406,19 @@ void BspAddOccluder(SOccluderBsp* pBsp, SOccluderPlane* pOccluder, uint32 nOcclu
 	}
 }
 
+
+bool BspAddOccluder(SOccluderBsp* pBsp, v3 vCenter, v3 vNormal, v3 vUp, float fUpSize, v3 vLeft, float fLeftSize)
+{
+	v3 vCorners[4];
+	// fUpSize += 0.05f;
+	// fLeftSize += 0.05f;
+	vCorners[0] = vCenter + vUp * fUpSize + vLeft * fLeftSize;
+	vCorners[1] = vCenter - vUp * fUpSize + vLeft * fLeftSize;
+	vCorners[2] = vCenter - vUp * fUpSize - vLeft * fLeftSize;
+	vCorners[3] = vCenter + vUp * fUpSize - vLeft * fLeftSize;
+	//uprintf("dot %f\n",v3dot(vNormal, v3normalize(v3cross(vCorners[0]-vCorners[1], vCorners[0]-vCorners[2]))));
+	return BspAddOccluder(pBsp, &vCorners[0], 4);
+}
 
 bool BspAddOccluder(SOccluderBsp* pBsp, v3* vCorners, uint32 nNumCorners)
 {
@@ -444,7 +478,7 @@ bool BspAddOccluder(SOccluderBsp* pBsp, v3* vCorners, uint32 nNumCorners)
 			ZDEBUG_DRAWLINE(v2, v0, (uint32)-1, true);
 		}
 	}
-	BspAddOccluder(pBsp, pPlane, nIndex);
+	BspAddOccluderInternal(pBsp, pPlane, nIndex);
 	return true;
 
 }
