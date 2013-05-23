@@ -63,7 +63,7 @@ static void DumpGlLog(GLuint handle)
 
 GLuint CreateProgram(int nType, const char* pFile)
 {
-	uprintf("COMPILING %s as %s", pFile, nType == GL_FRAGMENT_SHADER_ARB ? "FRAGMENT SHADER" : "VERTEX SHADER");
+	uprintf("COMPILING %s as %s\n", pFile, nType == GL_FRAGMENT_SHADER_ARB ? "FRAGMENT SHADER" : "VERTEX SHADER");
 	char* pBuffer = ReadTextFile(pFile);
 	GLuint handle = glCreateShaderObjectARB(nType);
 	CheckGLError();

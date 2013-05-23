@@ -260,22 +260,22 @@ void DebugDrawFlush()
 			}
 		}
 
-		v4* pVert = g_DebugDrawState.PolyVert.Ptr();
-		for(uint32 i = 0; i < g_DebugDrawState.Poly.Size(); ++i)
-		{
-			glBegin(GL_POLYGON);
-			uint32_t nColor = g_DebugDrawState.Poly[i].nColor;
-			uint32 nVertices = g_DebugDrawState.Poly[i].nVertices;
-			uint32 nStart = g_DebugDrawState.Poly[i].nStart;
-			glColor4ub(nColor >> 16, nColor >> 8, nColor, nColor>>24);
-			for(uint32 j = 0; j < nVertices; ++j)
-			{
-				v4 v = pVert[nStart+j];
-				glVertex3fv(&v.x);
-			}
+		// v4* pVert = g_DebugDrawState.PolyVert.Ptr();
+		// for(uint32 i = 0; i < g_DebugDrawState.Poly.Size(); ++i)
+		// {
+		// 	glBegin(GL_POLYGON);
+		// 	uint32_t nColor = g_DebugDrawState.Poly[i].nColor;
+		// 	uint32 nVertices = g_DebugDrawState.Poly[i].nVertices;
+		// 	uint32 nStart = g_DebugDrawState.Poly[i].nStart;
+		// 	glColor4ub(nColor >> 16, nColor >> 8, nColor, nColor>>24);
+		// 	for(uint32 j = 0; j < nVertices; ++j)
+		// 	{
+		// 		v4 v = pVert[nStart+j];
+		// 		glVertex3fv(&v.x);
+		// 	}
 
-			glEnd();
-		}
+		// 	glEnd();
+		// }
 
 
 		glDisable(GL_DEPTH_TEST);
@@ -292,6 +292,25 @@ void DebugDrawFlush()
 		{
 			DebugDrawBounds(Bounds);
 
+		}
+
+
+
+		v4* pVert = g_DebugDrawState.PolyVert.Ptr();
+		for(uint32 i = 0; i < g_DebugDrawState.Poly.Size(); ++i)
+		{
+			glBegin(GL_POLYGON);
+			uint32_t nColor = g_DebugDrawState.Poly[i].nColor;
+			uint32 nVertices = g_DebugDrawState.Poly[i].nVertices;
+			uint32 nStart = g_DebugDrawState.Poly[i].nStart;
+			glColor4ub(nColor >> 16, nColor >> 8, nColor, nColor>>24);
+			for(uint32 j = 0; j < nVertices; ++j)
+			{
+				v4 v = pVert[nStart+j];
+				glVertex3fv(&v.x);
+			}
+
+			glEnd();
 		}
 
 
