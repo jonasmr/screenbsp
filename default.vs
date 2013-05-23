@@ -15,7 +15,7 @@ void main(void)
 
 	n1 = gl_ModelViewMatrix * n1;
 	normal = n1.xyz;
-	float diffuse = dot(dir, normal);
+	float diffuse = max(dot(dir, normal), 0.3*dot(-dir, normal));
 	vec3 ambient = vec3(0.4, 0.4, 0.4);
 
 	gl_FrontColor = gl_Color;

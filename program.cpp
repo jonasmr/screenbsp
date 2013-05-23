@@ -162,7 +162,7 @@ void WorldRender()
 	ViewDesc.fAspect = (float)g_Height / (float)g_Width;
 	ViewDesc.fZNear = g_WorldState.Camera.fNear;
 
-	BspBuild(g_Bsp, &g_WorldState.Occluders[0], nNumOccluders, ViewDesc);
+	BspBuild(g_Bsp, &g_WorldState.Occluders[0], nNumOccluders, &g_WorldState.WorldObjects[0], g_WorldState.nNumWorldObjects, ViewDesc);
 
 	uint32 nNumObjects = g_WorldState.nNumWorldObjects;
 	bool* bCulled = (bool*)alloca(nNumObjects);
@@ -183,7 +183,9 @@ void WorldRender()
 		else
 		{
 			ShaderUse(VS_DEFAULT, PS_FLAT_LIT);
-			MeshDraw(GetBaseMesh(MESH_SPHERE_2_FLAT), g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].vSize);
+			glEnable(GL_CULL_FACE);
+			MeshDraw(GetBaseMesh(MESH_BOX_FLAT), g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].vSize);
+			glDisable(GL_CULL_FACE);
 			ShaderDisable();
 		}
 

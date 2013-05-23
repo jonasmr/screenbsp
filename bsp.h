@@ -18,7 +18,7 @@ struct SOccluderBspViewDesc
 
 
 void BspDestroy(SOccluderBsp* pBsp);
-void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, const SOccluderBspViewDesc& Desc);
+void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, SWorldObject* pWorldObject, uint32 nNumWorldObjects, const SOccluderBspViewDesc& Desc);
 bool BspCullObject(SOccluderBsp* pBsp, SWorldObject* pObject);
 
 
