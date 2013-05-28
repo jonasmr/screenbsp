@@ -229,6 +229,8 @@ v4 v4init(v3 v, float w){ v4 r; r.x = v.x; r.y = v.y; r.z = v.z; r.w = w; return
 inline
 v4 v4init(v4 v, float w){ v4 r; r.x = v.x; r.y = v.y; r.z = v.z; r.w = w; return r; }
 float v4dot(v4 v0, v4 v1);
+float v4length(v4 v0);
+float v4length2(v4 v0);
 
 
 v4 operator +(const v4 l, const v4 r);

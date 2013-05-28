@@ -650,6 +650,15 @@ float v4dot(v4 v0, v4 v1)
 	return v0.x * v1.x + v0.y * v1.y + v0.z * v1.z + v0.w * v1.w;
 }
 
+float v4length(v4 v0)
+{
+	return sqrt(v0.x * v0.x + v0.y * v0.y + v0.z * v0.z + v0.w * v0.w);
+}
+
+float v4length2(v4 v0)
+{
+	return v0.x * v0.x + v0.y * v0.y + v0.z * v0.z + v0.w * v0.w;
+}
 
 void v4::operator +=(const v4& r)
 {

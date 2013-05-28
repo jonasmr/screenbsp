@@ -5,6 +5,7 @@
 #include "program.h"
 #include "input.h"
 #include "bsp.h"
+#include "microprofile.h"
 
 #include <algorithm>
 
@@ -58,7 +59,7 @@ struct SOccluderBsp
 };
 void BspOccluderDebugDraw(v4* pVertexNew, v4* pVertexIn, uint32 nColor, uint32 nFill = 0) ;
 void BspAddOccluderInternal(SOccluderBsp* pBsp, SOccluderPlane* pOccluder, uint32 nOccluderIndex);
-bool BspAddOccluder(SOccluderBsp* pBsp, v3 vCenter, v3 vNormal, v3 vUp, float fUpSize, v3 vLeft, float fLeftSize);
+bool BspAddOccluder(SOccluderBsp* pBsp, v3 vCenter, v3 vNormal, v3 vUp, float fUpSize, v3 vLeft, float fLeftSize, bool bFlip = false);
 bool BspAddOccluder(SOccluderBsp* pBsp, v3* vCorners, uint32 nNumCorners);
 int BspAddInternal(SOccluderBsp* pBsp, SBspEdgeIndex* Poly, uint32 nVertices, uint32 nLevel);
 void BspAddOccluderRecursive(SOccluderBsp* pBsp, uint32 nBspIndex, SBspEdgeIndex* Poly, uint32 nEdges, uint32 nLevel);
@@ -149,6 +150,7 @@ void BspDestroy(SOccluderBsp* pBsp)
 }
 void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders, SWorldObject* pWorldObjects, uint32 nNumWorldObjects, const SOccluderBspViewDesc& Desc)
 {
+	ZMICROPROFILE_SCOPEI("BSP", "Build", 0xff0000);
 	if(g_KeyboardState.keys[SDLK_F3]&BUTTON_RELEASED)
 	{
 		g_nBspOccluderDrawOccluders = (g_nBspOccluderDrawOccluders+1)%2;
@@ -249,6 +251,7 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 			ZDEBUG_DRAWLINE(vFrustumCorners[3], vFrustumCorners[0], 0, true);
 		}
 	}
+#if 1
 	{
 		struct SSortKey
 		{
@@ -278,16 +281,17 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 			m mat = pObject->mObjectToWorld;
 			v3 vSize = pObject->vSize;
 			v3 vCenter = mat.trans.tov3();
-			v3 vX = mat.y.tov3();
-			v3 vY = mat.x.tov3();
+			v3 vX = mat.x.tov3();
+			v3 vY = mat.y.tov3();
 			v3 vZ = mat.z.tov3();
 			vX = v3dot(vX, vDirection) < 0.f ? vX : -vX;
 			vY = v3dot(vY, vDirection) < 0.f ? vY : -vY;
 			vZ = v3dot(vZ, vDirection) < 0.f ? vZ : -vZ;
 			//uprintf("DOT %i %i %i\n", v3dot(vX, vDirection) < 0.f, v3dot(vY, vDirection) < 0.f, v3dot(vZ, vDirection) < 0.f);
-			BspAddOccluder(pBsp, vCenter + vX * vSize.x, vX, vY, vSize.y, vZ, vSize.z);
-			BspAddOccluder(pBsp, vCenter + vY * vSize.y, vY, vZ, vSize.z, vX, vSize.x);
-			BspAddOccluder(pBsp, vCenter + vZ * vSize.z, vZ, vY, vSize.y, vX, vSize.x);
+			
+			BspAddOccluder(pBsp, vCenter + vY * vSize.y/**1.01*/, vY, vZ, vSize.z, vX, vSize.x,true);			
+			BspAddOccluder(pBsp, vCenter + vX * vSize.x/**1.01*/, vX, vY, vSize.y, vZ, vSize.z, true);
+			//BspAddOccluder(pBsp, vCenter + vZ * vSize.z/**1.01*/, vZ, vY, vSize.y, vX, vSize.x, true);
 			if(pBsp->Occluders.Size()>150 || pBsp->Nodes.Size() > 300)
 				break;
 		}
@@ -298,7 +302,7 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 
 //	uint32 nOccluderIndex = 1; // first is frustum
 
-#if 0
+#else
 	for(uint32 k = 0; k < nNumOccluders; ++k)
 	{
 		v3 vCorners[4];
@@ -407,15 +411,25 @@ void BspAddOccluderInternal(SOccluderBsp* pBsp, SOccluderPlane* pOccluder, uint3
 }
 
 
-bool BspAddOccluder(SOccluderBsp* pBsp, v3 vCenter, v3 vNormal, v3 vUp, float fUpSize, v3 vLeft, float fLeftSize)
+bool BspAddOccluder(SOccluderBsp* pBsp, v3 vCenter, v3 vNormal, v3 vUp, float fUpSize, v3 vLeft, float fLeftSize, bool bFlip)
 {
 	v3 vCorners[4];
 	// fUpSize += 0.05f;
 	// fLeftSize += 0.05f;
-	vCorners[0] = vCenter + vUp * fUpSize + vLeft * fLeftSize;
-	vCorners[1] = vCenter - vUp * fUpSize + vLeft * fLeftSize;
-	vCorners[2] = vCenter - vUp * fUpSize - vLeft * fLeftSize;
-	vCorners[3] = vCenter + vUp * fUpSize - vLeft * fLeftSize;
+	if(bFlip)
+	{
+		vCorners[3] = vCenter + vUp * fUpSize - vLeft * fLeftSize;
+		vCorners[2] = vCenter - vUp * fUpSize - vLeft * fLeftSize;
+		vCorners[1] = vCenter - vUp * fUpSize + vLeft * fLeftSize;
+		vCorners[0] = vCenter + vUp * fUpSize + vLeft * fLeftSize;
+	}
+	else
+	{
+		vCorners[0] = vCenter + vUp * fUpSize + vLeft * fLeftSize;
+		vCorners[1] = vCenter - vUp * fUpSize + vLeft * fLeftSize;
+		vCorners[2] = vCenter - vUp * fUpSize - vLeft * fLeftSize;
+		vCorners[3] = vCenter + vUp * fUpSize - vLeft * fLeftSize;
+	}
 	//uprintf("dot %f\n",v3dot(vNormal, v3normalize(v3cross(vCorners[0]-vCorners[1], vCorners[0]-vCorners[2]))));
 	return BspAddOccluder(pBsp, &vCorners[0], 4);
 }
@@ -588,15 +602,51 @@ uint32 BspClipPoly(SOccluderBsp* pBsp, SBspEdgeIndex PlaneIndex, SBspEdgeIndex* 
 	ZASSERT(0 == (0x3&(uintptr)vCorners));
 	uint32 nRealEdges = nEdges-1;
 	ZASSERT(Poly[nRealEdges].nEdge == 4);
+	const float fPlaneTolerance = 1e-5f;
 	v4 vNormalPlane = pBsp->Occluders[ Poly[nRealEdges].nOccluderIndex ].p[4];
+	bool bHasRejectPlane = false; //dont clip if too close
+	int nBehindCount = 0; // no. of corners behind
+	int nFrontCount = 0; // no. of corners in front
+	float fDistLort = 0;
 	for(uint32 i = 0; i < nRealEdges; ++i)
 	{
 		uint32 i0 = i;
 		uint32 i1 = (i+nRealEdges-1)%nRealEdges;
 		v4 v0 = GET_PLANE(pBsp, Poly[i0]);
 		v4 v1 = GET_PLANE(pBsp, Poly[i1]);
-		vCorners[i] = BspPlaneIntersection(v0, v1, vNormalPlane);
-		bBehindCorner[i] = v4dot(v4init(vCorners[i],1.f), vPlane) >= 0.f;
+		
+		bHasRejectPlane = bHasRejectPlane ||  v4length(v0 - vPlane) < fPlaneTolerance;
+		// if(v4length(v0 - vPlane) < fPlaneTolerance)
+		// {
+		// 	uplotfnxt("TOL FAIL %16.10f", v4length(v0 - vPlane));
+		// }
+		// else
+		{
+			vCorners[i] = BspPlaneIntersection(v0, v1, vNormalPlane);
+			float fDist = v4dot(v4init(vCorners[i],1.f), vPlane);
+			fDistLort += fDist;
+			bool bBehind = fDist >= 0.f;
+			bBehindCorner[i] = bBehind;
+			nBehindCount += v4dot(v4init(vCorners[i],1.f), vPlane) >= 0.1f ? 1 : 0;
+			nFrontCount += v4dot(v4init(vCorners[i],1.f), vPlane) <= -0.1f ? 0 : 1;
+		}
+	}
+	if(bHasRejectPlane)
+	{
+		// if(nBehindCount == 0 && nFrontCount == 0)
+		// 	return 0;
+		// ZASSERT(nBehindCount == 0 || nFrontCount == 0);
+		// ZASSERT(nBehindCount != nFrontCount);
+		uplotfnxt("REJECT %f", fDistLort);
+		if(fDistLort > 0.1f)
+		{
+			memcpy(pPolyOut, Poly, nEdges * sizeof(*Poly));
+			return nEdges;
+		}
+		else
+		{
+			return 0;
+		}
 	}
 	PlaneIndex.nSkip = 1;
 	uint32 nOutIndex = 0;
@@ -751,6 +801,8 @@ bool BspCullObjectR(SOccluderBsp* pBsp, uint32 Index, SBspEdgeIndex* Poly, uint3
 
 bool BspCullObject(SOccluderBsp* pBsp, SWorldObject* pObject)
 {
+	ZMICROPROFILE_SCOPEI("BSP", "Cull", 0xff0000);
+
 	long seed = rand();
 	srand((int)(uintptr)pObject);
 
@@ -772,7 +824,7 @@ bool BspCullObject(SOccluderBsp* pBsp, SWorldObject* pObject)
 	vRight = mgetxaxis(mboxinv);
 	vUp = mgetyaxis(mboxinv);
 
-	v3 vCenterQuad = vCenterWorld - vToCenter * AABB.z;
+	v3 vCenterQuad = vCenterWorld - vToCenter * AABB.z * 1.1;
 	v3 v0 = vCenterQuad + vRight * AABB.x + vUp * AABB.y;
 	v3 v1 = vCenterQuad + vRight * -AABB.x + vUp * AABB.y;
 	v3 v2 = vCenterQuad + vRight * -AABB.x + vUp * -AABB.y;
