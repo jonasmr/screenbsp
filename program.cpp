@@ -79,8 +79,13 @@ void WorldInit()
 	g_WorldState.WorldObjects[0].mObjectToWorld = mrotatey(90*TORAD);
 	g_WorldState.WorldObjects[0].mObjectToWorld.trans = v4init(3.f,0.f,-0.5f, 1.f);
 	g_WorldState.WorldObjects[0].vSize = v3init(0.25f, 0.2f, 0.2); 
-	g_WorldState.nNumWorldObjects = 1;
-	if(1)
+
+	g_WorldState.WorldObjects[1].mObjectToWorld = mrotatey(90*TORAD);
+	g_WorldState.WorldObjects[1].mObjectToWorld.trans = v4init(3.f,0.f,-1.5f, 1.f);
+	g_WorldState.WorldObjects[1].vSize = v3init(0.25f, 0.2f, 0.2)* 0.5f; 
+
+	g_WorldState.nNumWorldObjects = 2;
+	if(0)
 	{
 		int idx = 0;
 		#define GRID_SIZE 10
@@ -162,11 +167,15 @@ void WorldRender()
 	ViewDesc.fAspect = (float)g_Height / (float)g_Width;
 	ViewDesc.fZNear = g_WorldState.Camera.fNear;
 
-	BspBuild(g_Bsp, &g_WorldState.Occluders[0], nNumOccluders, &g_WorldState.WorldObjects[0], g_WorldState.nNumWorldObjects, ViewDesc);
+	BspBuild(g_Bsp, &g_WorldState.Occluders[0], nNumOccluders, &g_WorldState.WorldObjects[0], 
+		//g_WorldState.nNumWorldObjects, 
+		1,
+		ViewDesc);
 
 	uint32 nNumObjects = g_WorldState.nNumWorldObjects;
 	bool* bCulled = (bool*)alloca(nNumObjects);
-	for(uint32 i = 0; i < nNumObjects; ++i)
+	bCulled[0] = false;
+	for(uint32 i = 1; i < nNumObjects; ++i)
 	{
 		bCulled[i] = BspCullObject(g_Bsp, &g_WorldState.WorldObjects[i]);
 	}
@@ -178,10 +187,12 @@ void WorldRender()
 		glMultMatrixf(&g_WorldState.WorldObjects[i].mObjectToWorld.x.x);
 		if(bCulled[i])
 		{
+			uplotfnxt("CULLED %d", i);
 			ZDEBUG_DRAWBOX(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].mObjectToWorld.w.tov3(), g_WorldState.WorldObjects[i].vSize, 0xffff0000, 0);
 		}
 		else
 		{
+			uplotfnxt("NOT CULLED %d", i);
 			ShaderUse(VS_DEFAULT, PS_FLAT_LIT);
 			glEnable(GL_CULL_FACE);
 			MeshDraw(GetBaseMesh(MESH_BOX_FLAT), g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].vSize);

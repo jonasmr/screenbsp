@@ -12,6 +12,8 @@
 #include "debug.h"
 #include "mesh.h"
 #include "shader.h"
+#include "microprofile.h"
+
 
 SDL_Surface* g_Surface;
 uint32_t g_BaseWidth =  800;
@@ -185,6 +187,8 @@ int SDL_main(int argc, char** argv)
 		DebugDrawFlush();
 		TextFlush();
 		SDL_GL_SwapBuffers();
+		MicroProfilePlot();
+		MicroProfileFlip();
 	}
 	return 0;
 }
