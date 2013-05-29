@@ -13,6 +13,7 @@
 #include "manipulator.h"
 #include "mesh.h"
 #include "shader.h"
+#include "physics.h"
 
 extern uint32_t g_Width;
 extern uint32_t g_Height;
@@ -83,8 +84,8 @@ void WorldInit()
 	g_WorldState.WorldObjects[1].mObjectToWorld = mrotatey(90*TORAD);
 	g_WorldState.WorldObjects[1].mObjectToWorld.trans = v4init(3.f,0.f,-1.5f, 1.f);
 	g_WorldState.WorldObjects[1].vSize = v3init(0.25f, 0.2f, 0.2)* 0.5f; 
-
 	g_WorldState.nNumWorldObjects = 2;
+
 	if(0)
 	{
 		int idx = 0;
@@ -108,8 +109,17 @@ void WorldInit()
 		}}}
 		g_WorldState.nNumWorldObjects = idx;
 	}
+
+	for(int i = 0; i < g_WorldState.nNumWorldObjects; ++i)
+	{
+		PhysicsAddObjectBox(&g_WorldState.WorldObjects[i]);
+	}
+
+
 	g_EditorState.pSelected = 0;
 }
+
+
 
 int g_nSimulate = 0;
 void WorldRender()

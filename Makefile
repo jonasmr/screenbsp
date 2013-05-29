@@ -1,11 +1,12 @@
 
-LDFLAGS=-framework OpenGL -framework CoreAudio `/usr/local/bin/sdl-config --static-libs`
-CFLAGS=`/usr/local/bin/sdl-config --cflags` -mmacosx-version-min="10.7" -Iglew/glew-1.9.0/include -DGLEW_STATIC -Wno-c++11-extensions
+LDFLAGS=-framework OpenGL -framework CoreAudio `/usr/local/bin/sdl-config --static-libs` -lBulletDynamics -lBulletCollision -lLinearMath
+CFLAGS=`/usr/local/bin/sdl-config --cflags` -mmacosx-version-min="10.7" -Iglew/glew-1.9.0/include -DGLEW_STATIC -Wno-c++11-extensions -I/usr/local/include/bullet
 CFLAGS+=-g -O0 -Wno-invalid-offsetof
 CPPFLAGS=$(CFLAGS)
 CPPFLAGS+=-std=c++11 -Wno-lambda-extensions 
 
-CPP_SOURCES = main.cpp math.cpp text.cpp input.cpp program.cpp bsp.cpp debug.cpp manipulator.cpp mesh.cpp shader.cpp microprofile.cpp
+CPP_SOURCES = main.cpp math.cpp text.cpp input.cpp program.cpp bsp.cpp debug.cpp manipulator.cpp mesh.cpp shader.cpp \
+		microprofile.cpp physics.cpp
 C_SOURCES = stb_image.c glew.c
 
 CC=clang

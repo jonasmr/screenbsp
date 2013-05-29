@@ -9,7 +9,7 @@ enum
 	MAX_WORLD_OBJECTS = 2048,
 };
 
-struct SObject
+struct __attribute__((aligned(16))) SObject
 {
 	m mObjectToWorld;
 	v3 vSize;
