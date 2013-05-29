@@ -594,6 +594,31 @@ v3 BspGetCorner(SOccluderBsp* pBsp, SBspEdgeIndex* Poly, uint32 nEdges, uint32 i
 	return BspPlaneIntersection(v0, v1, vNormalPlane); 
 }
 
+bool PlaneToleranceTest(v4 vPlane, v4 vClipPlane, float fPlaneTolerance)
+{
+	float f3dot = fabs(v3dot(vPlane.tov3(), vClipPlane.tov3()));
+	float f3dot1 = fabs(v3dot((-vPlane).tov3(), vClipPlane.tov3()));
+	float fMinDist = fabs(v4length(vPlane -  vClipPlane));
+	float fMinDist1 = fabs(v4length(-vPlane - vClipPlane));
+	if(Min<float>(fMinDist, fMinDist1) < fPlaneTolerance || Max<float>(f3dot, f3dot1) > 0.9)
+	{
+		uplotfnxt("MIN %f %f .. MAX %f %f", fMinDist, fMinDist1, f3dot, f3dot1);
+
+	}
+
+	if(Min<float>(fMinDist, fMinDist1) < fPlaneTolerance && Max<float>(f3dot, f3dot1) > 0.9)
+	{
+		uprintf("FAIL %f %f  v3d %f", fMinDist, fMinDist1, f3dot);
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+
+
+}
+
 uint32 BspClipPoly(SOccluderBsp* pBsp, SBspEdgeIndex PlaneIndex, SBspEdgeIndex* Poly, uint32 nEdges, SBspEdgeIndex* pPolyOut)
 {
 	v4 vPlane = GET_PLANE(pBsp, PlaneIndex);
@@ -602,24 +627,31 @@ uint32 BspClipPoly(SOccluderBsp* pBsp, SBspEdgeIndex PlaneIndex, SBspEdgeIndex* 
 	ZASSERT(0 == (0x3&(uintptr)vCorners));
 	uint32 nRealEdges = nEdges-1;
 	ZASSERT(Poly[nRealEdges].nEdge == 4);
-	const float fPlaneTolerance = 1e-5f;
+	const float fPlaneTolerance = 1e-4f;
 	v4 vNormalPlane = pBsp->Occluders[ Poly[nRealEdges].nOccluderIndex ].p[4];
 	bool bHasRejectPlane = false; //dont clip if too close
 	int nBehindCount = 0; // no. of corners behind
 	int nFrontCount = 0; // no. of corners in front
 	float fDistLort = 0;
+	int nRejectIndex = -1;
 	for(uint32 i = 0; i < nRealEdges; ++i)
 	{
 		uint32 i0 = i;
 		uint32 i1 = (i+nRealEdges-1)%nRealEdges;
 		v4 v0 = GET_PLANE(pBsp, Poly[i0]);
 		v4 v1 = GET_PLANE(pBsp, Poly[i1]);
-		
-		bHasRejectPlane = bHasRejectPlane ||  v4length(v0 - vPlane) < fPlaneTolerance;
+		bool bPlaneTol = PlaneToleranceTest(v0, vPlane, fPlaneTolerance);
+		if(bPlaneTol)
+		{
+			ZASSERT(nRejectIndex == -1);
+			nRejectIndex = i;
+
+		}
+		//bHasRejectPlane = bHasRejectPlane ||  
 		// if(v4length(v0 - vPlane) < fPlaneTolerance)
 		// {
 		// 	uplotfnxt("TOL FAIL %16.10f", v4length(v0 - vPlane));
-		// }
+		//  }
 		// else
 		{
 			vCorners[i] = BspPlaneIntersection(v0, v1, vNormalPlane);
@@ -629,9 +661,15 @@ uint32 BspClipPoly(SOccluderBsp* pBsp, SBspEdgeIndex PlaneIndex, SBspEdgeIndex* 
 			bBehindCorner[i] = bBehind;
 			nBehindCount += v4dot(v4init(vCorners[i],1.f), vPlane) >= 0.1f ? 1 : 0;
 			nFrontCount += v4dot(v4init(vCorners[i],1.f), vPlane) <= -0.1f ? 0 : 1;
+			if(bPlaneTol)
+			{
+				//void BspDebugDrawHalfspace(v3 vNormal, v3 vPosition);
+				BspDebugDrawHalfspace(vPlane.tov3(), vCorners[i]);
+				BspDebugDrawHalfspace(v0.tov3(), vCorners[i]);
+			}
 		}
 	}
-	if(bHasRejectPlane)
+	if(0&&nRejectIndex> -1)
 	{
 		// if(nBehindCount == 0 && nFrontCount == 0)
 		// 	return 0;
@@ -640,8 +678,17 @@ uint32 BspClipPoly(SOccluderBsp* pBsp, SBspEdgeIndex PlaneIndex, SBspEdgeIndex* 
 		uplotfnxt("REJECT %f", fDistLort);
 		if(fDistLort > 0.1f)
 		{
-			memcpy(pPolyOut, Poly, nEdges * sizeof(*Poly));
-			return nEdges;
+			ZASSERT(nRejectIndex != nEdges-1);
+			int nOut=0;
+			for(uint32 i = 0; i < nEdges; ++i)
+			{
+				if(i != nRejectIndex)
+				{
+					pPolyOut[nOut++] = Poly[i];
+				}
+			}
+			//memcpy(pPolyOut, Poly, nEdges * sizeof(*Poly));
+			return nOut;
 		}
 		else
 		{

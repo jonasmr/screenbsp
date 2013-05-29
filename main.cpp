@@ -13,6 +13,7 @@
 #include "mesh.h"
 #include "shader.h"
 #include "microprofile.h"
+#include "physics.h"
 
 
 SDL_Surface* g_Surface;
@@ -164,6 +165,7 @@ int SDL_main(int argc, char** argv)
 	MeshInit();
 	ShaderInit();
 
+	PhysicsInit();
 	ProgramInit();
 	
 
@@ -184,6 +186,8 @@ int SDL_main(int argc, char** argv)
 		}
 
 
+
+		PhysicsStep();
 		DebugDrawFlush();
 		TextFlush();
 		SDL_GL_SwapBuffers();
