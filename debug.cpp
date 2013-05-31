@@ -112,8 +112,8 @@ namespace
 	void DebugDrawBox(const SDebugDrawBounds& Box)
 	{
 		glPushMatrix();
-		//glMultMatrixf(&Box.mat.x.x);
-		glTranslatef(Box.mat.trans.x, Box.mat.trans.y, Box.mat.trans.z);
+		glMultMatrixf(&Box.mat.x.x);
+		//glTranslatef(Box.mat.trans.x, Box.mat.trans.y, Box.mat.trans.z);
 		v3 vScale = Box.vSize;
 		glScalef(vScale.x, vScale.y, vScale.z);
 		glBegin(GL_LINES);

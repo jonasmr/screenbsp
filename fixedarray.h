@@ -2,6 +2,8 @@
 #include "podhelp.h"
 #include "debug.h"
 
+
+void BSPDUMP();
 //POD only
 template< typename T, uint32_t SIZE, bool bISPOD = true>
 struct TFixedArray
@@ -107,7 +109,7 @@ struct TFixedArray
 	const T* begin() const { return Ptr();}
 	const T* end() const { return Ptr() + nSize; }
 
-	T& operator[](const size_t nIndex){ ZASSERT(nIndex < nSize); return Ptr()[nIndex]; }
+	T& operator[](const size_t nIndex){ if(nIndex >= nSize ){BSPDUMP();}ZASSERT(nIndex < nSize); return Ptr()[nIndex]; }
 	const T& operator[](const size_t nIndex) const{ ZASSERT(nIndex < nSize); return Ptr()[nIndex]; }
 
 };
