@@ -173,7 +173,7 @@ int SDL_main(int argc, char** argv)
 	while(!g_nQuit)
 	{
 		CheckGLError();
-
+		//PhysicsStep();
 		InputClear();
 		SDL_Event Evt;
 		while(SDL_PollEvent(&Evt))
@@ -187,7 +187,7 @@ int SDL_main(int argc, char** argv)
 
 
 
-		PhysicsStep();
+
 		DebugDrawFlush();
 		TextFlush();
 		SDL_GL_SwapBuffers();
