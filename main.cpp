@@ -191,7 +191,7 @@ int SDL_main(int argc, char** argv)
 		DebugDrawFlush();
 		TextFlush();
 		SDL_GL_SwapBuffers();
-		MicroProfilePlot();
+//		MicroProfilePlot();
 		MicroProfileFlip();
 	}
 	return 0;
