@@ -260,7 +260,7 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 			ZDEBUG_DRAWLINE(vFrustumCorners[3], vFrustumCorners[0], 0, true);
 		}
 	}
-#if 0
+#if 1
 	{
 		struct SSortKey
 		{
@@ -324,7 +324,7 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 				vY.x, vY.y, vY.z);
 
 			BspAddOccluder(pBsp, vCenterY/**1.01*/, vY, vZ, vSize.z, vX, vSize.x,true);			
-			BspAddOccluder(pBsp, vCenterX/**1.01*/, vX, vY, vSize.y, vZ, vSize.z, true);
+//			BspAddOccluder(pBsp, vCenterX/**1.01*/, vX, vY, vSize.y, vZ, vSize.z, true);
 			BspAddOccluder(pBsp, vCenterZ/**1.01*/, vZ, vY, vSize.y, vX, vSize.x, true);
 
 			// BspAddOccluder(pBsp, vCenter + vY * vSize.y/**1.01*/, vY, vZ, vSize.z, vX, vSize.x,true);			
@@ -579,7 +579,7 @@ void BspDrawPoly(SOccluderBsp* pBsp, SBspEdgeIndex* Poly, uint32 nVertices, uint
 		v3 foo = v3init(0.01f, 0.01f, 0.01f);
 		for(int i = 0; i < nPolyEdges; ++i)
 		{
-			//if(0 == Poly[(i+nPolyEdges+1)%nPolyEdges].nSkip)
+			if(0 == Poly[(i+nPolyEdges+1)%nPolyEdges].nSkip)
 			{
 				ZDEBUG_DRAWLINE(vCorners[i], vCorners[(i+1)%nPolyEdges], nColorEdges, true);
 			}
@@ -616,7 +616,7 @@ int BspAddInternal(SOccluderBsp* pBsp, SBspEdgeIndex* Poly, uint32 nEdges, uint3
 			if(g_nBspDebugPlane == g_nBspDebugPlaneCounter++)
 			{
 				v4 vPlane = GET_PLANE(pBsp, Poly[i]);
-				uplotfnxt("DEBUG PLANE %d :: %d, flip %d", Poly[i].nOccluderIndex, Poly[i].nEdge, Poly[i].nEdge);
+				uplotfnxt("DEBUG PLANE %d :: %d, flip %d", Poly[i].nOccluderIndex, Poly[i].nEdge, Poly[i].nFlip);
 				v3 vCorner = BspGetCorner(pBsp, Poly, nEdges, i < nEdges - 1 ? i : i-1);
 				BspDebugDrawHalfspace(vPlane.tov3(), vCorner);
 			}
@@ -891,7 +891,7 @@ bool BspCullObjectR(SOccluderBsp* pBsp, uint32 Index, SBspEdgeIndex* Poly, uint3
 		BspDrawPoly(pBsp, Poly, nNumEdges, 0xff000000|randredcolor(), 0, 1);
 		if(g_nBreakOnClipIndex && g_nBspDebugPlane == g_nBspDebugPlaneCounter)
 		{
-			uprintf("BREAK\n");
+			//uprintf("BREAK\n");
 		}
 	}
 	g_nBspDebugPlaneCounter++;
@@ -921,13 +921,14 @@ bool BspCullObjectR(SOccluderBsp* pBsp, uint32 Index, SBspEdgeIndex* Poly, uint3
 		{
 			if(!g_nBspOccluderDebugDrawClipResult)
 				return false;
+			
 			bFail = true;
 		//	uplotfnxt("FAIL INSIDE");
 		}
 	}
 	if(CR & ECPR_OUTSIDE)
 	{
-		if(g_nBspOccluderDebugDrawClipResult &&Node.nOutside == OCCLUDER_EMPTY)
+		if(g_nBspOccluderDebugDrawClipResult && Node.nOutside == OCCLUDER_EMPTY)
 		{
 			BspDrawPoly(pBsp, pOut, nOut, 0xff000000|randredcolor(), 0, 1);
 		}
@@ -935,7 +936,8 @@ bool BspCullObjectR(SOccluderBsp* pBsp, uint32 Index, SBspEdgeIndex* Poly, uint3
 		ZASSERT(Node.nOutside != OCCLUDER_LEAF);
 		if((Node.nOutside == OCCLUDER_EMPTY || !BspCullObjectR(pBsp, Node.nOutside, pOut, nOut)))
 		{
-			//uplotfnxt("FAIL OUTSIDE");
+			uplotfnxt("FAIL OUTSIDE %d :: %d,%d", Index, Node.nOccluderIndex, Node.nEdge);
+
 			return false;
 		}
 
@@ -946,6 +948,8 @@ bool BspCullObjectR(SOccluderBsp* pBsp, uint32 Index, SBspEdgeIndex* Poly, uint3
 bool BspCullObject(SOccluderBsp* pBsp, SWorldObject* pObject)
 {
 	ZMICROPROFILE_SCOPEI("BSP", "Cull", 0xff0000);
+	if(!pBsp->Nodes.Size())
+		return false;
 	g_nBspDebugPlaneCounter = 0;	
 	long seed = rand();
 	srand((int)(uintptr)pObject);
