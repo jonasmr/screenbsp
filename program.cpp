@@ -86,7 +86,7 @@ void WorldInit()
 	g_WorldState.WorldObjects[1].vSize = v3init(0.25f, 0.2f, 0.2)* 0.5f; 
 	g_WorldState.nNumWorldObjects = 2;
 
-	if(0)
+	if(1)
 	{
 		int idx = 0;
 		#define GRID_SIZE 10

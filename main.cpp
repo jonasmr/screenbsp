@@ -160,6 +160,7 @@ int SDL_main(int argc, char** argv)
 		ZBREAK();
 	}
 
+	MicroProfileInit();
 	InputInit();
 	TextInit();
 	MeshInit();
@@ -190,9 +191,22 @@ int SDL_main(int argc, char** argv)
 
 		DebugDrawFlush();
 		TextFlush();
-		SDL_GL_SwapBuffers();
-//		MicroProfilePlot();
 		MicroProfileFlip();
+		{
+			CheckGLError();
+			glMatrixMode(GL_PROJECTION);
+			glLoadIdentity();
+			CheckGLError();
+			glOrtho(0.0, g_Width, g_Height, 0, -1.0, 1.0);
+			CheckGLError();
+			glMatrixMode(GL_MODELVIEW);
+			glLoadIdentity();
+			glDisable(GL_DEPTH_TEST);
+			glDisable(GL_CULL_FACE);
+			CheckGLError();
+		}
+		MicroProfileDraw(g_Width, g_Height);
+		SDL_GL_SwapBuffers();
 	}
 	return 0;
 }
