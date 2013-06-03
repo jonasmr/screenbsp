@@ -407,6 +407,7 @@ uint32_t MicroProfileDrawBarLegend(uint32_t nX, uint32_t nY, uint32_t nGroup)
 	uint32_t nWidth = S.nBarWidth;
 	uint32_t tidx = 0;
 	char sBuffer[SBUF_MAX];
+	nY += nHeight + 2;
 	for(uint32_t i = 0; i < S.nTotalTimers;++i)
 	{
 		if(0 == i || MicroProfileGetGroupIndex(S.TimerInfo[i].nToken) == nGroup || nGroup == 0xffff)
@@ -436,7 +437,7 @@ void MicroProfileDrawBarView(uint32_t nScreenWidth, uint32_t nScreenHeight)
 
 	uint32_t nX = 10;
 	uint32_t nY = 10;
-	uint32_t nBackColors[2] = {  0x444444, 0x888888 };
+	uint32_t nBackColors[2] = {  0x444444, 0x333333 };
 	int nColorIndex = 0;
 	nX += MicroProfileDrawBarArray(nX, nY, S.nActiveGroup, pTimers, "Time", nNumTimers, nBackColors[nColorIndex++ & 1]) + 1;
 	nX += MicroProfileDrawBarArray(nX, nY, S.nActiveGroup, pAverage, "Average", nNumTimers, nBackColors[nColorIndex++ & 1]) + 1;
