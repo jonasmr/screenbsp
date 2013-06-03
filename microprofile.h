@@ -167,6 +167,7 @@ void MicroProfileInit()
 		S.nBarHeight = ZMICROPROFILE_TEXT_HEIGHT;
 		S.nActiveGroup = 1;
 		S.GroupInfo[0].pName = "___ROOT";
+		S.nAggregateFlip = 15;
 	}
 }
 
@@ -365,6 +366,30 @@ void MicroProfileCalcTimers(float* pTimers, float* pAverage, float* pMax, float*
 
 }
 
+uint32_t MicroProfileDrawBarArray(uint32_t nX, uint32_t nY, uint32_t nGroup, float* pTimers)
+{
+	uint32_t nHeight = S.nBarHeight;
+	uint32_t nWidth = S.nBarWidth;
+	uint32_t tidx = 0;
+	uint32_t nTextWidth = 6 * ZMICROPROFILE_TEXT_WIDTH;
+	float fWidth = S.nBarWidth;
+	#define SBUF_MAX 32
+	char sBuffer[SBUF_MAX];
+	for(uint32_t i = 0; i < S.nTotalTimers;++i)
+	{
+		if(MicroProfileGetGroupIndex(S.TimerInfo[i].nToken) == nGroup || nGroup == 0xffff)
+		{
+			if(i == 0) pTimers[tidx+1] = 1.f;
+			snprintf(sBuffer, SBUF_MAX-1, "%5.2f", pTimers[tidx]);
+			MicroProfileDrawBox(nX + nTextWidth, nY, fWidth * pTimers[tidx+1], nHeight, S.TimerInfo[i].nColor);
+			MicroProfileDrawText(nX, nY, (uint32_t)-1, sBuffer);
+			nY += nHeight + 1;
+			tidx += 2;
+		}
+	}
+	return nWidth + 5 + nTextWidth;
+}
+
 void MicroProfileDrawBarView(uint32_t nScreenWidth, uint32_t nScreenHeight)
 {
 	if(!S.nActiveGroup)
@@ -383,25 +408,12 @@ void MicroProfileDrawBarView(uint32_t nScreenWidth, uint32_t nScreenHeight)
 
 	uint32_t nX = 10;
 	uint32_t nY = 10;
-	uint32_t nHeight = S.nBarHeight;
-	uint32_t nWidth = S.nBarWidth;
-	uint32_t nGroup = S.nActiveGroup;
-	uint32_t tidx = 0;
-	float fWidth = S.nBarWidth;
-	#define SBUF_MAX 32
-	char sBuffer[SBUF_MAX];
-	for(uint32_t i = 0; i < S.nTotalTimers;++i)
-	{
-		if(MicroProfileGetGroupIndex(S.TimerInfo[i].nToken) == nGroup || nGroup == 0xffff)
-		{
-			snprintf(sBuffer, SBUF_MAX-1, "%5.2f", pTimers[tidx]);
-			MicroProfileDrawBox(nX, nY, fWidth * pTimers[tidx+1], nHeight, S.TimerInfo[i].nColor);
-			MicroProfileDrawText(nX + nWidth, nY, (uint32_t)-1, sBuffer);
-			nY += nHeight + 1;
-			tidx += 2;
-		}
-	}
-	nX += nWidth + 5;
+
+	nX += MicroProfileDrawBarArray(nX, nY, S.nActiveGroup, pTimers) + 1;
+	nX += MicroProfileDrawBarArray(nX, nY, S.nActiveGroup, pAverage) + 1;
+	nX += MicroProfileDrawBarArray(nX, nY, S.nActiveGroup, pMax) + 1;
+	nX += MicroProfileDrawBarArray(nX, nY, S.nActiveGroup, pCallAverage) + 1;
+
 }
 
 void MicroProfileDraw(uint32_t nWidth, uint32_t nHeight)
