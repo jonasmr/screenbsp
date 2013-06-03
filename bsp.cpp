@@ -84,6 +84,7 @@ SBspEdgeIndex::SBspEdgeIndex(const SOccluderBspNode& node)
 
 v3 BspPlaneIntersection(v4 p0, v4 p1, v4 p2)
 {
+	ZMICROPROFILE_SCOPEI("BSP", "BspPlaneIntersection", 0xff0000);
 
 	float x = -(-p0.w*p1.y*p2.z+p0.w*p2.y*p1.z+p1.w*p0.y*p2.z-p1.w*p2.y*p0.z-p2.w*p0.y*p1.z+p2.w*p1.y*p0.z)
 	/(-p0.x*p1.y*p2.z+p0.x*p2.y*p1.z+p1.x*p0.y*p2.z-p1.x*p2.y*p0.z-p2.x*p0.y*p1.z+p2.x*p1.y*p0.z);
@@ -954,95 +955,100 @@ bool BspCullObject(SOccluderBsp* pBsp, SWorldObject* pObject)
 	long seed = rand();
 	srand((int)(uintptr)pObject);
 
-	m mObjectToWorld = pObject->mObjectToWorld;
-	v3 vHalfSize = pObject->vSize;
-	v4 vCenterWorld_ = pObject->mObjectToWorld.trans;
-	v3 vCenterWorld = v3init(vCenterWorld_);
-	v3 vOrigin = pBsp->Desc.vOrigin;
-	v3 vToCenter = v3normalize(vCenterWorld - vOrigin);
-	v3 vUp = v3init(0.f,1.f, 0.f);//replace with camera up.
-	if(v3dot(vUp, vToCenter) > 0.9f)
-		vUp = v3init(1.f, 0, 0);
-	v3 vRight = v3normalize(v3cross(vToCenter, vUp));
-	m mbox = mcreate(vToCenter, vRight, vCenterWorld);
-	m mboxinv = maffineinverse(mbox);
-	m mcomposite = mmult(mbox, mObjectToWorld);
-	v3 AABB = obbtoaabb(mcomposite, vHalfSize);
-	
-	vRight = mgetxaxis(mboxinv);
-	vUp = mgetyaxis(mboxinv);
-
-	v3 vCenterQuad = vCenterWorld - vToCenter * AABB.z * 1.1;
-	v3 v0 = vCenterQuad + vRight * AABB.x + vUp * AABB.y;
-	v3 v1 = vCenterQuad + vRight * -AABB.x + vUp * AABB.y;
-	v3 v2 = vCenterQuad + vRight * -AABB.x + vUp * -AABB.y;
-	v3 p3 = vCenterQuad + vRight * AABB.x + vUp * -AABB.y;
-
-
-	if(g_nBspOccluderDebugDrawClipResult)
-	{
-		ZDEBUG_DRAWLINE(v0, v1, 0xff00ff00, true);
-		ZDEBUG_DRAWLINE(v2, v1, 0xff00ff00, true);
-		ZDEBUG_DRAWLINE(p3, v2, 0xff00ff00, true);
-		ZDEBUG_DRAWLINE(v0, p3, 0xff00ff00, true);
-	}
-	// vCenterQuad += vToCenter * 2*AABB.z;
-	// v3 v0_ = vCenterQuad + vRight * AABB.x + vUp * AABB.y;
-	// v3 v1_ = vCenterQuad + vRight * -AABB.x + vUp * AABB.y;
-	// v3 v2_ = vCenterQuad + vRight * -AABB.x + vUp * -AABB.y;
-	// v3 v3_ = vCenterQuad + vRight * AABB.x + vUp * -AABB.y;
-
-	// ZDEBUG_DRAWLINE(v0_, v1_, 0xff00ff00, true);
-	// ZDEBUG_DRAWLINE(v2_, v1_, 0xff00ff00, true);
-	// ZDEBUG_DRAWLINE(v3_, v2_, 0xff00ff00, true);
-	// ZDEBUG_DRAWLINE(v0_, v3_, 0xff00ff00, true);
-
-	// ZDEBUG_DRAWLINE(v0, v0_, 0xff00ff00, true);
-	// ZDEBUG_DRAWLINE(v1, v1_, 0xff00ff00, true);
-	// ZDEBUG_DRAWLINE(v2, v2_, 0xff00ff00, true);
-	// ZDEBUG_DRAWLINE(p3, v3_, 0xff00ff00, true);
-
-	// ZDEBUG_DRAWLINE(v0*5.f, v3zero(), 0, true);
-	// ZDEBUG_DRAWLINE(v1*5.f, v3zero(), 0, true);
-	// ZDEBUG_DRAWLINE(v2*5.f, v3zero(), 0, true);
-	// ZDEBUG_DRAWLINE(p3*5.f, v3zero(), 0, true);
-	uint32 nSize = pBsp->Occluders.Size();
-	pBsp->Occluders.Resize(nSize+1);//TODO use thread specific blocks
-
-	SOccluderPlane* pPlanes = pBsp->Occluders.Ptr() + nSize;
-	v3 n0 = v3normalize(v3cross(v0, v0 - v1));
-	v3 n1 = v3normalize(v3cross(v1, v1 - v2));
-	v3 n2 = v3normalize(v3cross(v2, v2 - p3));
-	v3 n3 = v3normalize(v3cross(p3, p3 - v0));
-	pPlanes[0].p[0] = MakePlane(v0, n0);
-	pPlanes[0].p[1] = MakePlane(v1, n1);
-	pPlanes[0].p[2] = MakePlane(v2, n2);
-	pPlanes[0].p[3] = MakePlane(p3, n3);
-	pPlanes[0].p[4] = MakePlane(p3, v3normalize(vToCenter));
-
-
 	SBspEdgeIndex Poly[5];
-	Poly[0].nOccluderIndex = nSize;
-	Poly[0].nEdge = 0;
-	Poly[0].nFlip = 0;
-	Poly[0].nSkip = 0;
-	Poly[1].nOccluderIndex = nSize;
-	Poly[1].nEdge = 1;
-	Poly[1].nFlip = 0;
-	Poly[1].nSkip = 0;
-	Poly[2].nOccluderIndex = nSize;
-	Poly[2].nEdge = 2;
-	Poly[2].nFlip = 0;
-	Poly[2].nSkip = 0;
-	Poly[3].nOccluderIndex = nSize;
-	Poly[3].nEdge = 3;
-	Poly[3].nFlip = 0;
-	Poly[3].nSkip = 0;
-	Poly[4].nOccluderIndex = nSize;
-	Poly[4].nEdge = 4;
-	Poly[4].nFlip = 0;
-	Poly[4].nSkip = 0;
+	uint32 nSize = pBsp->Occluders.Size();
+	{
+		ZMICROPROFILE_SCOPEI("BSP", "CullPrepare", 0xff0000);
 
+		m mObjectToWorld = pObject->mObjectToWorld;
+		v3 vHalfSize = pObject->vSize;
+		v4 vCenterWorld_ = pObject->mObjectToWorld.trans;
+		v3 vCenterWorld = v3init(vCenterWorld_);
+		v3 vOrigin = pBsp->Desc.vOrigin;
+		v3 vToCenter = v3normalize(vCenterWorld - vOrigin);
+		v3 vUp = v3init(0.f,1.f, 0.f);//replace with camera up.
+		if(v3dot(vUp, vToCenter) > 0.9f)
+			vUp = v3init(1.f, 0, 0);
+		v3 vRight = v3normalize(v3cross(vToCenter, vUp));
+		m mbox = mcreate(vToCenter, vRight, vCenterWorld);
+		m mboxinv = maffineinverse(mbox);
+		m mcomposite = mmult(mbox, mObjectToWorld);
+		v3 AABB = obbtoaabb(mcomposite, vHalfSize);
+		
+		vRight = mgetxaxis(mboxinv);
+		vUp = mgetyaxis(mboxinv);
+
+		v3 vCenterQuad = vCenterWorld - vToCenter * AABB.z * 1.1;
+		v3 v0 = vCenterQuad + vRight * AABB.x + vUp * AABB.y;
+		v3 v1 = vCenterQuad + vRight * -AABB.x + vUp * AABB.y;
+		v3 v2 = vCenterQuad + vRight * -AABB.x + vUp * -AABB.y;
+		v3 p3 = vCenterQuad + vRight * AABB.x + vUp * -AABB.y;
+
+
+		if(g_nBspOccluderDebugDrawClipResult)
+		{
+			ZDEBUG_DRAWLINE(v0, v1, 0xff00ff00, true);
+			ZDEBUG_DRAWLINE(v2, v1, 0xff00ff00, true);
+			ZDEBUG_DRAWLINE(p3, v2, 0xff00ff00, true);
+			ZDEBUG_DRAWLINE(v0, p3, 0xff00ff00, true);
+		}
+		// vCenterQuad += vToCenter * 2*AABB.z;
+		// v3 v0_ = vCenterQuad + vRight * AABB.x + vUp * AABB.y;
+		// v3 v1_ = vCenterQuad + vRight * -AABB.x + vUp * AABB.y;
+		// v3 v2_ = vCenterQuad + vRight * -AABB.x + vUp * -AABB.y;
+		// v3 v3_ = vCenterQuad + vRight * AABB.x + vUp * -AABB.y;
+
+		// ZDEBUG_DRAWLINE(v0_, v1_, 0xff00ff00, true);
+		// ZDEBUG_DRAWLINE(v2_, v1_, 0xff00ff00, true);
+		// ZDEBUG_DRAWLINE(v3_, v2_, 0xff00ff00, true);
+		// ZDEBUG_DRAWLINE(v0_, v3_, 0xff00ff00, true);
+
+		// ZDEBUG_DRAWLINE(v0, v0_, 0xff00ff00, true);
+		// ZDEBUG_DRAWLINE(v1, v1_, 0xff00ff00, true);
+		// ZDEBUG_DRAWLINE(v2, v2_, 0xff00ff00, true);
+		// ZDEBUG_DRAWLINE(p3, v3_, 0xff00ff00, true);
+
+		// ZDEBUG_DRAWLINE(v0*5.f, v3zero(), 0, true);
+		// ZDEBUG_DRAWLINE(v1*5.f, v3zero(), 0, true);
+		// ZDEBUG_DRAWLINE(v2*5.f, v3zero(), 0, true);
+		// ZDEBUG_DRAWLINE(p3*5.f, v3zero(), 0, true);
+		
+		pBsp->Occluders.Resize(nSize+1);//TODO use thread specific blocks
+
+		SOccluderPlane* pPlanes = pBsp->Occluders.Ptr() + nSize;
+		v3 n0 = v3normalize(v3cross(v0, v0 - v1));
+		v3 n1 = v3normalize(v3cross(v1, v1 - v2));
+		v3 n2 = v3normalize(v3cross(v2, v2 - p3));
+		v3 n3 = v3normalize(v3cross(p3, p3 - v0));
+		pPlanes[0].p[0] = MakePlane(v0, n0);
+		pPlanes[0].p[1] = MakePlane(v1, n1);
+		pPlanes[0].p[2] = MakePlane(v2, n2);
+		pPlanes[0].p[3] = MakePlane(p3, n3);
+		pPlanes[0].p[4] = MakePlane(p3, v3normalize(vToCenter));
+
+
+
+		Poly[0].nOccluderIndex = nSize;
+		Poly[0].nEdge = 0;
+		Poly[0].nFlip = 0;
+		Poly[0].nSkip = 0;
+		Poly[1].nOccluderIndex = nSize;
+		Poly[1].nEdge = 1;
+		Poly[1].nFlip = 0;
+		Poly[1].nSkip = 0;
+		Poly[2].nOccluderIndex = nSize;
+		Poly[2].nEdge = 2;
+		Poly[2].nFlip = 0;
+		Poly[2].nSkip = 0;
+		Poly[3].nOccluderIndex = nSize;
+		Poly[3].nEdge = 3;
+		Poly[3].nFlip = 0;
+		Poly[3].nSkip = 0;
+		Poly[4].nOccluderIndex = nSize;
+		Poly[4].nEdge = 4;
+		Poly[4].nFlip = 0;
+		Poly[4].nSkip = 0;
+	}
 	bool bResult = BspCullObjectR(pBsp, 0, &Poly[0], 5);
 	pBsp->Occluders.Resize(nSize);
 	srand(seed);
