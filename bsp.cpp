@@ -84,7 +84,7 @@ SBspEdgeIndex::SBspEdgeIndex(const SOccluderBspNode& node)
 
 v3 BspPlaneIntersection(v4 p0, v4 p1, v4 p2)
 {
-	//ZMICROPROFILE_SCOPEIC("BSP", "BspPlaneIntersect");
+	ZMICROPROFILE_SCOPEIC("BSP", "BspPlaneIntersect");
 
 	float x = -(-p0.w*p1.y*p2.z+p0.w*p2.y*p1.z+p1.w*p0.y*p2.z-p1.w*p2.y*p0.z-p2.w*p0.y*p1.z+p2.w*p1.y*p0.z)
 	/(-p0.x*p1.y*p2.z+p0.x*p2.y*p1.z+p1.x*p0.y*p2.z-p1.x*p2.y*p0.z-p2.x*p0.y*p1.z+p2.x*p1.y*p0.z);
@@ -922,7 +922,6 @@ bool BspCullObjectR(SOccluderBsp* pBsp, uint32 Index, SBspEdgeIndex* Poly, uint3
 		{
 			if(!g_nBspOccluderDebugDrawClipResult)
 				return false;
-			
 			bFail = true;
 		//	uplotfnxt("FAIL INSIDE");
 		}

@@ -33,7 +33,6 @@ inline int64_t TickToNs(int64_t nTicks)
 #define ZMICROPROFILE_TEXT_WIDTH 5
 #define ZMICROPROFILE_TEXT_HEIGHT 8
 #define ZMICROPROFILE_FRAME_TIME (1000.f / 30.f)
-//#define ZMICROPROFILE_FRAME_TIME (1000.f / 500.f)
 #define ZMICROPROFILE_FRAME_TIME_TO_PRC (1.f / ZMICROPROFILE_FRAME_TIME)
 
 
@@ -168,6 +167,10 @@ void MicroProfileInit()
 		S.nActiveGroup = 1;
 		S.GroupInfo[0].pName = "___ROOT";
 		S.nAggregateFlip = 15;
+		S.TimerInfo[0].pName = "Frame Time";
+		S.TimerInfo[0].nColor = (uint32_t)-1;
+		S.TimerInfo[0].nToken = 0;
+		S.nTotalTimers = 1;
 	}
 }
 
@@ -187,7 +190,7 @@ MicroProfileToken MicroProfileGetToken(const char* pGroup, const char* pName, ui
 	{
 		S.GroupInfo[S.nGroupCount].pName = pGroup;
 		S.GroupInfo[S.nGroupCount].nGroupIndex = S.nGroupCount;
-		S.GroupInfo[S.nGroupCount].nNumTimers = 0;
+		S.GroupInfo[S.nGroupCount].nNumTimers = 1;
 		nGroupIndex = S.nGroupCount++;
 	}
 	uint16_t nTimerIndex = S.nTotalTimers++;
@@ -226,6 +229,11 @@ void MicroProfileLeave(MicroProfileToken nToken)
 
 void MicroProfileFlip()
 {
+	S.FrameTimers[0].nTicks += TICK() - S.nStart[0];
+	S.FrameTimers[0].nCount++;
+	S.nStart[0] = TICK();
+
+
 	ZMICROPROFILE_SCOPEI("MicroProfile", "MicroProfileFlip", randcolor());
 	for(uint32_t i = 0; i < S.nTotalTimers; ++i)
 	{
@@ -340,19 +348,19 @@ void MicroProfileCalcTimers(float* pTimers, float* pAverage, float* pMax, float*
 
 	for(uint32_t i = 0; i < S.nTotalTimers;++i)
 	{
-		if(MicroProfileGetGroupIndex(S.TimerInfo[i].nToken) == nGroup || nGroup == 0xffff)
+		if(0 == i || MicroProfileGetGroupIndex(S.TimerInfo[i].nToken) == nGroup || nGroup == 0xffff)
 		{
-			float fMs = TickToNs(S.Frame[i].nTicks) / 1000000.f;
-			float lala = ZMICROPROFILE_FRAME_TIME_TO_PRC;
-			float fPrc = fMs * lala;
 			uint32 nAggregateFrames = S.nAggregateFrames ? S.nAggregateFrames : 1;
 			uint32 nAggregateCount = S.Aggregate[i].nCount ? S.Aggregate[i].nCount : 1;
+
+			float fMs = TickToNs(S.Frame[i].nTicks) / 1000000.f;
+			float fPrc = Min(fMs * ZMICROPROFILE_FRAME_TIME_TO_PRC, 1.f);
 			float fAverageMs = TickToNs(S.Aggregate[i].nTicks / nAggregateFrames) / 1000000.f;
-			float fAveragePrc = fAverageMs * ZMICROPROFILE_FRAME_TIME_TO_PRC;
+			float fAveragePrc = Min(fAverageMs * ZMICROPROFILE_FRAME_TIME_TO_PRC, 1.f);
 			float fMaxMs = TickToNs(S.AggregateMax[i]) / 1000000.f;
-			float fMaxPrc = fMaxMs * ZMICROPROFILE_FRAME_TIME_TO_PRC;
+			float fMaxPrc = Min(fMaxMs * ZMICROPROFILE_FRAME_TIME_TO_PRC, 1.f);
 			float fCallAverageMs = TickToNs(S.Aggregate[i].nTicks / nAggregateCount) / 1000000.f;
-			float fCallAveragePrc = fAverageMs * ZMICROPROFILE_FRAME_TIME_TO_PRC;
+			float fCallAveragePrc = Min(fCallAverageMs * ZMICROPROFILE_FRAME_TIME_TO_PRC, 1.f);
 			*pTimers++ = fMs;
 			*pTimers++ = fPrc;
 			*pAverage++ = fAverageMs;
@@ -366,7 +374,7 @@ void MicroProfileCalcTimers(float* pTimers, float* pAverage, float* pMax, float*
 
 }
 
-uint32_t MicroProfileDrawBarArray(uint32_t nX, uint32_t nY, uint32_t nGroup, float* pTimers)
+uint32_t MicroProfileDrawBarArray(uint32_t nX, uint32_t nY, uint32_t nGroup, float* pTimers, const char* pName, uint32_t nNumTimers, uint32_t nBackColor)
 {
 	uint32_t nHeight = S.nBarHeight;
 	uint32_t nWidth = S.nBarWidth;
@@ -375,11 +383,13 @@ uint32_t MicroProfileDrawBarArray(uint32_t nX, uint32_t nY, uint32_t nGroup, flo
 	float fWidth = S.nBarWidth;
 	#define SBUF_MAX 32
 	char sBuffer[SBUF_MAX];
+	MicroProfileDrawBox(nX-1, nY-1, nTextWidth + nWidth + 6, (nNumTimers+1) * (nHeight+1)+4, nBackColor);
+	MicroProfileDrawText(nX, nY, (uint32)-1, pName);
+	nY += nHeight + 2;
 	for(uint32_t i = 0; i < S.nTotalTimers;++i)
 	{
-		if(MicroProfileGetGroupIndex(S.TimerInfo[i].nToken) == nGroup || nGroup == 0xffff)
+		if(0 == i || MicroProfileGetGroupIndex(S.TimerInfo[i].nToken) == nGroup || nGroup == 0xffff)
 		{
-			if(i == 0) pTimers[tidx+1] = 1.f;
 			snprintf(sBuffer, SBUF_MAX-1, "%5.2f", pTimers[tidx]);
 			MicroProfileDrawBox(nX + nTextWidth, nY, fWidth * pTimers[tidx+1], nHeight, S.TimerInfo[i].nColor);
 			MicroProfileDrawText(nX, nY, (uint32_t)-1, sBuffer);
@@ -390,12 +400,30 @@ uint32_t MicroProfileDrawBarArray(uint32_t nX, uint32_t nY, uint32_t nGroup, flo
 	return nWidth + 5 + nTextWidth;
 }
 
+
+uint32_t MicroProfileDrawBarLegend(uint32_t nX, uint32_t nY, uint32_t nGroup)
+{
+	uint32_t nHeight = S.nBarHeight;
+	uint32_t nWidth = S.nBarWidth;
+	uint32_t tidx = 0;
+	char sBuffer[SBUF_MAX];
+	for(uint32_t i = 0; i < S.nTotalTimers;++i)
+	{
+		if(0 == i || MicroProfileGetGroupIndex(S.TimerInfo[i].nToken) == nGroup || nGroup == 0xffff)
+		{
+//			MicroProfileDrawBox(nX, nY, fWidth * pTimers[tidx+1], nHeight, S.TimerInfo[i].nColor);
+			MicroProfileDrawText(nX, nY, S.TimerInfo[i].nColor, S.TimerInfo[i].pName);
+			nY += nHeight + 1;
+			tidx += 2;
+		}
+	}
+	return nX;
+}
+
 void MicroProfileDrawBarView(uint32_t nScreenWidth, uint32_t nScreenHeight)
 {
 	if(!S.nActiveGroup)
 		return;
-
-	//MicroProfileDrawBox(100, 100, 200,200, (uint32)-1);
 
 	ZMICROPROFILE_SCOPEI("MicroProfile", "DrawBarView", randcolor());
 	uint32_t nNumTimers = S.GroupInfo[S.nActiveGroup].nNumTimers;
@@ -408,11 +436,13 @@ void MicroProfileDrawBarView(uint32_t nScreenWidth, uint32_t nScreenHeight)
 
 	uint32_t nX = 10;
 	uint32_t nY = 10;
-
-	nX += MicroProfileDrawBarArray(nX, nY, S.nActiveGroup, pTimers) + 1;
-	nX += MicroProfileDrawBarArray(nX, nY, S.nActiveGroup, pAverage) + 1;
-	nX += MicroProfileDrawBarArray(nX, nY, S.nActiveGroup, pMax) + 1;
-	nX += MicroProfileDrawBarArray(nX, nY, S.nActiveGroup, pCallAverage) + 1;
+	uint32_t nBackColors[2] = {  0x444444, 0x888888 };
+	int nColorIndex = 0;
+	nX += MicroProfileDrawBarArray(nX, nY, S.nActiveGroup, pTimers, "Time", nNumTimers, nBackColors[nColorIndex++ & 1]) + 1;
+	nX += MicroProfileDrawBarArray(nX, nY, S.nActiveGroup, pAverage, "Average", nNumTimers, nBackColors[nColorIndex++ & 1]) + 1;
+	nX += MicroProfileDrawBarArray(nX, nY, S.nActiveGroup, pMax, "Max Time", nNumTimers, nBackColors[nColorIndex++ & 1]) + 1;
+	nX += MicroProfileDrawBarArray(nX, nY, S.nActiveGroup, pCallAverage, "Call Average", nNumTimers, nBackColors[nColorIndex++ & 1]) + 1;
+	nX += MicroProfileDrawBarLegend(nX, nY, S.nActiveGroup) + 1;
 
 }
 
