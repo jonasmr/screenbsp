@@ -354,7 +354,6 @@ void MicroProfileCalcTimers(float* pTimers, float* pAverage, float* pMax, float*
 			float fCallAveragePrc = fAverageMs * ZMICROPROFILE_FRAME_TIME_TO_PRC;
 			*pTimers++ = fMs;
 			*pTimers++ = fPrc;
-			uprintf("hmm %f %f\n", fMs, fPrc);
 			*pAverage++ = fAverageMs;
 			*pAverage++ = fAveragePrc;
 			*pMax++ = fMaxMs;
@@ -385,15 +384,19 @@ void MicroProfileDrawBarView(uint32_t nScreenWidth, uint32_t nScreenHeight)
 	uint32_t nX = 10;
 	uint32_t nY = 10;
 	uint32_t nHeight = S.nBarHeight;
-	uint32_t nWidth = S.nBarWidth*5;
+	uint32_t nWidth = S.nBarWidth;
 	uint32_t nGroup = S.nActiveGroup;
 	uint32_t tidx = 0;
 	float fWidth = S.nBarWidth;
+	#define SBUF_MAX 32
+	char sBuffer[SBUF_MAX];
 	for(uint32_t i = 0; i < S.nTotalTimers;++i)
 	{
 		if(MicroProfileGetGroupIndex(S.TimerInfo[i].nToken) == nGroup || nGroup == 0xffff)
 		{
-			MicroProfileDrawBox(nX, nY, fWidth * pTimers[tidx+1], nHeight, -1);
+			snprintf(sBuffer, SBUF_MAX-1, "%5.2f", pTimers[tidx]);
+			MicroProfileDrawBox(nX, nY, fWidth * pTimers[tidx+1], nHeight, S.TimerInfo[i].nColor);
+			MicroProfileDrawText(nX + nWidth, nY, (uint32_t)-1, sBuffer);
 			nY += nHeight + 1;
 			tidx += 2;
 		}

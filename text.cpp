@@ -141,40 +141,6 @@ void TextFlush()
 
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.5f);
-		/*
-		glBegin(GL_QUADS);
-		glColor3f(0.f,0.f,0.f);
-		uint32_t nOffset = 1;
-		for(uint32_t i = 0; i < g_TextRenderState.Plots.Size(); ++i)
-		{
-			int nX = g_TextRenderState.Plots[i].nX;
-			int nY = g_TextRenderState.Plots[i].nY;
-			int nLen = g_TextRenderState.Plots[i].nCount;
-			const unsigned char* pStr = (unsigned char*)&g_TextRenderState.Lines[nY].c[nX];
-			float fX = nOffset+nX*TEXT_CHAR_WIDTH;
-			float fY = nOffset+nY*(TEXT_CHAR_HEIGHT+1);
-			float fY2 = fY + (TEXT_CHAR_HEIGHT+1);
-			
-			for(uint32_t j = 0; j < nLen; ++j)
-			{
-				int16_t nOffset = g_FontDescription.nCharOffsets[*pStr++];
-				float fOffset = nOffset / 1024.f;
-				glTexCoord2f(fOffset, 0.f);
-				glVertex2f(fX, fY);
-
-				glTexCoord2f(fOffset+fOffsetU, 0.f);
-				glVertex2f(fX+TEXT_CHAR_WIDTH, fY);
-
-				glTexCoord2f(fOffset+fOffsetU, 1.f);
-				glVertex2f(fX+TEXT_CHAR_WIDTH, fY2);
-				glTexCoord2f(fOffset, 1.f);
-				glVertex2f(fX, fY2);
-				fX += TEXT_CHAR_WIDTH+1;
-			}
-
-		}
-		glEnd();
-		*/
 
 		glBegin(GL_QUADS);
 		glColor3f(1.f,1.f,1.f);
@@ -253,4 +219,48 @@ void uplotf(uint32_t nX, uint32_t nY, const char* fmt, ...)
 	uplotfnxt_inner(buffer, nX, nY);
 	va_end (args);
 }
+
+
+
+void TextBegin()
+{
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, g_FontDescription.nTextureId);
+	glEnable(GL_ALPHA_TEST);
+	glAlphaFunc(GL_GREATER, 0.5f);
+	glBegin(GL_QUADS);
+	glColor3f(1.f,1.f,1.f);
+
+}
+void TextEnd()
+{
+	glEnd();
+	glDisable(GL_TEXTURE_2D);
+	glDisable(GL_BLEND);
+}
+
+void TextPut(uint32_t nX, uint32_t nY, const char* pStr, uint32_t nNumChars)
+{
+	const float fEndV = 9.f / 16.f;
+	const float fOffsetU = 5.f / 1024.f;
+	int nLen = nNumChars == (uint32_t)-1 ? strlen(pStr) : nNumChars;
+	float fX = nX;
+	float fY = nY;
+	float fY2 = fY + (TEXT_CHAR_HEIGHT+1);
+	for(uint32_t j = 0; j < nLen; ++j)
+	{
+		int16_t nOffset = g_FontDescription.nCharOffsets[*pStr++];
+		float fOffset = nOffset / 1024.f;
+		glTexCoord2f(fOffset, 0.f);
+		glVertex2f(fX, fY);
+		glTexCoord2f(fOffset+fOffsetU, 0.f);
+		glVertex2f(fX+TEXT_CHAR_WIDTH, fY);
+		glTexCoord2f(fOffset+fOffsetU, 1.f);
+		glVertex2f(fX+TEXT_CHAR_WIDTH, fY2);
+		glTexCoord2f(fOffset, 1.f);
+		glVertex2f(fX, fY2);
+		fX += TEXT_CHAR_WIDTH+1;
+	}
+}
+
 
