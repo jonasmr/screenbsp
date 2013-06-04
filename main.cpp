@@ -55,9 +55,14 @@ void HandleEvent(SDL_Event* pEvt)
 	case SDL_MOUSEMOTION:
 		g_MouseState.position[0] = pEvt->motion.x;
 		g_MouseState.position[1] = g_Height-pEvt->motion.y; // flip to match opengl
+		MicroProfileMouseMove(g_MouseState.position[0], pEvt->motion.y);
 		break;
 	case SDL_MOUSEBUTTONDOWN:
 	case SDL_MOUSEBUTTONUP:
+		if(pEvt->type == SDL_MOUSEBUTTONUP)
+		{
+			MicroProfileMouseClick(pEvt->button.button == 1, pEvt->button.button == 0);
+		}
 		if(pEvt->button.button < MOUSE_BUTTON_MAX)
 		{
 			int type = pEvt->type;
@@ -191,6 +196,8 @@ int SDL_main(int argc, char** argv)
 
 		DebugDrawFlush();
 		TextFlush();
+
+
 		MicroProfileFlip();
 		{
 			CheckGLError();
