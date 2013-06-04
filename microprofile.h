@@ -454,7 +454,7 @@ void MicroProfileDrawGraph(uint32_t nScreenWidth, uint32_t nScreenHeight)
 	uint32_t nY = nScreenHeight - ZMICROPROFILE_GRAPH_HEIGHT;
 	MicroProfileDrawBox(nX, nY, ZMICROPROFILE_GRAPH_WIDTH, ZMICROPROFILE_GRAPH_HEIGHT, 0x0);
 
-	float fX = nX;
+	
 	float fY = nScreenHeight;
 	float fDX = ZMICROPROFILE_GRAPH_WIDTH * 1.f / MICROPROFILE_GRAPH_HISTORY;  
 	float fDY = ZMICROPROFILE_GRAPH_HEIGHT;
@@ -464,6 +464,7 @@ void MicroProfileDrawGraph(uint32_t nScreenWidth, uint32_t nScreenHeight)
 	{
 		if(S.Graph[i].nToken != MICROPROFILE_INVALID_TOKEN)
 		{
+			float fX = nX;
 			float* pGraphData = (float*)alloca(sizeof(float)* MICROPROFILE_GRAPH_HISTORY*2);
 			uplotfnxt("PLOTTING %d %d", MicroProfileGetGroupIndex(S.Graph[i].nToken), MicroProfileGetTimerIndex(S.Graph[i].nToken));
 			for(uint32 j = 0; j < MICROPROFILE_GRAPH_HISTORY; ++j)
@@ -503,13 +504,30 @@ void MicroProfileDrawBarView(uint32_t nScreenWidth, uint32_t nScreenHeight)
 	nX += MicroProfileDrawBarArray(nX, nY, S.nActiveGroup, pCallAverage, "Call Average", nNumTimers, nBackColors[nColorIndex++ & 1]) + 1;
 	nX += MicroProfileDrawBarLegend(nX, nY, S.nActiveGroup) + 1;
 
-	for(uint32_t i = 0; i < MICROPROFILE_MAX_GRAPHS; ++i)
+
+	uint32_t tidx = 0;
+	for(uint32_t i = 0; i < S.nTotalTimers;++i)
 	{
-		if(S.Graph[i].nToken != MICROPROFILE_INVALID_TOKEN)
+		if(0 == i || MicroProfileGetGroupIndex(S.TimerInfo[i].nToken) == S.nActiveGroup || S.nActiveGroup == 0xffff)
 		{
-			S.Graph[i].fHistory[S.nGraphPut] = pTimers[1+MicroProfileGetTimerIndex(S.Graph[i].nToken)];
+			for(uint32_t j = 0; j < MICROPROFILE_MAX_GRAPHS; ++j)
+			{
+				if(S.Graph[j].nToken != MICROPROFILE_INVALID_TOKEN && S.TimerInfo[i].nToken == S.Graph[j].nToken)
+				{
+					S.Graph[j].fHistory[S.nGraphPut] = pTimers[1+tidx];
+				}
+			}
+
+
+			// snprintf(sBuffer, SBUF_MAX-1, "%5.2f", pTimers[tidx]);
+			// MicroProfileDrawBox(nX + nTextWidth, nY, fWidth * pTimers[tidx+1], nHeight, S.TimerInfo[i].nColor);
+			// MicroProfileDrawText(nX, nY, (uint32_t)-1, sBuffer);
+			// nY += nHeight + 1;
+			tidx += 2;
 		}
 	}
+
+
 	S.nGraphPut = (S.nGraphPut+1) % MICROPROFILE_GRAPH_HISTORY;
 	MicroProfileDrawGraph(nScreenWidth, nScreenHeight);
 
