@@ -24,13 +24,18 @@ void MicroProfileDrawBox(uint32_t nX, uint32_t nY, uint32_t nWidth, uint32_t nHe
 	glVertex2i(nX + nWidth, nY + nHeight);
 	glVertex2i(nX, nY + nHeight);
 	glEnd();
-
 }
-void MicroProfileMouseMove(uint32_t nX, uint32_t nY)
+
+void MicroProfileDrawLine2D(uint32_t nVertices, float* pVertices, uint32_t nColor)
 {
-
+	if(!nVertices) return;
+	glBegin(GL_LINES);
+	glColor4ub(0xff&(nColor>>16), 0xff&(nColor>>8), 0xff&nColor, 0xff);
+	for(uint32 i = 0; i < nVertices-1; ++i)
+	{
+		glVertex2f(pVertices[i*2], pVertices[(i*2)+1]);
+		glVertex2f(pVertices[(i+1)*2], pVertices[((i+1)*2)+1]);
+	}
+	glEnd();
 }
-void MicroProfileMouseClick(uint32_t nLeft, uint32_t nRight)
-{
 
-}
