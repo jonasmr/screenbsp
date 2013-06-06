@@ -62,11 +62,11 @@ void MicroProfileNextAggregatePreset(); //! Flip over some aggregate presets
 void MicroProfilePrevAggregatePreset(); //! Flip over some aggregate presets
 void MicroProfileNextGroup(); //! Toggle Group of bars displayed
 void MicroProfilePrevGroup(); //! Toggle Group of bars displayed
-void MicroProfileToggleDetailed(); //Toggle detailed view
+void MicroProfileToggleDisplayMode(); //switch between off, bars, detailed
 void MicroProfileToggleTimers();//Toggle timer view
 void MicroProfileToggleAverageTimers(); //Toggle average view
 void MicroProfileToggleMaxTimers(); //Toggle max view
-
+void MicroProfileToggleCallCount(); // Toggle call count view
 
 //UNDEFINED: MUST BE IMPLEMENTED ELSEWHERE
 void MicroProfileDrawText(uint32_t nX, uint32_t nY, uint32_t nColor, const char* pText);
@@ -102,10 +102,18 @@ struct MicroProfileScopeHandler
 
 enum MicroProfileDrawMask
 {
-	DRAW_TIMERS 	= 0x1,
-	DRAW_AVERAGE	= 0x2,
-	DRAW_MAX		= 0x4,
-	DRAW_DETAILED	= 0x8,
+	MP_DRAW_OFF		= 0x0,
+	MP_DRAW_BARS		= 0x1,
+	MP_DRAW_DETAILED	= 0x2,
+};
+enum MicroProfileDrawBarsMask
+{
+	MP_DRAW_TIMERS 	= 0x1,
+	MP_DRAW_AVERAGE	= 0x2,
+	MP_DRAW_MAX		= 0x4,
+	MP_DRAW_CALL_COUNT	= 0x8,
+	MP_DRAW_ALL = 0xf,
+
 };
 
 struct MicroProfileTimer
@@ -146,6 +154,7 @@ struct
 	uint32_t nAggregateFrames;
 	
 	uint32_t nDisplay;
+	uint32_t nBars;
 	uint32_t nActiveGroup;
 	uint32_t nDirty;
 
@@ -198,6 +207,7 @@ void MicroProfileInit()
 			S.Graph[i].nToken = MICROPROFILE_INVALID_TOKEN;
 		}
 		S.Graph[0].nToken = 0;
+		S.nBars = MP_DRAW_ALL;
 	}
 }
 
@@ -335,23 +345,32 @@ void MicroProfilePrevGroup()
 {
 	S.nActiveGroup = (S.nActiveGroup-1)%S.nGroupCount;
 }
-void MicroProfileToggleDetailed()
+
+void MicroProfileToggleDisplayMode()
 {
-	S.nDisplay ^= DRAW_DETAILED;
+	if(!S.nDisplay)
+		S.nDisplay = 1;
+	else
+		S.nDisplay = (S.nDisplay << 1) & 0x3;
+
 }
 void MicroProfileToggleTimers()
 {
-	S.nDisplay ^= DRAW_TIMERS;
+	S.nBars ^= MP_DRAW_TIMERS;
 }
 void MicroProfileToggleAverageTimers()
 {
-	S.nDisplay ^= DRAW_AVERAGE;
+	S.nBars ^= MP_DRAW_AVERAGE;
 }
 void MicroProfileToggleMaxTimers()
 {
-	S.nDisplay ^= DRAW_MAX;
+	S.nBars ^= MP_DRAW_MAX;
 }
 
+void MicroProfileToggleCallCount()
+{
+	S.nBars ^= MP_DRAW_CALL_COUNT;
+}
 
 
 void MicroProfilePlot()
@@ -531,11 +550,17 @@ void MicroProfileDrawBarView(uint32_t nScreenWidth, uint32_t nScreenHeight)
 	{
 		MicroProfileDrawBox(nX-1, nY + i * (nHeight+1), nScreenWidth - nX - 10, (nHeight+1)+1, nBackColors[nColorIndex++ & 1]);
 	}
-	nX += MicroProfileDrawBarArray(nX, nY, S.nActiveGroup, pTimers, "Time", nNumTimers) + 1;
-	nX += MicroProfileDrawBarArray(nX, nY, S.nActiveGroup, pAverage, "Average", nNumTimers) + 1;
-	nX += MicroProfileDrawBarArray(nX, nY, S.nActiveGroup, pMax, "Max Time", nNumTimers) + 1;
-	nX += MicroProfileDrawBarArray(nX, nY, S.nActiveGroup, pCallAverage, "Call Average", nNumTimers) + 1;
-	nX += MicroProfileDrawBarCallCount(nX, nY, S.nActiveGroup, "Count", nNumTimers) + 1; 
+	if(S.nBars & MP_DRAW_TIMERS)		
+		nX += MicroProfileDrawBarArray(nX, nY, S.nActiveGroup, pTimers, "Time", nNumTimers) + 1;
+	if(S.nBars & MP_DRAW_AVERAGE)		
+		nX += MicroProfileDrawBarArray(nX, nY, S.nActiveGroup, pAverage, "Average", nNumTimers) + 1;
+	if(S.nBars & MP_DRAW_MAX)		
+		nX += MicroProfileDrawBarArray(nX, nY, S.nActiveGroup, pMax, "Max Time", nNumTimers) + 1;
+	if(S.nBars & MP_DRAW_CALL_COUNT)		
+	{
+		nX += MicroProfileDrawBarArray(nX, nY, S.nActiveGroup, pCallAverage, "Call Average", nNumTimers) + 1;
+		nX += MicroProfileDrawBarCallCount(nX, nY, S.nActiveGroup, "Count", nNumTimers) + 1; 
+	}
 	nX += MicroProfileDrawBarLegend(nX, nY, S.nActiveGroup, nScreenWidth, nScreenHeight, nNumTimers) + 1;
 
 
@@ -563,13 +588,15 @@ void MicroProfileDrawBarView(uint32_t nScreenWidth, uint32_t nScreenHeight)
 
 void MicroProfileDraw(uint32_t nWidth, uint32_t nHeight)
 {
+	uplotfnxt("DRAW %x %x", S.nDisplay, S.nBars);
 	ZMICROPROFILE_SCOPEI("MicroProfile", "Draw", randcolor());
-	MicroProfilePlot();
-	if(S.nDisplay&DRAW_DETAILED)
+
+	//MicroProfilePlot();
+	if(S.nDisplay & MP_DRAW_DETAILED)
 	{
 		MicroProfileDrawDetailedView(nWidth, nHeight);
 	}
-	else
+	else if(0 != (S.nDisplay & MP_DRAW_BARS) && S.nBars)
 	{
 		MicroProfileDrawBarView(nWidth, nHeight);
 	}
@@ -605,17 +632,11 @@ void MicroProfileToggleGraph(MicroProfileToken nToken)
 			nMaxSort = S.Graph[i].nKey;
 		}
 	}
-	if(nFreeIndex>-1)
-	{
-		S.Graph[nFreeIndex].nToken = nToken;
-		S.Graph[nFreeIndex].nKey = nMaxSort+1;
-	}
-	else
-	{
-		S.Graph[nMinIndex].nToken = nToken;
-		S.Graph[nMinIndex].nKey = nMaxSort+1;
-	}
-
+	int nIndex = nFreeIndex>-1 ? nFreeIndex : nMinIndex;
+	S.Graph[nIndex].nToken = nToken;
+	S.Graph[nIndex].nKey = nMaxSort+1;
+	memset(&S.Graph[nIndex].fHistory[0], 0, sizeof(S.Graph[nIndex].fHistory));
+\
 }
 void MicroProfileMouseClick(uint32_t nLeft, uint32_t nRight)
 {
