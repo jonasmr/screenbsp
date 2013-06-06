@@ -213,6 +213,55 @@ int SDL_main(int argc, char** argv)
 			CheckGLError();
 		}
 		MicroProfileDraw(g_Width, g_Height);
+
+
+
+		if(g_KeyboardState.keys['z']&BUTTON_RELEASED)
+		{
+			uprintf("KEYDOWN MicroProfileToggleDisplayMode\n");
+			MicroProfileToggleDisplayMode();
+		}
+		if(g_KeyboardState.keys['x']&BUTTON_RELEASED)
+		{
+			uprintf("KEYDOWN MicroProfileToggleTimers\n");
+			MicroProfileToggleTimers();
+		}
+		if(g_KeyboardState.keys['c']&BUTTON_RELEASED)
+		{
+			uprintf("KEYDOWN MicroProfileToggleAverageTimers\n");
+			MicroProfileToggleAverageTimers();
+		}
+		if(g_KeyboardState.keys['v']&BUTTON_RELEASED)
+		{
+			uprintf("KEYDOWN MicroProfileToggleMaxTimers\n");
+			MicroProfileToggleMaxTimers();
+		}
+		if(g_KeyboardState.keys['b']&BUTTON_RELEASED)
+		{
+			uprintf("KEYDOWN MicroProfileToggleCallCount\n");
+			MicroProfileToggleCallCount();
+		}
+		if(g_KeyboardState.keys['[']&BUTTON_RELEASED)
+		{
+			uprintf("KEYDOWN MicroProfileNextGroup\n");
+			MicroProfileNextGroup();
+		}
+		if(g_KeyboardState.keys[']']&BUTTON_RELEASED)
+		{
+			uprintf("KEYDOWN MicroProfilePrevGroup\n");
+			MicroProfilePrevGroup();
+		}
+		if(g_KeyboardState.keys['}']&BUTTON_RELEASED)
+		{
+			uprintf("KEYDOWN MicroProfileNextAggregateGroup\n");
+			MicroProfileNextAggregatePreset();
+		}
+		if(g_KeyboardState.keys['{']&BUTTON_RELEASED)
+		{
+			uprintf("KEYDOWN MicroProfilePrevAggregatePreset\n");
+			MicroProfilePrevAggregatePreset();
+		}
+
 		SDL_GL_SwapBuffers();
 	}
 	return 0;
