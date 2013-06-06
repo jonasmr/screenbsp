@@ -241,22 +241,22 @@ int SDL_main(int argc, char** argv)
 			uprintf("KEYDOWN MicroProfileToggleCallCount\n");
 			MicroProfileToggleCallCount();
 		}
-		if(g_KeyboardState.keys[']']&BUTTON_RELEASED)
+		if(g_KeyboardState.keys[']']&BUTTON_RELEASED && 0 == ((g_KeyboardState.keys[SDLK_RSHIFT]|g_KeyboardState.keys[SDLK_LSHIFT]) & BUTTON_DOWN))
 		{
 			uprintf("KEYDOWN MicroProfileNextGroup\n");
 			MicroProfileNextGroup();
 		}
-		if(g_KeyboardState.keys['[']&BUTTON_RELEASED)
+		if(g_KeyboardState.keys['[']&BUTTON_RELEASED && 0 == ((g_KeyboardState.keys[SDLK_RSHIFT]|g_KeyboardState.keys[SDLK_LSHIFT]) & BUTTON_DOWN))
 		{
 			uprintf("KEYDOWN MicroProfilePrevGroup\n");
 			MicroProfilePrevGroup();
 		}
-		if(g_KeyboardState.keys['}']&BUTTON_RELEASED)
+		if(g_KeyboardState.keys[']']&BUTTON_RELEASED && 0 != ((g_KeyboardState.keys[SDLK_RSHIFT]|g_KeyboardState.keys[SDLK_LSHIFT]) & BUTTON_DOWN))
 		{
 			uprintf("KEYDOWN MicroProfileNextAggregateGroup\n");
 			MicroProfileNextAggregatePreset();
 		}
-		if(g_KeyboardState.keys['{']&BUTTON_RELEASED)
+		if(g_KeyboardState.keys['[']&BUTTON_RELEASED && 0 != ((g_KeyboardState.keys[SDLK_RSHIFT]|g_KeyboardState.keys[SDLK_LSHIFT]) & BUTTON_DOWN))
 		{
 			uprintf("KEYDOWN MicroProfilePrevAggregatePreset\n");
 			MicroProfilePrevAggregatePreset();

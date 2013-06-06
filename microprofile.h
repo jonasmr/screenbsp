@@ -286,7 +286,7 @@ void MicroProfileFlip()
 
 	bool bFlipAggregate = false;
 	uint32 nFlipFrequency = S.nAggregateFlip ? S.nAggregateFlip : 30;
-	if(S.nAggregateFlip == ++S.nAggregateFlipCount)
+	if(S.nAggregateFlip <= ++S.nAggregateFlipCount)
 	{
 		memcpy(&S.Aggregate[0], &S.AggregateTimers[0], sizeof(S.Aggregate[0]) * S.nTotalTimers);
 		memcpy(&S.AggregateMax[0], &S.MaxTimers[0], sizeof(S.AggregateMax[0]) * S.nTotalTimers);
@@ -321,24 +321,23 @@ void MicroProfileNextAggregatePreset()
 	}
 	S.nAggregateFlip = nCurrent;
 	S.nDirty = 1;
-	uprintf("AGGR %d\n", nCurrent);
 }
 void MicroProfilePrevAggregatePreset()
 {
-	uint32_t nNext = g_AggregatePresets[(sizeof(g_AggregatePresets)/sizeof(g_AggregatePresets[0]))-1];
+	S.nDirty = 1;
 	uint32_t nCurrent = S.nAggregateFlip;
+	uint32_t nBest = g_AggregatePresets[(sizeof(g_AggregatePresets)/sizeof(g_AggregatePresets[0]))-1];
 
 	for(uint32_t nPreset : g_AggregatePresets)
 	{
 		if(nPreset < nCurrent)
 		{
-			nCurrent = nPreset;
+			nBest = nPreset;
 		}
 	}
-	S.nAggregateFlip = nCurrent;
-	S.nDirty = 1;
-	uprintf("AGGR %d\n", nCurrent);
+	S.nAggregateFlip = nBest;
 }
+
 void MicroProfileNextGroup()
 {
 	S.nActiveGroup = (S.nActiveGroup+1)%S.nGroupCount;
@@ -550,10 +549,17 @@ void MicroProfileDrawBarView(uint32_t nScreenWidth, uint32_t nScreenHeight)
 	uint32_t nBackColors[2] = {  0x474747, 0x313131 };
 	int nColorIndex = 0;
 
-	for(uint32_t i = 0; i < nNumTimers+1; ++i)
+	for(uint32_t i = 0; i < nNumTimers+2; ++i)
 	{
-		MicroProfileDrawBox(nX-1, nY + i * (nHeight+1), nScreenWidth - nX - 10, (nHeight+1)+1, nBackColors[nColorIndex++ & 1]);
+		MicroProfileDrawBox(nX-1, nY + i * (nHeight + 1), nScreenWidth - nX - 10, (nHeight+1)+1, nBackColors[nColorIndex++ & 1]);
 	}
+	{
+		char buffer[128];
+		snprintf(buffer, 127, "MicroProfile Group:'%s' Aggregate:%d", S.GroupInfo[S.nActiveGroup].pName, S.nAggregateFlip);
+		MicroProfileDrawText(nX, nY, -1, buffer);
+	}
+
+	nY += nHeight + 1;
 	if(S.nBars & MP_DRAW_TIMERS)		
 		nX += MicroProfileDrawBarArray(nX, nY, S.nActiveGroup, pTimers, "Time", nNumTimers) + 1;
 	if(S.nBars & MP_DRAW_AVERAGE)		
@@ -592,10 +598,8 @@ void MicroProfileDrawBarView(uint32_t nScreenWidth, uint32_t nScreenHeight)
 
 void MicroProfileDraw(uint32_t nWidth, uint32_t nHeight)
 {
-	uplotfnxt("DRAW %x %x", S.nDisplay, S.nBars);
 	ZMICROPROFILE_SCOPEI("MicroProfile", "Draw", randcolor());
 
-	//MicroProfilePlot();
 	if(S.nDisplay & MP_DRAW_DETAILED)
 	{
 		MicroProfileDrawDetailedView(nWidth, nHeight);
@@ -656,7 +660,7 @@ void MicroProfileMouseClick(uint32_t nLeft, uint32_t nRight)
 {
 	if(nLeft)
 	{
-		uint32_t nBaseHeight = 10 + S.nBarHeight + 2;
+		uint32_t nBaseHeight = 10 + 2*(S.nBarHeight + 1);
 		int nIndex = (S.nMouseY - nBaseHeight) / (S.nBarHeight+1);
 		if(nIndex < S.GroupInfo[S.nActiveGroup].nNumTimers)
 		{
