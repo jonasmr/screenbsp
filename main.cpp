@@ -241,12 +241,12 @@ int SDL_main(int argc, char** argv)
 			uprintf("KEYDOWN MicroProfileToggleCallCount\n");
 			MicroProfileToggleCallCount();
 		}
-		if(g_KeyboardState.keys['[']&BUTTON_RELEASED)
+		if(g_KeyboardState.keys[']']&BUTTON_RELEASED)
 		{
 			uprintf("KEYDOWN MicroProfileNextGroup\n");
 			MicroProfileNextGroup();
 		}
-		if(g_KeyboardState.keys[']']&BUTTON_RELEASED)
+		if(g_KeyboardState.keys['[']&BUTTON_RELEASED)
 		{
 			uprintf("KEYDOWN MicroProfilePrevGroup\n");
 			MicroProfilePrevGroup();

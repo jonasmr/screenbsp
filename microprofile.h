@@ -67,6 +67,7 @@ void MicroProfileToggleTimers();//Toggle timer view
 void MicroProfileToggleAverageTimers(); //Toggle average view
 void MicroProfileToggleMaxTimers(); //Toggle max view
 void MicroProfileToggleCallCount(); // Toggle call count view
+void MicroProfileClearGraph();
 
 //UNDEFINED: MUST BE IMPLEMENTED ELSEWHERE
 void MicroProfileDrawText(uint32_t nX, uint32_t nY, uint32_t nColor, const char* pText);
@@ -320,6 +321,7 @@ void MicroProfileNextAggregatePreset()
 	}
 	S.nAggregateFlip = nCurrent;
 	S.nDirty = 1;
+	uprintf("AGGR %d\n", nCurrent);
 }
 void MicroProfilePrevAggregatePreset()
 {
@@ -335,15 +337,17 @@ void MicroProfilePrevAggregatePreset()
 	}
 	S.nAggregateFlip = nCurrent;
 	S.nDirty = 1;
+	uprintf("AGGR %d\n", nCurrent);
 }
 void MicroProfileNextGroup()
 {
 	S.nActiveGroup = (S.nActiveGroup+1)%S.nGroupCount;
-
+	MicroProfileClearGraph();
 }
 void MicroProfilePrevGroup()
 {
-	S.nActiveGroup = (S.nActiveGroup-1)%S.nGroupCount;
+	S.nActiveGroup = (S.nActiveGroup+S.nGroupCount-1)%S.nGroupCount;
+	MicroProfileClearGraph();
 }
 
 void MicroProfileToggleDisplayMode()
@@ -606,6 +610,16 @@ void MicroProfileMouseMove(uint32_t nX, uint32_t nY)
 	S.nMouseX = nX;
 	S.nMouseY = nY;
 }
+void MicroProfileClearGraph()
+{
+	for(uint32_t i = 0; i < MICROPROFILE_MAX_GRAPHS; ++i)
+	{
+		if(S.Graph[i].nToken != 0)
+		{
+			S.Graph[i].nToken = MICROPROFILE_INVALID_TOKEN;
+		}
+	}
+}
 void MicroProfileToggleGraph(MicroProfileToken nToken)
 {
 
@@ -632,7 +646,7 @@ void MicroProfileToggleGraph(MicroProfileToken nToken)
 			nMaxSort = S.Graph[i].nKey;
 		}
 	}
-	int nIndex = nFreeIndex>-1 ? nFreeIndex : nMinIndex;
+	int nIndex = nFreeIndex > -1 ? nFreeIndex : nMinIndex;
 	S.Graph[nIndex].nToken = nToken;
 	S.Graph[nIndex].nKey = nMaxSort+1;
 	memset(&S.Graph[nIndex].fHistory[0], 0, sizeof(S.Graph[nIndex].fHistory));
