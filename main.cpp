@@ -75,6 +75,14 @@ void HandleEvent(SDL_Event* pEvt)
 				g_MouseState.button[pEvt->button.button] = BUTTON_DOWN|BUTTON_PUSHED;
 			}
 		}
+		if(pEvt->button.button == SDL_BUTTON_WHEELUP)
+		{
+			MicroProfileZoom(-1);
+		}
+		else if(pEvt->button.button == SDL_BUTTON_WHEELDOWN)
+		{
+			MicroProfileZoom(1);
+		}
 	// 	}
 	// 	break;
 	// case SDL_JOYAXISMOTION:
@@ -175,6 +183,8 @@ int SDL_main(int argc, char** argv)
 	ProgramInit();
 	
 
+	MicroProfileToken MainTok = MicroProfileGetToken("MAIN", "Main", 0xff0000);
+
 	
 	while(!g_nQuit)
 	{
@@ -186,19 +196,46 @@ int SDL_main(int argc, char** argv)
 		{
 			HandleEvent(&Evt);
 		}
-		if(ProgramMain())
 		{
-			g_nQuit = 1;
+			ZMICROPROFILE_SCOPEI("MAIN", "Program", 0x33ee55);
+			if(ProgramMain())
+			{
+				g_nQuit = 1;
+			}
+
+		}
+
+		{
+			srand(0);
+			ZMICROPROFILE_SCOPEI("MAIN", "DebugRender", 0x00eeee);
+			DebugDrawFlush();
+			TextFlush();
+			ZMICROPROFILE_SCOPEI("MAIN", "DUMMY", randcolor());
+
+			for(int i = 0; i < 2; ++i)
+			{
+				ZMICROPROFILE_SCOPEI("MAIN", "DUM0", randcolor());
+				usleep(100);				
+				{ZMICROPROFILE_SCOPEI("MAIN", "DUM1", randcolor());
+				usleep(100);
+				{ZMICROPROFILE_SCOPEI("MAIN", "DUM2", randcolor());
+				usleep(100);
+				{ZMICROPROFILE_SCOPEI("MAIN", "DUM3", randcolor());
+				usleep(200);
+				{ZMICROPROFILE_SCOPEI("MAIN", "DUM4", randcolor());
+				usleep(200);
+				{ZMICROPROFILE_SCOPEI("MAIN", "DUM5", randcolor());
+				usleep(200);
+				}}}}}
+	
+			}
+
 		}
 
 
-
-
-		DebugDrawFlush();
-		TextFlush();
-
-
+		MicroProfileLeave(MainTok);
 		MicroProfileFlip();
+		MicroProfileEnter(MainTok);
 		{
 			CheckGLError();
 			glMatrixMode(GL_PROJECTION);
@@ -218,50 +255,47 @@ int SDL_main(int argc, char** argv)
 
 		if(g_KeyboardState.keys['z']&BUTTON_RELEASED)
 		{
-			uprintf("KEYDOWN MicroProfileToggleDisplayMode\n");
 			MicroProfileToggleDisplayMode();
 		}
 		if(g_KeyboardState.keys['x']&BUTTON_RELEASED)
 		{
-			uprintf("KEYDOWN MicroProfileToggleTimers\n");
 			MicroProfileToggleTimers();
 		}
 		if(g_KeyboardState.keys['c']&BUTTON_RELEASED)
 		{
-			uprintf("KEYDOWN MicroProfileToggleAverageTimers\n");
 			MicroProfileToggleAverageTimers();
 		}
 		if(g_KeyboardState.keys['v']&BUTTON_RELEASED)
 		{
-			uprintf("KEYDOWN MicroProfileToggleMaxTimers\n");
 			MicroProfileToggleMaxTimers();
 		}
 		if(g_KeyboardState.keys['b']&BUTTON_RELEASED)
 		{
-			uprintf("KEYDOWN MicroProfileToggleCallCount\n");
 			MicroProfileToggleCallCount();
 		}
 		if(g_KeyboardState.keys[']']&BUTTON_RELEASED && 0 == ((g_KeyboardState.keys[SDLK_RSHIFT]|g_KeyboardState.keys[SDLK_LSHIFT]) & BUTTON_DOWN))
 		{
-			uprintf("KEYDOWN MicroProfileNextGroup\n");
 			MicroProfileNextGroup();
 		}
 		if(g_KeyboardState.keys['[']&BUTTON_RELEASED && 0 == ((g_KeyboardState.keys[SDLK_RSHIFT]|g_KeyboardState.keys[SDLK_LSHIFT]) & BUTTON_DOWN))
 		{
-			uprintf("KEYDOWN MicroProfilePrevGroup\n");
 			MicroProfilePrevGroup();
 		}
 		if(g_KeyboardState.keys[']']&BUTTON_RELEASED && 0 != ((g_KeyboardState.keys[SDLK_RSHIFT]|g_KeyboardState.keys[SDLK_LSHIFT]) & BUTTON_DOWN))
 		{
-			uprintf("KEYDOWN MicroProfileNextAggregateGroup\n");
 			MicroProfileNextAggregatePreset();
 		}
 		if(g_KeyboardState.keys['[']&BUTTON_RELEASED && 0 != ((g_KeyboardState.keys[SDLK_RSHIFT]|g_KeyboardState.keys[SDLK_LSHIFT]) & BUTTON_DOWN))
 		{
-			uprintf("KEYDOWN MicroProfilePrevAggregatePreset\n");
 			MicroProfilePrevAggregatePreset();
 		}
+		if(g_KeyboardState.keys[SDLK_RSHIFT] & BUTTON_RELEASED)
+		{
+			uprintf("FLIP DET\n");
+			MicroProfileToggleFlipDetailed();
+		}
 
+		ZMICROPROFILE_SCOPEI("MAIN", "Flip", 0xffee00);
 		SDL_GL_SwapBuffers();
 	}
 	return 0;
