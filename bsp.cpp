@@ -8,8 +8,8 @@
 #include "microprofileinc.h"
 
 #include <algorithm>
-
-
+// #undef ZMICROPROFILE_SCOPEIC
+// #define ZMICROPROFILE_SCOPEIC(...)
 #define OCCLUDER_EMPTY (0xc000)
 #define OCCLUDER_LEAF (0x8000)
 #define OCCLUDER_CLIP_MAX 0x100
