@@ -62,7 +62,6 @@ void HandleEvent(SDL_Event* pEvt)
 			{
 				if(nPosX>0)
 				{
-					uprintf("MOTION %d\n", pEvt->motion.x);
 					MicroProfileMoveGraph(0,pEvt->motion.x-nPosX);
 				}
 				nPosX = pEvt->motion.x;
