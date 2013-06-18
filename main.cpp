@@ -204,7 +204,7 @@ int SDL_main(int argc, char** argv)
 	while(!g_nQuit)
 	{
 		CheckGLError();
-		//PhysicsStep();
+		PhysicsStep();
 		InputClear();
 		SDL_Event Evt;
 		while(SDL_PollEvent(&Evt))
@@ -227,7 +227,7 @@ int SDL_main(int argc, char** argv)
 			TextFlush();
 			ZMICROPROFILE_SCOPEI("MAIN", "DUMMY", randcolor());
 
-			for(int i = 0; i < 2; ++i)
+			for(int i = 0; i < 5; ++i)
 			{
 				ZMICROPROFILE_SCOPEI("MAIN", "DUM0", randcolor());
 				usleep(100);				
