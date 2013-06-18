@@ -33,7 +33,7 @@ inline int64_t TickToNs(int64_t nTicks)
 
 
 #define MP_ASSERT(a) do{if(!(a)){MP_BREAK();} }while(0)
-#define TICK_TO_MS(a) (TickToNs(a) / 1000000.f)
+#define MP_TICK_TO_MS(a) (TickToNs(a) / 1000000.f)
 
 
 
@@ -497,10 +497,7 @@ void MicroProfileDrawFloatInfo(uint32_t nX, uint32_t nY, uint32_t nToken, uint64
 {
 #define MAX_STRINGS 16
 	
-	float fMs = TICK_TO_MS(nTime);
-	// char buffer[256];
-	// snprintf(buffer, 255, "%6.3fms", fMs);
-	// MicroProfileDrawBox(nX, nY, 100, 100, 0);
+	float fMs = MP_TICK_TO_MS(nTime);
 	float fAverage = 15.f;
 	float fCallAverage = 20.f;
 	uint32_t nCalls = 9999;
@@ -634,8 +631,8 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 				uint64_t nTickEnd = LE.nTick;
 				uint32_t nColor = S.TimerInfo[ LE.nToken & 0xffff].nColor;
 
-				float fMsStart = TICK_TO_MS(nTickStart - nFrameStart) - fMsBase;
-				float fMsEnd = TICK_TO_MS(nTickEnd - nFrameStart) - fMsBase;
+				float fMsStart = MP_TICK_TO_MS(nTickStart - nFrameStart) - fMsBase;
+				float fMsEnd = MP_TICK_TO_MS(nTickEnd - nFrameStart) - fMsBase;
 				ZASSERT(fMsStart <= fMsEnd);
 				float fXStart = nX + fMsStart * fMsToScreen;
 				float fXEnd = nX + fMsEnd * fMsToScreen;
