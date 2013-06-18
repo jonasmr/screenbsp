@@ -119,7 +119,7 @@ struct MicroProfileScopeHandler
 #define MICROPROFILE_MAX_GROUPS 128
 #define MICROPROFILE_MAX_GRAPHS 5
 #define MICROPROFILE_GRAPH_HISTORY 128
-#define MICROPROFIL_LOG_BUFFER_SIZE (8*128<<10)/sizeof(MicroProfileLogEntry)
+#define MICROPROFIL_LOG_BUFFER_SIZE (2048<<10)/sizeof(MicroProfileLogEntry)
 
 #include "debug.h"
 
@@ -495,14 +495,17 @@ void MicroProfileToggleCallCount()
 
 void MicroProfileDrawFloatInfo(uint32_t nX, uint32_t nY, uint32_t nToken, uint64_t nTime)
 {
-#define MAX_STRINGS 16
-	
+#define MAX_STRINGS 32
+	uint32_t nIndex = MicroProfileGetTimerIndex(nToken);
+	uint32_t nAggregateFrames = S.nAggregateFrames ? S.nAggregateFrames : 1;
+	uint32_t nAggregateCount = S.Aggregate[nIndex].nCount ? S.Aggregate[nIndex].nCount : 1;
+
 	float fMs = MP_TICK_TO_MS(nTime);
-	float fAverage = 15.f;
-	float fCallAverage = 20.f;
-	uint32_t nCalls = 9999;
-	float fMax = 21.f;
-//	MicroProfileDrawText(nX, nY, 0, buffer);
+	float fFrameMs = MP_TICK_TO_MS(S.Frame[nIndex].nTicks);
+	float fAverage = MP_TICK_TO_MS(S.Aggregate[nIndex].nTicks/nAggregateFrames);
+	float fCallAverage = MP_TICK_TO_MS(S.Aggregate[nIndex].nTicks / nAggregateCount);
+	float fMax = MP_TICK_TO_MS(S.AggregateMax[nIndex]);
+
 	{
 		const char* ppStrings[MAX_STRINGS];
 		uint32_t nColors[MAX_STRINGS];
@@ -516,36 +519,46 @@ void MicroProfileDrawFloatInfo(uint32_t nX, uint32_t nY, uint32_t nToken, uint64
 		const char* pGroupName = S.GroupInfo[nGroupId].pName;
 		const char* pTimerName = S.TimerInfo[nTimerId].pName;
 #define SZ (intptr)(sizeof(buffer)-1-(pBufferStart - pBuffer))
+		uint32_t nTextCount = 0;
 
-		ppStrings[0] = pBuffer;
+
+		ppStrings[nTextCount++] = pBuffer;
 		pBuffer += 1 + snprintf(pBuffer,SZ, "%s", pGroupName);
-		ppStrings[1] = pBuffer;
+		ppStrings[nTextCount++] = pBuffer;
 		pBuffer += 1 + snprintf(pBuffer,SZ, "%s", pTimerName);
 		
-		
-		ppStrings[2] = "Time:";
-		ppStrings[3] = pBuffer;
-		pBuffer += 1 + snprintf(pBuffer, SZ,"%6.3fms",  fMs);
-		
-		ppStrings[4] = "Average:";
-		ppStrings[5] = pBuffer;
-		pBuffer += 1 + snprintf(pBuffer, SZ,"%6.3fms",  fAverage);
+		if(nTime != (uint64_t)-1)
+		{
+			ppStrings[nTextCount++] = "Time:";
+			ppStrings[nTextCount++] = pBuffer;
+			pBuffer += 1 + snprintf(pBuffer, SZ,"%6.3fms",  fMs);
+			ppStrings[nTextCount++] = "";
+			ppStrings[nTextCount++] = "";
+		}
 
-		ppStrings[6] = "Max:";
-		ppStrings[7] = pBuffer;
-		pBuffer += 1 + snprintf(pBuffer, SZ,"%6.3fms",  fMax);
-		
-		ppStrings[8] = "Call Average:";
-		ppStrings[9] = pBuffer;
+		ppStrings[nTextCount++] = "Frame Time:";
+		ppStrings[nTextCount++] = pBuffer;
+		pBuffer += 1 + snprintf(pBuffer, SZ,"%6.3fms",  fFrameMs);
+
+		ppStrings[nTextCount++] = "Frame Call Average:";
+		ppStrings[nTextCount++] = pBuffer;
 		pBuffer += 1 + snprintf(pBuffer, SZ,"%6.3fms",  fCallAverage);
 
-		ppStrings[10] = "Call Count:";
-		ppStrings[11] = pBuffer;
-		pBuffer += 1 + snprintf(pBuffer, SZ, "%6d",  nCalls);
+		ppStrings[nTextCount++] = "Frame Call Count:";
+		ppStrings[nTextCount++] = pBuffer;
+		pBuffer += 1 + snprintf(pBuffer, SZ, "%6d",  nAggregateCount / nAggregateFrames);
+		
+		ppStrings[nTextCount++] = "Average:";
+		ppStrings[nTextCount++] = pBuffer;
+		pBuffer += 1 + snprintf(pBuffer, SZ,"%6.3fms",  fAverage);
 
-
+		ppStrings[nTextCount++] = "Max:";
+		ppStrings[nTextCount++] = pBuffer;
+		pBuffer += 1 + snprintf(pBuffer, SZ,"%6.3fms",  fMax);
+		
+		ZASSERT(nTextCount < MAX_STRINGS);
+		nTextCount /= 2;
 #undef SZ
-		uint32_t nTextCount = 6;
 		uint32_t nWidth = 0;
 		uint32_t nStringLengths[MAX_STRINGS];
 		for(uint32_t i = 0; i < nTextCount; ++i)
@@ -559,17 +572,17 @@ void MicroProfileDrawFloatInfo(uint32_t nX, uint32_t nY, uint32_t nToken, uint64
 		nWidth = (ZMICROPROFILE_TEXT_WIDTH+1) * (2+nWidth) + 2 * ZMICROPROFILE_BORDER_SIZE;
 		uint32_t nHeight = (ZMICROPROFILE_TEXT_HEIGHT+1) * nTextCount + 2 * ZMICROPROFILE_BORDER_SIZE;
 		nY += 20;
+		if(nX + nWidth > S.nWidth)
+			nX = S.nWidth - nWidth;
+		if(nY + nHeight > S.nHeight)
+			nY = S.nHeight - nHeight;
 		MicroProfileDrawBox(nX, nY, nWidth, nHeight, 0);
 		for(uint32_t i = 0; i < nTextCount; ++i)
 		{
 			int i0 = i * 2;
 			MicroProfileDrawText(nX + 1, nY + 1 + (ZMICROPROFILE_TEXT_HEIGHT+1) * i, (uint32_t)-1, ppStrings[i0]);
 			MicroProfileDrawText(nX + nWidth - nStringLengths[i0+1] * (ZMICROPROFILE_TEXT_WIDTH+1), nY + 1 + (ZMICROPROFILE_TEXT_HEIGHT+1) * i, (uint32_t)-1, ppStrings[i0+1]);
-
 		}
-
-
-
 
 	}
 #undef MAX_STRINGS
