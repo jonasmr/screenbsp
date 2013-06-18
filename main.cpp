@@ -56,6 +56,22 @@ void HandleEvent(SDL_Event* pEvt)
 		g_MouseState.position[0] = pEvt->motion.x;
 		g_MouseState.position[1] = g_Height-pEvt->motion.y; // flip to match opengl
 		MicroProfileMouseMove(g_MouseState.position[0], pEvt->motion.y);
+		{
+			static int nPosX = -1;
+			if(g_KeyboardState.keys[SDLK_LCTRL] & BUTTON_DOWN)
+			{
+				if(nPosX>0)
+				{
+					uprintf("MOTION %d\n", pEvt->motion.x);
+					MicroProfileMoveGraph(0,pEvt->motion.x-nPosX);
+				}
+				nPosX = pEvt->motion.x;
+			}
+			else
+			{
+				nPosX = -1;
+			}
+		}
 		break;
 	case SDL_MOUSEBUTTONDOWN:
 	case SDL_MOUSEBUTTONUP:
@@ -77,11 +93,11 @@ void HandleEvent(SDL_Event* pEvt)
 		}
 		if(pEvt->button.button == SDL_BUTTON_WHEELUP)
 		{
-			MicroProfileZoom(-1);
+			MicroProfileMoveGraph(-1,0);
 		}
 		else if(pEvt->button.button == SDL_BUTTON_WHEELDOWN)
 		{
-			MicroProfileZoom(1);
+			MicroProfileMoveGraph(1,0);
 		}
 	// 	}
 	// 	break;

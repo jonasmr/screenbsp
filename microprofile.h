@@ -51,6 +51,7 @@ inline int64_t TickToNs(int64_t nTicks)
 #define ZMICROPROFILE_GRAPH_WIDTH 256
 #define ZMICROPROFILE_GRAPH_HEIGHT 256
 #define ZMICROPROFILE_BORDER_SIZE 1
+#define ZMICROPROFILE_MAX_GRAPH_TIME 100.f
 
 
 typedef uint32_t MicroProfileToken;
@@ -82,15 +83,14 @@ void MicroProfileToggleMaxTimers(); //Toggle max view
 void MicroProfileToggleCallCount(); // Toggle call count view
 void MicroProfileClearGraph();
 void MicroProfileToggleFlipDetailed();
+void MicroProfileMouseMove(uint32_t nX, uint32_t nY);
+void MicroProfileMouseClick(uint32_t nLeft, uint32_t nRight);
+void MicroProfileMoveGraph(int nDir, int nPan);
 
 //UNDEFINED: MUST BE IMPLEMENTED ELSEWHERE
 void MicroProfileDrawText(uint32_t nX, uint32_t nY, uint32_t nColor, const char* pText);
 void MicroProfileDrawBox(uint32_t nX, uint32_t nY, uint32_t nWidth, uint32_t nHeight, uint32_t nColor);
 void MicroProfileDrawLine2D(uint32_t nVertices, float* pVertices, uint32_t nColor);
-//MUST BE CALLED
-void MicroProfileMouseMove(uint32_t nX, uint32_t nY);
-void MicroProfileMouseClick(uint32_t nLeft, uint32_t nRight);
-void MicroProfileZoom(int nDir);
 
 
 
@@ -194,6 +194,10 @@ struct
 	uint32_t nStoredGroup;
 	uint32_t nFlipLog;
 	float fGraphBaseTime;
+	float fGraphBaseTimePos;
+
+	uint32_t nWidth;
+	uint32_t nHeight;
 
 	uint32_t nBarWidth;
 	uint32_t nBarHeight;
@@ -271,6 +275,8 @@ void MicroProfileInit()
 		S.nBars = MP_DRAW_ALL;
 		S.nFlipLog = 1;
 		S.fGraphBaseTime = 40.f;
+		S.nWidth = 100;
+		S.nHeight = 100;
 	}
 }
 
@@ -582,22 +588,25 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 	uint32_t nX = 10;
 	uint32_t nY = 20;
 
-	float fMsBase = 0.f;
+	float fMsBase = S.fGraphBaseTimePos;
 	float fMs = S.fGraphBaseTime;
+	float fMsEnd = fMs + fMsBase;
 	float fWidth = nWidth - 2 * nX;
 	float fMsToScreen = fWidth / fMs;
 
-	int nColorIndex = 0;
+	int nColorIndex = floor(fMsBase);
 	//DRAW LEGEND
 	int i = 0;
-	for(float f = 0.f; f < fMs; f += 1.f, ++i)
+	for(float f = fMsBase; f < fMsEnd; ++i)
 	{
-		float fEnd = MicroProfileMin(fMs, f+1) - f;
-		uint32_t nXPos = nX-1 + f * fMsToScreen;
-		MicroProfileDrawBox(nXPos, nY, fEnd * fMsToScreen+1, nHeight, g_nMicroProfileBackColors[nColorIndex++ & 1]);
+		float fStart = f;
+		float fNext = MicroProfileMin<float>(floor(f)+1.f, fMsEnd);
+		uint32_t nXPos = nX-1 + (fStart-fMsBase) * fMsToScreen;
+		MicroProfileDrawBox(nXPos, nY, (fNext-fMsBase) * fMsToScreen+1, nHeight, g_nMicroProfileBackColors[nColorIndex++ & 1]);
 		char buf[10];
-		snprintf(buf, 9, "%d", i);
+		snprintf(buf, 9, "%d", (int)f);
 		MicroProfileDrawText(nXPos, nY, (uint32_t)-1, buf);
+		f = fNext;
 
 	}
 	float fMouseX = S.nMouseX;
@@ -870,6 +879,8 @@ void MicroProfileDraw(uint32_t nWidth, uint32_t nHeight)
 	ZMICROPROFILE_SCOPEI("MicroProfile", "Draw", 0x737373);
 	if(!S.nDisplay)
 		return;
+	S.nWidth = nWidth;
+	S.nHeight = nHeight;
 
 	uint32_t nX = 10;
 	uint32_t nY = 10;
@@ -970,15 +981,33 @@ void MicroProfileMouseClick(uint32_t nLeft, uint32_t nRight)
 		}
 	}
 }
-void MicroProfileZoom(int nDir)
+
+
+void MicroProfileMoveGraph(int nZoom, int nPan)
 {
-	if(nDir > 0)
+	if(nZoom)
 	{
-		S.fGraphBaseTime *= 1.05f;
-		S.fGraphBaseTime = MicroProfileMin(S.fGraphBaseTime, 50.f);
+		float fBasePos = S.fGraphBaseTimePos;
+		float fBaseTime = S.fGraphBaseTime;
+		float fMousePrc = MicroProfileMax((S.nMouseX - 10.f) / S.nWidth ,0.f);
+		float fMouseTimeCenter = fMousePrc * fBaseTime + fBasePos;
+		if(nZoom > 0)
+		{
+			S.fGraphBaseTime *= 1.05f;
+			S.fGraphBaseTime = MicroProfileMin(S.fGraphBaseTime, (float)ZMICROPROFILE_MAX_GRAPH_TIME);
+		}
+		else
+			S.fGraphBaseTime /= 1.05f;
+
+		S.fGraphBaseTimePos = fMouseTimeCenter - fMousePrc * S.fGraphBaseTime;
+		S.fGraphBaseTimePos = MicroProfileMax(0.f, S.fGraphBaseTimePos);
 	}
-	else
-		S.fGraphBaseTime /= 1.05f;
+	if(nPan)
+	{
+		S.fGraphBaseTimePos += nPan * 2 * S.fGraphBaseTime / S.nWidth;
+		S.fGraphBaseTimePos = MicroProfileMax(S.fGraphBaseTimePos, 0.f);
+		S.fGraphBaseTimePos = MicroProfileMin(S.fGraphBaseTimePos, ZMICROPROFILE_MAX_GRAPH_TIME - S.fGraphBaseTime);
+	}
 }
 
 
