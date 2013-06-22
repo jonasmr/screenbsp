@@ -623,6 +623,8 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 	float fMouseY = S.nMouseY;
 	uint32_t nHoverToken = -1;
 	uint64_t nHoverTime = 0;
+	float fHoverDist = 0.5f;
+	float fBestDist = 100000.f;
 
 	for(uint32_t i = 0; i < S.nLogPosDisplay; ++i)
 	{
@@ -652,28 +654,33 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 
 				float fYStart = nY + nStackPos * (ZMICROPROFILE_DETAILED_BAR_HEIGHT+1);
 				float fYEnd = fYStart + (ZMICROPROFILE_DETAILED_BAR_HEIGHT+1);
-				uint32_t foo = fXEnd - fXStart;
+				uint32_t nIntegerWidth = fXEnd - fXStart;
+				float fXDist = MicroProfileMax(fXStart - fMouseX, fMouseX - fXEnd);
 
-				if(foo)
+				if(fXDist < fHoverDist)
 				{
-					if(fXStart < fMouseX && fMouseX <= fXEnd && fYStart < fMouseY && fMouseY <= fYEnd)
+					if(fYStart <= fMouseY && fMouseY <= fYEnd)
 					{
+						fHoverDist = fXDist;
 						nHoverToken = LE.nToken;
 						nHoverTime = nTickEnd - nTickStart;
 					}
+				}
+
+				if(nIntegerWidth)
+				{
 					MicroProfileDrawBox(fXStart, fYStart, fXEnd - fXStart, ZMICROPROFILE_DETAILED_BAR_HEIGHT, nColor);
 				}
 				else
 				{
 					float fXAvg = 0.5f * (fXStart + fXEnd);
 					float fLine[] = {
-						fXAvg, fYStart,
-						fXAvg, fYEnd
+						fXAvg, fYStart + 0.5f,
+						fXAvg, fYEnd - 0.5f
 
 					};
 					MicroProfileDrawLine2D(2, &fLine[0], nColor);
 				}
-
 				nStackPos--;
 			}
 			break;
