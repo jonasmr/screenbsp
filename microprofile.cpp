@@ -11,12 +11,14 @@
 
 void MicroProfileDrawText(uint32_t nX, uint32_t nY, uint32_t nColor, const char* pText)
 {
+	ZMICROPROFILE_SCOPEI("MicroProfile", "MicroProfileText", 0xee7700);
 	TextBegin();
 	TextPut(nX, nY, pText, -1);
 	TextEnd();
 }
 void MicroProfileDrawBox(uint32_t nX, uint32_t nY, uint32_t nWidth, uint32_t nHeight, uint32_t nColor)
 {
+	ZMICROPROFILE_SCOPEI("MicroProfile", "MicroProfileDrawBox", 0xee7700);
 	glBegin(GL_QUADS);
 	glColor4ub(0xff&(nColor>>16), 0xff&(nColor>>8), 0xff&nColor, 0xff);
 	glVertex2i(nX, nY);
@@ -29,6 +31,8 @@ void MicroProfileDrawBox(uint32_t nX, uint32_t nY, uint32_t nWidth, uint32_t nHe
 void MicroProfileDrawLine2D(uint32_t nVertices, float* pVertices, uint32_t nColor)
 {
 	if(!nVertices) return;
+	ZMICROPROFILE_SCOPEI("MicroProfile", "MicroProfileDrawLine2D", 0xeee);
+
 	glBegin(GL_LINES);
 	glColor4ub(0xff&(nColor>>16), 0xff&(nColor>>8), 0xff&nColor, 0xff);
 	for(uint32 i = 0; i < nVertices-1; ++i)
