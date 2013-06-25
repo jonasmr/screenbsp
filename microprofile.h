@@ -2,9 +2,11 @@
 // TODO: 
 // blinking
 // line over
+// scroll legends
 // active vs full vs current
 // buffer overflow signal + handling
 // multithread
+// graph in detailed
 #include <stdint.h>
 #include <string.h>
 #if 1
@@ -602,20 +604,23 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 	float fMsToScreen = fWidth / fMs;
 
 	int nColorIndex = floor(fMsBase);
-	//DRAW LEGEND
 	int i = 0;
+	int nSkip = (fMsEnd-fMsBase)> 50 ? 2 : 1;
 	for(float f = fMsBase; f < fMsEnd; ++i)
 	{
 		float fStart = f;
 		float fNext = MicroProfileMin<float>(floor(f)+1.f, fMsEnd);
 		uint32_t nXPos = nX + ((fStart-fMsBase) * fMsToScreen);
 		MicroProfileDrawBox(nXPos, nY, (fNext-fMsBase) * fMsToScreen+1, nHeight, g_nMicroProfileBackColors[nColorIndex++ & 1]);
-		char buf[10];
-		snprintf(buf, 9, "%d", (int)f);
-		MicroProfileDrawText(nXPos, nY, (uint32_t)-1, buf);
+		if(0 == (i%nSkip))
+		{
+			char buf[10];
+			snprintf(buf, 9, "%d", (int)f);
+			MicroProfileDrawText(nXPos, nY, (uint32_t)-1, buf);
+		}
 		f = fNext;
-
 	}
+
 	float fMouseX = S.nMouseX;
 	float fMouseY = S.nMouseY;
 	uint32_t nHoverToken = -1;
