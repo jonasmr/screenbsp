@@ -1,12 +1,6 @@
-//#include "base.h"
-//#include "debug.h"
-
 #define MICRO_PROFILE_IMPL
 #include "microprofile.h"
-
 #include "glinc.h"
-
-
 #include "text.h"
 
 void MicroProfileDrawText(uint32_t nX, uint32_t nY, uint32_t nColor, const char* pText)

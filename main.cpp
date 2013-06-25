@@ -212,7 +212,7 @@ int SDL_main(int argc, char** argv)
 			HandleEvent(&Evt);
 		}
 		{
-			ZMICROPROFILE_SCOPEI("MAIN", "Program", 0x33ee55);
+			MICROPROFILE_SCOPEI("MAIN", "Program", 0x33ee55);
 			if(ProgramMain())
 			{
 				g_nQuit = 1;
@@ -222,24 +222,24 @@ int SDL_main(int argc, char** argv)
 
 		{
 			srand(0);
-			ZMICROPROFILE_SCOPEI("MAIN", "DebugRender", 0x00eeee);
+			MICROPROFILE_SCOPEI("MAIN", "DebugRender", 0x00eeee);
 			DebugDrawFlush();
 			TextFlush();
-			ZMICROPROFILE_SCOPEI("MAIN", "DUMMY", randcolor());
+			MICROPROFILE_SCOPEI("MAIN", "DUMMY", randcolor());
 
 			for(int i = 0; i < 5; ++i)
 			{
-				ZMICROPROFILE_SCOPEI("MAIN", "DUM0", randcolor());
+				MICROPROFILE_SCOPEI("MAIN", "DUM0", randcolor());
 				usleep(100);				
-				{ZMICROPROFILE_SCOPEI("MAIN", "DUM1", randcolor());
+				{MICROPROFILE_SCOPEI("MAIN", "DUM1", randcolor());
 				usleep(100);
-				{ZMICROPROFILE_SCOPEI("MAIN", "DUM2", randcolor());
+				{MICROPROFILE_SCOPEI("MAIN", "DUM2", randcolor());
 				usleep(100);
-				{ZMICROPROFILE_SCOPEI("MAIN", "DUM3", randcolor());
+				{MICROPROFILE_SCOPEI("MAIN", "DUM3", randcolor());
 				usleep(200);
-				{ZMICROPROFILE_SCOPEI("MAIN", "DUM4", randcolor());
+				{MICROPROFILE_SCOPEI("MAIN", "DUM4", randcolor());
 				usleep(200);
-				{ZMICROPROFILE_SCOPEI("MAIN", "DUM5", randcolor());
+				{MICROPROFILE_SCOPEI("MAIN", "DUM5", randcolor());
 				usleep(200);
 				}}}}}
 	
@@ -310,7 +310,7 @@ int SDL_main(int argc, char** argv)
 			MicroProfileToggleFlipDetailed();
 		}
 
-		ZMICROPROFILE_SCOPEI("MAIN", "Flip", 0xffee00);
+		MICROPROFILE_SCOPEI("MAIN", "Flip", 0xffee00);
 		SDL_GL_SwapBuffers();
 	}
 	return 0;
