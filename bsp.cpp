@@ -8,8 +8,8 @@
 #include "microprofileinc.h"
 
 #include <algorithm>
-// #undef ZMICROPROFILE_SCOPEIC
-// #define ZMICROPROFILE_SCOPEIC(...)
+// #undef MICROPROFILE_SCOPEIC
+// #define MICROPROFILE_SCOPEIC(...)
 #define OCCLUDER_EMPTY (0xc000)
 #define OCCLUDER_LEAF (0x8000)
 #define OCCLUDER_CLIP_MAX 0x100
@@ -84,7 +84,7 @@ SBspEdgeIndex::SBspEdgeIndex(const SOccluderBspNode& node)
 
 v3 BspPlaneIntersection(v4 p0, v4 p1, v4 p2)
 {
-	ZMICROPROFILE_SCOPEIC("BSP", "BspPlaneIntersect");
+MICROPROFILE_SCOPEIC("BSP", "BspPlaneIntersect");
 
 	float x = -(-p0.w*p1.y*p2.z+p0.w*p2.y*p1.z+p1.w*p0.y*p2.z-p1.w*p2.y*p0.z-p2.w*p0.y*p1.z+p2.w*p1.y*p0.z)
 	/(-p0.x*p1.y*p2.z+p0.x*p2.y*p1.z+p1.x*p0.y*p2.z-p1.x*p2.y*p0.z-p2.x*p0.y*p1.z+p2.x*p1.y*p0.z);
@@ -159,7 +159,7 @@ void BspDestroy(SOccluderBsp* pBsp)
 void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders, SWorldObject* pWorldObjects, uint32 nNumWorldObjects, const SOccluderBspViewDesc& Desc)
 {
 	g_pBsp = pBsp;
-	ZMICROPROFILE_SCOPEIC("BSP", "Build");
+MICROPROFILE_SCOPEIC("BSP", "Build");
 	if(g_KeyboardState.keys[SDLK_F3]&BUTTON_RELEASED)
 	{
 		g_nBspOccluderDrawOccluders = (g_nBspOccluderDrawOccluders+1)%2;
@@ -947,7 +947,7 @@ bool BspCullObjectR(SOccluderBsp* pBsp, uint32 Index, SBspEdgeIndex* Poly, uint3
 
 bool BspCullObject(SOccluderBsp* pBsp, SWorldObject* pObject)
 {
-	ZMICROPROFILE_SCOPEIC("BSP", "Cull");
+MICROPROFILE_SCOPEIC("BSP", "Cull");
 	if(!pBsp->Nodes.Size())
 		return false;
 	g_nBspDebugPlaneCounter = 0;	
@@ -957,7 +957,7 @@ bool BspCullObject(SOccluderBsp* pBsp, SWorldObject* pObject)
 	SBspEdgeIndex Poly[5];
 	uint32 nSize = pBsp->Occluders.Size();
 	{
-		ZMICROPROFILE_SCOPEIC("BSP", "CullPrepare");
+	MICROPROFILE_SCOPEIC("BSP", "CullPrepare");
 
 		m mObjectToWorld = pObject->mObjectToWorld;
 		v3 vHalfSize = pObject->vSize;

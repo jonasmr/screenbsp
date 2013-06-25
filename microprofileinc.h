@@ -2,4 +2,4 @@
 
 #include "microprofile.h"
 #include "math.h"
-#define ZMICROPROFILE_SCOPEIC(group, name) ZMICROPROFILE_SCOPEI(group,name,randcolor())
+#define MICROPROFILE_SCOPEIC(group, name) MICROPROFILE_SCOPEI(group,name,randcolor())

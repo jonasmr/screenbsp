@@ -39,12 +39,12 @@ void PhysicsInit()
 }
 void PhysicsStep()
 {
-	ZMICROPROFILE_SCOPEIC("physics", "physics total");
+	MICROPROFILE_SCOPEIC("physics", "physics total");
 	{
-		ZMICROPROFILE_SCOPEIC("physics", "physics step");
+		MICROPROFILE_SCOPEIC("physics", "physics step");
 		g_Physics.World->stepSimulation(1.f/60.f,10);
 	}
-	ZMICROPROFILE_SCOPEIC("physics", "Get Pos");
+	MICROPROFILE_SCOPEIC("physics", "Get Pos");
 	const int nNumObjects = g_Physics.World->getNumCollisionObjects();
 	for(int i = 0; i < nNumObjects; ++i)
 	{

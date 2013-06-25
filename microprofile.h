@@ -36,21 +36,21 @@ inline int64_t TickToNs(int64_t nTicks)
 
 
 
-#define ZMICROPROFILE_DECLARE(var) extern MicroProfileToken g_mp_##var
-#define ZMICROPROFILE_DEFINE(var, group, name, color) MicroProfileToken g_mp_##var(group, name, color)
-#define ZMICROPROFILE_TOKEN_PASTE0(a, b) a ## b
-#define ZMICROPROFILE_TOKEN_PASTE(a, b)  ZMICROPROFILE_TOKEN_PASTE0(a,b)
-#define ZMICROPROFILE_SCOPE(var) MicroProfileScopeHandler ZMICROPROFILE_TOKEN_PASTE(foo, __LINE__)(g_mp_##var)
-#define ZMICROPROFILE_SCOPEI(group, name, color) static MicroProfileToken ZMICROPROFILE_TOKEN_PASTE(g_mp,__LINE__) = MicroProfileGetToken(group, name, color); MicroProfileScopeHandler ZMICROPROFILE_TOKEN_PASTE(foo,__LINE__)( ZMICROPROFILE_TOKEN_PASTE(g_mp,__LINE__))
-#define ZMICROPROFILE_TEXT_WIDTH 5
-#define ZMICROPROFILE_TEXT_HEIGHT 8
-#define ZMICROPROFILE_DETAILED_BAR_HEIGHT 12
-#define ZMICROPROFILE_FRAME_TIME (1000.f / 30.f)
-#define ZMICROPROFILE_FRAME_TIME_TO_PRC (1.f / ZMICROPROFILE_FRAME_TIME)
-#define ZMICROPROFILE_GRAPH_WIDTH 256
-#define ZMICROPROFILE_GRAPH_HEIGHT 256
-#define ZMICROPROFILE_BORDER_SIZE 1
-#define ZMICROPROFILE_MAX_GRAPH_TIME 100.f
+#define MICROPROFILE_DECLARE(var) extern MicroProfileToken g_mp_##var
+#define MICROPROFILE_DEFINE(var, group, name, color) MicroProfileToken g_mp_##var(group, name, color)
+#define MICROPROFILE_TOKEN_PASTE0(a, b) a ## b
+#define MICROPROFILE_TOKEN_PASTE(a, b)  MICROPROFILE_TOKEN_PASTE0(a,b)
+#define MICROPROFILE_SCOPE(var) MicroProfileScopeHandler MICROPROFILE_TOKEN_PASTE(foo, __LINE__)(g_mp_##var)
+#define MICROPROFILE_SCOPEI(group, name, color) static MicroProfileToken MICROPROFILE_TOKEN_PASTE(g_mp,__LINE__) = MicroProfileGetToken(group, name, color); MicroProfileScopeHandler MICROPROFILE_TOKEN_PASTE(foo,__LINE__)( MICROPROFILE_TOKEN_PASTE(g_mp,__LINE__))
+#define MICROPROFILE_TEXT_WIDTH 5
+#define MICROPROFILE_TEXT_HEIGHT 8
+#define MICROPROFILE_DETAILED_BAR_HEIGHT 12
+#define MICROPROFILE_FRAME_TIME (1000.f / 30.f)
+#define MICROPROFILE_FRAME_TIME_TO_PRC (1.f / MICROPROFILE_FRAME_TIME)
+#define MICROPROFILE_GRAPH_WIDTH 256
+#define MICROPROFILE_GRAPH_HEIGHT 256
+#define MICROPROFILE_BORDER_SIZE 1
+#define MICROPROFILE_MAX_GRAPH_TIME 100.f
 
 
 typedef uint32_t MicroProfileToken;
@@ -258,7 +258,7 @@ void MicroProfileInit()
 		memset(&S, 0, sizeof(S));
 		S.nGroupCount = 1;//0 is for inactive
 		S.nBarWidth = 100;
-		S.nBarHeight = ZMICROPROFILE_TEXT_HEIGHT;
+		S.nBarHeight = MICROPROFILE_TEXT_HEIGHT;
 		S.nActiveGroup = 1;
 		S.GroupInfo[0].pName = "___ROOT";
 		S.nAggregateFlip = 30;
@@ -356,7 +356,7 @@ void MicroProfileFlip()
 	S.nStart[0] = TICK();
 
 
-	ZMICROPROFILE_SCOPEI("MicroProfile", "MicroProfileFlip", 0x3355ee);
+	MICROPROFILE_SCOPEI("MicroProfile", "MicroProfileFlip", 0x3355ee);
 	for(uint32_t i = 0; i < S.nTotalTimers; ++i)
 	{
 		S.AggregateTimers[i].nTicks += S.FrameTimers[i].nTicks;
@@ -568,8 +568,8 @@ void MicroProfileDrawFloatInfo(uint32_t nX, uint32_t nY, uint32_t nToken, uint64
 			nStringLengths[i0+1] = s1 = strlen(ppStrings[i0+1]);
 			nWidth = MicroProfileMax(s0+s1, nWidth);
 		}
-		nWidth = (ZMICROPROFILE_TEXT_WIDTH+1) * (2+nWidth) + 2 * ZMICROPROFILE_BORDER_SIZE;
-		uint32_t nHeight = (ZMICROPROFILE_TEXT_HEIGHT+1) * nTextCount + 2 * ZMICROPROFILE_BORDER_SIZE;
+		nWidth = (MICROPROFILE_TEXT_WIDTH+1) * (2+nWidth) + 2 * MICROPROFILE_BORDER_SIZE;
+		uint32_t nHeight = (MICROPROFILE_TEXT_HEIGHT+1) * nTextCount + 2 * MICROPROFILE_BORDER_SIZE;
 		nY += 20;
 		if(nX + nWidth > S.nWidth)
 			nX = S.nWidth - nWidth;
@@ -579,8 +579,8 @@ void MicroProfileDrawFloatInfo(uint32_t nX, uint32_t nY, uint32_t nToken, uint64
 		for(uint32_t i = 0; i < nTextCount; ++i)
 		{
 			int i0 = i * 2;
-			MicroProfileDrawText(nX + 1, nY + 1 + (ZMICROPROFILE_TEXT_HEIGHT+1) * i, (uint32_t)-1, ppStrings[i0]);
-			MicroProfileDrawText(nX + nWidth - nStringLengths[i0+1] * (ZMICROPROFILE_TEXT_WIDTH+1), nY + 1 + (ZMICROPROFILE_TEXT_HEIGHT+1) * i, (uint32_t)-1, ppStrings[i0+1]);
+			MicroProfileDrawText(nX + 1, nY + 1 + (MICROPROFILE_TEXT_HEIGHT+1) * i, (uint32_t)-1, ppStrings[i0]);
+			MicroProfileDrawText(nX + nWidth - nStringLengths[i0+1] * (MICROPROFILE_TEXT_WIDTH+1), nY + 1 + (MICROPROFILE_TEXT_HEIGHT+1) * i, (uint32_t)-1, ppStrings[i0+1]);
 		}
 
 	}
@@ -654,8 +654,8 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 				float fXStart = nX + fMsStart * fMsToScreen;
 				float fXEnd = nX + fMsEnd * fMsToScreen;
 
-				float fYStart = nY + nStackPos * (ZMICROPROFILE_DETAILED_BAR_HEIGHT+1);
-				float fYEnd = fYStart + (ZMICROPROFILE_DETAILED_BAR_HEIGHT+1);
+				float fYStart = nY + nStackPos * (MICROPROFILE_DETAILED_BAR_HEIGHT+1);
+				float fYEnd = fYStart + (MICROPROFILE_DETAILED_BAR_HEIGHT+1);
 				uint32_t nIntegerWidth = fXEnd - fXStart;
 				float fXDist = MicroProfileMax(fXStart - fMouseX, fMouseX - fXEnd);
 
@@ -671,7 +671,7 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 
 				if(nIntegerWidth)
 				{
-					MicroProfileDrawBox(fXStart, fYStart, fXEnd - fXStart, ZMICROPROFILE_DETAILED_BAR_HEIGHT, nColor);
+					MicroProfileDrawBox(fXStart, fYStart, fXEnd - fXStart, MICROPROFILE_DETAILED_BAR_HEIGHT, nColor);
 				}
 				else
 				{
@@ -699,7 +699,7 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 
 void MicroProfileCalcTimers(float* pTimers, float* pAverage, float* pMax, float* pCallAverage, uint16_t nGroup)
 {
-	ZMICROPROFILE_SCOPEI("MicroProfile", "MicroProfileCalcTimers", 0x773300);
+	MICROPROFILE_SCOPEI("MicroProfile", "MicroProfileCalcTimers", 0x773300);
 
 	for(uint32_t i = 0; i < S.nTotalTimers;++i)
 	{
@@ -709,13 +709,13 @@ void MicroProfileCalcTimers(float* pTimers, float* pAverage, float* pMax, float*
 			uint32_t nAggregateCount = S.Aggregate[i].nCount ? S.Aggregate[i].nCount : 1;
 
 			float fMs = TickToNs(S.Frame[i].nTicks) / 1000000.f;
-			float fPrc = MicroProfileMin(fMs * ZMICROPROFILE_FRAME_TIME_TO_PRC, 1.f);
+			float fPrc = MicroProfileMin(fMs * MICROPROFILE_FRAME_TIME_TO_PRC, 1.f);
 			float fAverageMs = TickToNs(S.Aggregate[i].nTicks / nAggregateFrames) / 1000000.f;
-			float fAveragePrc = MicroProfileMin(fAverageMs * ZMICROPROFILE_FRAME_TIME_TO_PRC, 1.f);
+			float fAveragePrc = MicroProfileMin(fAverageMs * MICROPROFILE_FRAME_TIME_TO_PRC, 1.f);
 			float fMaxMs = TickToNs(S.AggregateMax[i]) / 1000000.f;
-			float fMaxPrc = MicroProfileMin(fMaxMs * ZMICROPROFILE_FRAME_TIME_TO_PRC, 1.f);
+			float fMaxPrc = MicroProfileMin(fMaxMs * MICROPROFILE_FRAME_TIME_TO_PRC, 1.f);
 			float fCallAverageMs = TickToNs(S.Aggregate[i].nTicks / nAggregateCount) / 1000000.f;
-			float fCallAveragePrc = MicroProfileMin(fCallAverageMs * ZMICROPROFILE_FRAME_TIME_TO_PRC, 1.f);
+			float fCallAveragePrc = MicroProfileMin(fCallAverageMs * MICROPROFILE_FRAME_TIME_TO_PRC, 1.f);
 			*pTimers++ = fMs;
 			*pTimers++ = fPrc;
 			*pAverage++ = fAverageMs;
@@ -734,7 +734,7 @@ uint32_t MicroProfileDrawBarArray(uint32_t nX, uint32_t nY, uint32_t nGroup, flo
 	uint32_t nHeight = S.nBarHeight;
 	uint32_t nWidth = S.nBarWidth;
 	uint32_t tidx = 0;
-	uint32_t nTextWidth = 6 * ZMICROPROFILE_TEXT_WIDTH;
+	uint32_t nTextWidth = 6 * MICROPROFILE_TEXT_WIDTH;
 	float fWidth = S.nBarWidth;
 	#define SBUF_MAX 32
 	char sBuffer[SBUF_MAX];
@@ -759,7 +759,7 @@ uint32_t MicroProfileDrawBarCallCount(uint32_t nX, uint32_t nY, uint32_t nGroup,
 	uint32_t nHeight = S.nBarHeight;
 	uint32_t nWidth = S.nBarWidth;
 	uint32_t tidx = 0;
-	uint32_t nTextWidth = 6 * ZMICROPROFILE_TEXT_WIDTH;
+	uint32_t nTextWidth = 6 * MICROPROFILE_TEXT_WIDTH;
 	float fWidth = S.nBarWidth;
 	#define SBUF_MAX 32
 	char sBuffer[SBUF_MAX];
@@ -801,15 +801,15 @@ uint32_t MicroProfileDrawBarLegend(uint32_t nX, uint32_t nY, uint32_t nGroup, ui
 
 void MicroProfileDrawGraph(uint32_t nScreenWidth, uint32_t nScreenHeight)
 {
-	ZMICROPROFILE_SCOPEI("MicroProfile", "DrawGraph", 0xff0033);
-	uint32_t nX = nScreenWidth - ZMICROPROFILE_GRAPH_WIDTH;
-	uint32_t nY = nScreenHeight - ZMICROPROFILE_GRAPH_HEIGHT;
-	MicroProfileDrawBox(nX, nY, ZMICROPROFILE_GRAPH_WIDTH, ZMICROPROFILE_GRAPH_HEIGHT, 0x0);
+	MICROPROFILE_SCOPEI("MicroProfile", "DrawGraph", 0xff0033);
+	uint32_t nX = nScreenWidth - MICROPROFILE_GRAPH_WIDTH;
+	uint32_t nY = nScreenHeight - MICROPROFILE_GRAPH_HEIGHT;
+	MicroProfileDrawBox(nX, nY, MICROPROFILE_GRAPH_WIDTH, MICROPROFILE_GRAPH_HEIGHT, 0x0);
 
 	
 	float fY = nScreenHeight;
-	float fDX = ZMICROPROFILE_GRAPH_WIDTH * 1.f / MICROPROFILE_GRAPH_HISTORY;  
-	float fDY = ZMICROPROFILE_GRAPH_HEIGHT;
+	float fDX = MICROPROFILE_GRAPH_WIDTH * 1.f / MICROPROFILE_GRAPH_HISTORY;  
+	float fDY = MICROPROFILE_GRAPH_HEIGHT;
 
 	uint32_t nPut = S.nGraphPut;
 	for(uint32_t i = 0; i < MICROPROFILE_MAX_GRAPHS; ++i)
@@ -836,7 +836,7 @@ void MicroProfileDrawBarView(uint32_t nScreenWidth, uint32_t nScreenHeight)
 	if(!S.nActiveGroup)
 		return;
 
-	ZMICROPROFILE_SCOPEI("MicroProfile", "DrawBarView", 0x00dd77);
+	MICROPROFILE_SCOPEI("MicroProfile", "DrawBarView", 0x00dd77);
 	uint32_t nNumTimers = S.GroupInfo[S.nActiveGroup].nNumTimers;
 	uint32_t nBlockSize = 2 * nNumTimers;
 	float* pTimers = (float*)alloca(nBlockSize * 4 * sizeof(float));
@@ -894,7 +894,7 @@ void MicroProfileDrawBarView(uint32_t nScreenWidth, uint32_t nScreenHeight)
 
 void MicroProfileDraw(uint32_t nWidth, uint32_t nHeight)
 {
-	ZMICROPROFILE_SCOPEI("MicroProfile", "Draw", 0x737373);
+	MICROPROFILE_SCOPEI("MicroProfile", "Draw", 0x737373);
 	if(!S.nDisplay)
 		return;
 	S.nWidth = nWidth;
@@ -1009,7 +1009,7 @@ void MicroProfileMoveGraph(int nZoom, int nPan)
 		if(nZoom > 0)
 		{
 			S.fGraphBaseTime *= 1.05f;
-			S.fGraphBaseTime = MicroProfileMin(S.fGraphBaseTime, (float)ZMICROPROFILE_MAX_GRAPH_TIME);
+			S.fGraphBaseTime = MicroProfileMin(S.fGraphBaseTime, (float)MICROPROFILE_MAX_GRAPH_TIME);
 		}
 		else
 			S.fGraphBaseTime /= 1.05f;
@@ -1021,7 +1021,7 @@ void MicroProfileMoveGraph(int nZoom, int nPan)
 	{
 		S.fGraphBaseTimePos += nPan * 2 * S.fGraphBaseTime / S.nWidth;
 		S.fGraphBaseTimePos = MicroProfileMax(S.fGraphBaseTimePos, 0.f);
-		S.fGraphBaseTimePos = MicroProfileMin(S.fGraphBaseTimePos, ZMICROPROFILE_MAX_GRAPH_TIME - S.fGraphBaseTime);
+		S.fGraphBaseTimePos = MicroProfileMin(S.fGraphBaseTimePos, MICROPROFILE_MAX_GRAPH_TIME - S.fGraphBaseTime);
 	}
 }
 
