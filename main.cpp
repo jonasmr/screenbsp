@@ -161,6 +161,8 @@ extern "C"
 int SDL_main(int argc, char** argv)
 #endif
 {
+	MicroProfileInit();
+	MicroProfileOnThreadCreate("Main");
 
 	if(SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER) < 0) {
 		return 1;
@@ -188,7 +190,6 @@ int SDL_main(int argc, char** argv)
 		ZBREAK();
 	}
 
-	MicroProfileInit();
 	InputInit();
 	TextInit();
 	MeshInit();
