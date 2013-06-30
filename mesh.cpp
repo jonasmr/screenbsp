@@ -254,7 +254,7 @@ Mesh* CreateFlatMesh(Mesh* pMesh)
 		v3 d0 = v0.Position - v1.Position;
 		v3 d1 = v2.Position - v1.Position;
 		v3 normal = v3normalize(v3cross(d1,d0));
-		uprintf("NORMAL IS %f %f %f ::: %f\n", normal.x, normal.y, normal.z, v3dot(normal, v0.Normal));
+//		uprintf("NORMAL IS %f %f %f ::: %f\n", normal.x, normal.y, normal.z, v3dot(normal, v0.Normal));
 		pVertices[idx] = v0;
 		pVertices[idx].Normal = normal;
 		pVertices[idx+1] = v1;

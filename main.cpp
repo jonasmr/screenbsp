@@ -4,6 +4,8 @@
 #include <stdarg.h>
 #include <SDL.h>
 #include <string>
+#include <thread>
+
 #include "base.h"
 #include "input.h"
 #include "glinc.h"
@@ -24,6 +26,52 @@ uint32_t g_Height =  g_BaseHeight;
 uint32_t g_nQuit = 0;
 uint32_t g_lShowDebug = 1;
 uint32_t g_lShowDebugText = 1;
+
+
+//fake work
+void WorkerThread(int threadId)
+{
+	uprintf("ENTERING WORKER\n");
+	char name[100];
+	snprintf(name, 99, "Worker%d", threadId);
+	MicroProfileOnThreadCreate(&name[0]);
+	uint32_t c0 = randcolor();
+	uint32_t c1 = randcolor();
+	uint32_t c2 = randcolor();
+	uint32_t c3 = randcolor();
+	uint32_t c4 = randcolor();
+
+	while(!g_nQuit)
+	{
+		switch(threadId)
+		{
+		case 2:
+			{
+				usleep(1000);
+				MICROPROFILE_SCOPEI("SleepWorker", "Work", c4);
+				usleep(200);
+			}
+			break;
+		default:
+			{
+				MICROPROFILE_SCOPEI("ThreadWork", "MAIN", c0);
+				usleep(1000);;
+				for(uint32_t i = 0; i < 10; ++i)
+				{
+					MICROPROFILE_SCOPEI("ThreadWork", "Inner0", c1);
+					usleep(100);
+					for(uint32_t j = 0; j < 4; ++j)
+					{
+						MICROPROFILE_SCOPEI("ThreadWork", "Inner1", c1);
+						usleep(50);
+					}
+				}
+
+
+			}
+		}
+	}
+}
 
 void CheckGLError()
 {
@@ -179,6 +227,13 @@ int SDL_main(int argc, char** argv)
 		return 1;
 	}
 
+
+	//Microprofile test
+	std::thread t0(WorkerThread, 0);
+	// std::thread t1(WorkerThread, 1);
+	// std::thread t2(WorkerThread, 2);
+	// std::thread t3(WorkerThread, 3);
+
 	glewExperimental=1;
 	GLenum err=glewInit();
 	if(err!=GLEW_OK)
@@ -314,6 +369,12 @@ int SDL_main(int argc, char** argv)
 		MICROPROFILE_SCOPEI("MAIN", "Flip", 0xffee00);
 		SDL_GL_SwapBuffers();
 	}
+
+
+	t0.join();
+	// t1.join();
+	// t2.join();
+	// t3.join();
 	return 0;
 }
 
