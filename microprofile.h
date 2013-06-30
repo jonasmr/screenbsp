@@ -183,6 +183,9 @@ struct MicroProfileThreadLog
 {
 	MicroProfileThreadLog*  pNext;
 	MicroProfileLogEntry	Log[MICROPROFILE_LOG_BUFFER_SIZE];
+
+	uint32_t 				nLogPut;
+	uint32_t 				nLogGet;
 	uint32_t 				nLogPos;
 	uint64_t 				nOwningThread;
 	enum{
@@ -267,6 +270,7 @@ T MicroProfileMax(T a, T b)
 { return a > b ? a : b; }
 
 
+#include "debug.h"
 
 void MicroProfileInit()
 {
@@ -306,24 +310,13 @@ void MicroProfileInit()
 			{
 				S.Pool[i].pNext = 0;
 			}
+			S.Pool[i].nLogPut = 0;
+			S.Pool[i].nLogGet = 0;
 		}
 		S.pFreeThreadLogList = &S.Pool[0];
 
 
 	}
-}
-
-
-
-bool CASSS(void** pPtr, void* pNext, void* pOld)
-{
-	void* pVal = *pPtr;
-	if(pVal == pOld)
-	{
-		*pPtr = pNext;
-		return true;
-	}
-	return false;
 }
 
 
@@ -668,8 +661,6 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 	uint64_t nFrameEnd = S.DisplayPoolEnd;
 	uint64_t nFrameStart = S.DisplayPoolStart;
 #define DETAILED_STACK_MAX 64
-	uint32_t nStack[DETAILED_STACK_MAX];
-	uint32_t nStackPos = 0;
 
 	uint32_t nX = 0;
 	uint32_t nY = S.nBarHeight + 1;
@@ -705,6 +696,7 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 		}
 		f = fNext;
 	}
+	nY += MICROPROFILE_TEXT_HEIGHT + 1;
 
 
 	float fMouseX = S.nMouseX;
@@ -717,6 +709,17 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 	{
 		MicroProfileThreadLog* pLog = &S.DisplayPool[j];
 		uint32_t nSize = pLog->nLogPos;
+		uint32_t nMaxStackDepth = 0;
+
+		nY += 3;
+		MicroProfileDrawText(nX, nY, (uint32_t)-1, &pLog->ThreadName[0]);
+		nY += 3;
+		nY += MICROPROFILE_TEXT_HEIGHT + 1;
+
+		uint32_t nStack[DETAILED_STACK_MAX];
+		uint32_t nStackPos = 0;
+
+		uprintf("**\n\n\n*****Start log for thread %s size is %d\n", &pLog->ThreadName[0], nSize);
 		for(uint32_t i = 0; i < nSize; ++i)
 		{
 			MicroProfileLogEntry& LE = pLog->Log[i];
@@ -725,15 +728,20 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 				case MicroProfileLogEntry::EEnter:
 				{
 					MP_ASSERT(nStackPos < DETAILED_STACK_MAX);
+					uprintf("ENTER %d sp %d\n", nStackPos, i);
 					nStack[nStackPos++] = i;
+					nMaxStackDepth = MicroProfileMax(nStackPos, nMaxStackDepth);
+
 				}
 				break;
 				case MicroProfileLogEntry::ELeave:
 				{
+					uprintf("Leave %d sp %d\n", nStackPos, i);
 					if(0 == nStackPos)
 						continue;
 					MP_ASSERT(pLog->Log[nStack[nStackPos-1]].nToken == LE.nToken);
 					uint64_t nTickStart = pLog->Log[nStack[nStackPos-1]].nTick;
+					nStackPos--;
 					uint64_t nTickEnd = LE.nTick;
 					uint32_t nColor = S.TimerInfo[ LE.nToken & 0xffff].nColor;
 
@@ -772,11 +780,12 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 						};
 						MicroProfileDrawLine2D(2, &fLine[0], nColor);
 					}
-					nStackPos--;
+					
 				}
 				break;
 			}
 		}
+		nY += nMaxStackDepth * (MICROPROFILE_DETAILED_BAR_HEIGHT+1);
 	}
 	#undef DETAILED_STACK_MAX
 	if(nHoverToken != (uint32_t)-1 && nHoverTime)
