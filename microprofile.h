@@ -18,7 +18,6 @@
 #include <mach/mach_time.h>
 #include <unistd.h>
 #include <libkern/OSAtomic.h>
-
 #define MP_TICK() mach_absolute_time()
 inline int64_t MicroProfileTickToNs(int64_t nTicks)
 {
@@ -27,8 +26,18 @@ inline int64_t MicroProfileTickToNs(int64_t nTicks)
 	{
         (void) mach_timebase_info(&sTimebaseInfo);
     }
-
     return nTicks * sTimebaseInfo.numer / sTimebaseInfo.denom;
+}
+
+
+inline int64_t MicroProfileNsToTick(int64_t nNs)
+{
+	static mach_timebase_info_data_t sTimebaseInfo;	
+	if(sTimebaseInfo.denom == 0) 
+	{
+        (void) mach_timebase_info(&sTimebaseInfo);
+    }
+    return nNs * sTimebaseInfo.denom / sTimebaseInfo.numer;
 }
 
 #define MP_CAS(ptr, value, old) OSAtomicCompareAndSwapPtr(old, value, (void**)ptr)
@@ -39,6 +48,7 @@ inline int64_t MicroProfileTickToNs(int64_t nTicks)
 
 #define MP_ASSERT(a) do{if(!(a)){MP_BREAK();} }while(0)
 #define MP_TICK_TO_MS(a) (MicroProfileTickToNs(a) / 1000000.f)
+#define MP_MS_TO_TICK(a) (MicroProfileNsToTick(a*1000000.f))
 #define MICROPROFILE_DECLARE(var) extern MicroProfileToken g_mp_##var
 #define MICROPROFILE_DEFINE(var, group, name, color) MicroProfileToken g_mp_##var(group, name, color)
 #define MICROPROFILE_TOKEN_PASTE0(a, b) a ## b
@@ -93,6 +103,7 @@ void MicroProfileOnThreadCreate(const char* pThreadName); //should be called fro
 //UNDEFINED: MUST BE IMPLEMENTED ELSEWHERE
 void MicroProfileDrawText(uint32_t nX, uint32_t nY, uint32_t nColor, const char* pText);
 void MicroProfileDrawBox(uint32_t nX, uint32_t nY, uint32_t nWidth, uint32_t nHeight, uint32_t nColor);
+void MicroProfileDrawBox0(uint32_t nX, uint32_t nY, uint32_t nX1, uint32_t nY1, uint32_t nColor);
 void MicroProfileDrawLine2D(uint32_t nVertices, float* pVertices, uint32_t nColor);
 
 
@@ -385,7 +396,7 @@ void MicroProfileEnter(MicroProfileToken nToken_)
 	if(S.nActiveGroup == 0xffff || MicroProfileGetGroupIndex(nToken_) == S.nActiveGroup)
 	{
 		MicroProfileToken nToken = nToken_ & 0xffff;
-		MP_ASSERT(0 == S.nStart[nToken]);
+		//MP_ASSERT(0 == S.nStart[nToken]);
 		uint64_t nTick = MP_TICK();
 		S.nStart[nToken] = nTick;
 
@@ -726,6 +737,7 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 	uint32_t nY = S.nBarHeight + 1;
 
 	float fMsBase = S.fGraphBaseTimePos;
+	uint64_t nBaseTicks = MP_MS_TO_TICK(fMsBase);
 	float fMs = S.fGraphBaseTime;
 	float fMsEnd = fMs + fMsBase;
 	float fWidth = nWidth;
@@ -801,11 +813,12 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 					uint64_t nTickEnd = LE.nTick;
 					uint32_t nColor = S.TimerInfo[ LE.nToken & 0xffff].nColor;
 
-					float fMsStart = MP_TICK_TO_MS(nTickStart - nFrameStart) - fMsBase;
-					float fMsEnd = MP_TICK_TO_MS(nTickEnd - nFrameStart) - fMsBase;
+					float fMsStart = MP_TICK_TO_MS(nTickStart - nFrameStart - nBaseTicks);
+					float fMsEnd = MP_TICK_TO_MS(nTickEnd - nFrameStart - nBaseTicks);
 					MP_ASSERT(fMsStart <= fMsEnd);
 					float fXStart = nX + fMsStart * fMsToScreen;
 					float fXEnd = nX + fMsEnd * fMsToScreen;
+
 
 					float fYStart = nY + nStackPos * (MICROPROFILE_DETAILED_BAR_HEIGHT+1);
 					float fYEnd = fYStart + (MICROPROFILE_DETAILED_BAR_HEIGHT+1);
@@ -824,7 +837,16 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 
 					if(nIntegerWidth)
 					{
-						MicroProfileDrawBox(fXStart, fYStart, fXEnd - fXStart, MICROPROFILE_DETAILED_BAR_HEIGHT, nColor);
+						//MicroProfileDrawBox(fXStart, fYStart, fXEnd - fXStart, MICROPROFILE_DETAILED_BAR_HEIGHT, nColor);
+						MicroProfileDrawBox0(
+							fXStart, 
+							fYStart, 
+							fXEnd,
+							fYEnd,
+							nColor);
+							// MP_TICK_TO_MS(nTickEnd - nTickStart) * fMsToScreen,
+
+							//  MICROPROFILE_DETAILED_BAR_HEIGHT, nColor);
 					}
 					else
 					{
