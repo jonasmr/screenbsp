@@ -7,6 +7,10 @@
 // buffer overflow signal + handling
 // multithread
 // graph in detailed
+// borders
+// line skipping
+// fix rounding
+
 #include <stdint.h>
 #include <string.h>
 #if 1
@@ -113,13 +117,15 @@ struct MicroProfileScopeHandler
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <thread>
+#include <mutex>
 
 #define S g_MicroProfile
 #define MICROPROFILE_MAX_TIMERS 1024
 #define MICROPROFILE_MAX_GROUPS 128
 #define MICROPROFILE_MAX_GRAPHS 5
 #define MICROPROFILE_GRAPH_HISTORY 128
-#define MICROPROFILE_LOG_BUFFER_SIZE ((4*2048)<<10)/sizeof(MicroProfileLogEntry)
+#define MICROPROFILE_LOG_BUFFER_SIZE (((4*2048)<<10)/sizeof(MicroProfileLogEntry))
 #define MICROPROFILE_LOG_MAX_THREADS 16
 
 //#include "debug.h"
@@ -258,6 +264,7 @@ struct
 } g_MicroProfile;
 
 __thread MicroProfileThreadLog* g_MicroProfileThreadLog = 0;
+std::mutex g_MicroProfileMutex;
 
 static uint32_t 				g_nMicroProfileBackColors[2] = {  0x474747, 0x313131 };
 
@@ -274,6 +281,7 @@ T MicroProfileMax(T a, T b)
 
 void MicroProfileInit()
 {
+	std::lock_guard<std::mutex> Lock(g_MicroProfileMutex);
 	static bool bOnce = true;
 	if(bOnce)
 	{
@@ -322,6 +330,7 @@ void MicroProfileInit()
 
 void MicroProfileOnThreadCreate(const char* pThreadName)
 {
+	std::lock_guard<std::mutex> Lock(g_MicroProfileMutex);
 	MP_ASSERT(g_MicroProfileThreadLog == 0);
 	MicroProfileThreadLog* pLog = 0;
 	MicroProfileThreadLog* pNext = 0;
@@ -343,6 +352,7 @@ void MicroProfileOnThreadCreate(const char* pThreadName)
 
 MicroProfileToken MicroProfileGetToken(const char* pGroup, const char* pName, uint32_t nColor)
 {
+	std::lock_guard<std::mutex> Lock(g_MicroProfileMutex);
 	uint16_t nGroupIndex = 0xffff;
 	for(uint32_t i = 0; i < S.nGroupCount; ++i)
 	{
@@ -369,6 +379,7 @@ MicroProfileToken MicroProfileGetToken(const char* pGroup, const char* pName, ui
 	return nToken;
 }
 
+
 void MicroProfileEnter(MicroProfileToken nToken_)
 {
 	if(S.nActiveGroup == 0xffff || MicroProfileGetGroupIndex(nToken_) == S.nActiveGroup)
@@ -377,16 +388,24 @@ void MicroProfileEnter(MicroProfileToken nToken_)
 		MP_ASSERT(0 == S.nStart[nToken]);
 		uint64_t nTick = MP_TICK();
 		S.nStart[nToken] = nTick;
+
 		if(S.nActiveGroup == 0xffff)
 		{
 			MicroProfileThreadLog* pLog = g_MicroProfileThreadLog;
-			MP_ASSERT(pLog != 0); //remember to call init for each thread
-			uint32_t nPos = pLog->nLogPos++;
-			if(nPos < MICROPROFILE_LOG_BUFFER_SIZE)
+			MP_ASSERT(pLog != 0); //MicroProfileOnThreadCreate wasn't called
+			uint32_t nPos = pLog->nLogPut;
+			uint32_t nNextPos = (nPos+1);
+			nNextPos = nNextPos % MICROPROFILE_LOG_BUFFER_SIZE;
+			if(nNextPos == pLog->nLogGet)
+			{
+				uprintf("WARNING BUFFER FULL!!!\n");
+			}
+			else
 			{
 				pLog->Log[nPos].nToken = nToken_;
 				pLog->Log[nPos].nTick = nTick;
 				pLog->Log[nPos].eType = MicroProfileLogEntry::EEnter;
+				pLog->nLogPut = nNextPos;
 			}
 		}
 	}
@@ -406,12 +425,18 @@ void MicroProfileLeave(MicroProfileToken nToken_)
 		{
 			MicroProfileThreadLog* pLog = g_MicroProfileThreadLog;
 			MP_ASSERT(pLog != 0); //remember to call init for each thread
-			uint32_t nPos = pLog->nLogPos++;
-			if(nPos < MICROPROFILE_LOG_BUFFER_SIZE)
+			uint32_t nPos = pLog->nLogPut;
+			uint32_t nNextPos = (nPos+1) % MICROPROFILE_LOG_BUFFER_SIZE;
+			if(nNextPos == pLog->nLogGet)
+			{
+				uprintf("WARNING BUFFER FULL!!!\n");
+			}
+			else
 			{
 				pLog->Log[nPos].nToken = nToken_;
 				pLog->Log[nPos].nTick = nTick;
 				pLog->Log[nPos].eType = MicroProfileLogEntry::ELeave;
+				pLog->nLogPut = nNextPos;
 			}
 		}		
 	}
@@ -420,12 +445,17 @@ void MicroProfileLeave(MicroProfileToken nToken_)
 
 void MicroProfileFlip()
 {
+	MICROPROFILE_SCOPEI("MicroProfile", "MicroProfileFlip", 0x3355ee);
+
+	uint32_t nPutStart[MICROPROFILE_LOG_MAX_THREADS];
+	for(uint32_t i = 0; i < MICROPROFILE_LOG_MAX_THREADS; ++i)
+	{
+		nPutStart[i] = S.Pool[i].nLogPut;
+	}
+
 	S.FrameTimers[0].nTicks += MP_TICK() - S.nStart[0];
 	S.FrameTimers[0].nCount++;
 	S.nStart[0] = MP_TICK();
-
-
-	MICROPROFILE_SCOPEI("MicroProfile", "MicroProfileFlip", 0x3355ee);
 	for(uint32_t i = 0; i < S.nTotalTimers; ++i)
 	{
 		S.AggregateTimers[i].nTicks += S.FrameTimers[i].nTicks;
@@ -452,7 +482,37 @@ void MicroProfileFlip()
 		}
 		if(S.nFlipLog)
 		{
-			memcpy(S.DisplayPool, S.Pool, sizeof(S.Pool));
+			for(uint32_t i = 0; i < MICROPROFILE_LOG_MAX_THREADS; ++i)
+			{
+				uint32_t nPut = nPutStart[i];
+				uint32_t nGet = S.Pool[i].nLogGet;
+				if(nPut > nGet)
+				{
+					MP_ASSERT(nPut < MICROPROFILE_LOG_BUFFER_SIZE);
+					memcpy(&S.DisplayPool[i].Log[0], &S.Pool[i].Log[nGet], (nPut - nGet) * sizeof(S.Pool[0].Log[0]));
+					S.DisplayPool[i].nLogPos = nPut - nGet;
+				}
+				else if(nPut != nGet)
+				{
+					MP_ASSERT(nGet != MICROPROFILE_LOG_BUFFER_SIZE);
+					uint32_t nCountEnd = MICROPROFILE_LOG_BUFFER_SIZE - nGet;
+					memcpy(&S.DisplayPool[i].Log[0], &S.Pool[i].Log[nGet], nCountEnd * sizeof(S.Pool[0].Log[0]));
+					memcpy(&S.DisplayPool[i].Log[nCountEnd], &S.Pool[i].Log[0], nPut * sizeof(S.Pool[0].Log[0]));
+					S.DisplayPool[i].nLogPos = nCountEnd + nPut;
+				}
+				else
+				{
+					S.DisplayPool[i].nLogPos = 0;
+				}
+				S.DisplayPool[i].nLogGet = 0;
+				S.DisplayPool[i].nLogPut = 0;
+				S.DisplayPool[i].nOwningThread = S.Pool[i].nOwningThread;
+				memcpy(&S.DisplayPool[i].ThreadName[0], &S.Pool[i].ThreadName[0], sizeof(S.Pool[i].ThreadName));
+
+			}
+
+
+
 			S.DisplayPoolStart = S.nFrameStart;
 			S.DisplayPoolEnd = MP_TICK();
 		}
@@ -461,7 +521,7 @@ void MicroProfileFlip()
 
 	for(uint32_t i = 0; i < MICROPROFILE_LOG_MAX_THREADS; ++i)
 	{
-		S.Pool[i].nLogPos = 0;
+		S.Pool[i].nLogGet = nPutStart[i];
 	}
 	S.nFrameStartPrev = S.nFrameStart;
 	S.nFrameStart = MP_TICK();
@@ -718,8 +778,6 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 
 		uint32_t nStack[DETAILED_STACK_MAX];
 		uint32_t nStackPos = 0;
-
-		uprintf("**\n\n\n*****Start log for thread %s size is %d\n", &pLog->ThreadName[0], nSize);
 		for(uint32_t i = 0; i < nSize; ++i)
 		{
 			MicroProfileLogEntry& LE = pLog->Log[i];
@@ -728,7 +786,6 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 				case MicroProfileLogEntry::EEnter:
 				{
 					MP_ASSERT(nStackPos < DETAILED_STACK_MAX);
-					uprintf("ENTER %d sp %d\n", nStackPos, i);
 					nStack[nStackPos++] = i;
 					nMaxStackDepth = MicroProfileMax(nStackPos, nMaxStackDepth);
 
@@ -736,7 +793,6 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 				break;
 				case MicroProfileLogEntry::ELeave:
 				{
-					uprintf("Leave %d sp %d\n", nStackPos, i);
 					if(0 == nStackPos)
 						continue;
 					MP_ASSERT(pLog->Log[nStack[nStackPos-1]].nToken == LE.nToken);
