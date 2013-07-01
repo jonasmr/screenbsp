@@ -20,6 +20,18 @@ void MicroProfileDrawBox(uint32_t nX, uint32_t nY, uint32_t nWidth, uint32_t nHe
 	glEnd();
 }
 
+void MicroProfileDrawBox0(uint32_t nX0, uint32_t nY0, uint32_t nX1, uint32_t nY1, uint32_t nColor)
+{
+	glBegin(GL_QUADS);
+	glColor4ub(0xff&(nColor>>16), 0xff&(nColor>>8), 0xff&nColor, 0xff);
+	glVertex2i(nX0, nY0);
+	glVertex2i(nX1, nY0);
+	glVertex2i(nX1, nY1);
+	glVertex2i(nX0, nY1);
+	glEnd();
+}
+
+
 void MicroProfileDrawLine2D(uint32_t nVertices, float* pVertices, uint32_t nColor)
 {
 	if(!nVertices) return;
