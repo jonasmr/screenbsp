@@ -45,16 +45,39 @@ void WorkerThread(int threadId)
 	{
 		switch(threadId)
 		{
+		case 0:
+		{
+			usleep(100);
+			{MICROPROFILE_SCOPEI("Thread0", "Work Thread0", c4); usleep(200);
+			{MICROPROFILE_SCOPEI("Thread0", "Work Thread1", c3); usleep(200);
+			{MICROPROFILE_SCOPEI("Thread0", "Work Thread2", c2); usleep(200);
+			{MICROPROFILE_SCOPEI("Thread0", "Work Thread3", c1); usleep(200);
+			}}}}
+		}
+		break;
+		
+		case 1:
+			{
+				usleep(100);
+				MICROPROFILE_SCOPEI("Thread1", "Work Thread 1", c1);
+				usleep(2000);
+			}
+			break;
+
 		case 2:
 			{
 				usleep(1000);
-				MICROPROFILE_SCOPEI("SleepWorker", "Work", c4);
-				usleep(200);
+				{MICROPROFILE_SCOPEI("Thread2", "Worker2", c0); usleep(200);
+				{MICROPROFILE_SCOPEI("Thread2", "InnerWork0", c1); usleep(100);
+				{MICROPROFILE_SCOPEI("Thread2", "InnerWork1", c2); usleep(100);
+				{MICROPROFILE_SCOPEI("Thread2", "InnerWork2", c3); usleep(100);
+				{MICROPROFILE_SCOPEI("Thread2", "InnerWork3", c4); usleep(100);
+				}}}}}
 			}
 			break;
-		default:
+		case 3:
 			{
-				MICROPROFILE_SCOPEI("ThreadWork", "MAIN", c0);
+				MICROPROFILE_SCOPEI("ThreadWork 3", "MAIN", c0);
 				usleep(1000);;
 				for(uint32_t i = 0; i < 10; ++i)
 				{
@@ -62,13 +85,22 @@ void WorkerThread(int threadId)
 					usleep(100);
 					for(uint32_t j = 0; j < 4; ++j)
 					{
-						MICROPROFILE_SCOPEI("ThreadWork", "Inner1", c1);
+						MICROPROFILE_SCOPEI("ThreadWork", "Inner1", c4);
+						usleep(50);
+						MICROPROFILE_SCOPEI("ThreadWork", "Inner2", c2);
+						usleep(50);
+						MICROPROFILE_SCOPEI("ThreadWork", "Inner3", c3);
+						usleep(50);
+						MICROPROFILE_SCOPEI("ThreadWork", "Inner4", c3);
 						usleep(50);
 					}
 				}
 
 
 			}
+			break;
+		default:
+			ZBREAK();
 		}
 	}
 }
@@ -230,9 +262,9 @@ int SDL_main(int argc, char** argv)
 
 	//Microprofile test
 	std::thread t0(WorkerThread, 0);
-	// std::thread t1(WorkerThread, 1);
-	// std::thread t2(WorkerThread, 2);
-	// std::thread t3(WorkerThread, 3);
+	std::thread t1(WorkerThread, 1);
+	std::thread t2(WorkerThread, 2);
+	std::thread t3(WorkerThread, 3);
 
 	glewExperimental=1;
 	GLenum err=glewInit();
@@ -372,9 +404,9 @@ int SDL_main(int argc, char** argv)
 
 
 	t0.join();
-	// t1.join();
-	// t2.join();
-	// t3.join();
+	t1.join();
+	t2.join();
+	t3.join();
 	return 0;
 }
 
