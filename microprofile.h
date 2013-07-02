@@ -103,7 +103,7 @@ void MicroProfileOnThreadCreate(const char* pThreadName); //should be called fro
 //UNDEFINED: MUST BE IMPLEMENTED ELSEWHERE
 void MicroProfileDrawText(uint32_t nX, uint32_t nY, uint32_t nColor, const char* pText);
 void MicroProfileDrawBox(uint32_t nX, uint32_t nY, uint32_t nWidth, uint32_t nHeight, uint32_t nColor);
-void MicroProfileDrawBox0(uint32_t nX, uint32_t nY, uint32_t nX1, uint32_t nY1, uint32_t nColor);
+void MicroProfileDrawBoxFade(uint32_t nX, uint32_t nY, uint32_t nX1, uint32_t nY1, uint32_t nColor);
 void MicroProfileDrawLine2D(uint32_t nVertices, float* pVertices, uint32_t nColor);
 
 
@@ -821,7 +821,7 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 
 
 					float fYStart = nY + nStackPos * (MICROPROFILE_DETAILED_BAR_HEIGHT+1);
-					float fYEnd = fYStart + (MICROPROFILE_DETAILED_BAR_HEIGHT+1);
+					float fYEnd = fYStart + (MICROPROFILE_DETAILED_BAR_HEIGHT);
 					uint32_t nIntegerWidth = fXEnd - fXStart;
 					float fXDist = MicroProfileMax(fXStart - fMouseX, fMouseX - fXEnd);
 
@@ -837,23 +837,14 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 
 					if(nIntegerWidth)
 					{
-						//MicroProfileDrawBox(fXStart, fYStart, fXEnd - fXStart, MICROPROFILE_DETAILED_BAR_HEIGHT, nColor);
-						MicroProfileDrawBox0(
-							fXStart, 
-							fYStart, 
-							fXEnd,
-							fYEnd,
-							nColor);
-							// MP_TICK_TO_MS(nTickEnd - nTickStart) * fMsToScreen,
-
-							//  MICROPROFILE_DETAILED_BAR_HEIGHT, nColor);
+						MicroProfileDrawBoxFade(fXStart, fYStart, fXEnd, fYEnd, nColor);
 					}
 					else
 					{
 						float fXAvg = 0.5f * (fXStart + fXEnd);
 						float fLine[] = {
 							fXAvg, fYStart + 0.5f,
-							fXAvg, fYEnd - 0.5f
+							fXAvg, fYEnd + 0.5f
 
 						};
 						MicroProfileDrawLine2D(2, &fLine[0], nColor);
@@ -921,7 +912,8 @@ uint32_t MicroProfileDrawBarArray(uint32_t nX, uint32_t nY, uint32_t nGroup, flo
 		if(0 == i || MicroProfileGetGroupIndex(S.TimerInfo[i].nToken) == nGroup || nGroup == 0xffff)
 		{
 			snprintf(sBuffer, SBUF_MAX-1, "%5.2f", pTimers[tidx]);
-			MicroProfileDrawBox(nX + nTextWidth, nY, fWidth * pTimers[tidx+1], nHeight, S.TimerInfo[i].nColor);
+			//MicroProfileDrawBox(nX + nTextWidth, nY, fWidth * pTimers[tidx+1], nHeight, S.TimerInfo[i].nColor);
+			MicroProfileDrawBoxFade(nX + nTextWidth, nY, nX + nTextWidth + fWidth * pTimers[tidx+1], nY + nHeight, S.TimerInfo[i].nColor);
 			MicroProfileDrawText(nX, nY, (uint32_t)-1, sBuffer);
 			nY += nHeight + 1;
 			tidx += 2;
