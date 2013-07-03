@@ -100,7 +100,25 @@ void WorkerThread(int threadId)
 			}
 			break;
 		default:
-			ZBREAK();
+			MICROPROFILE_SCOPEI_THREADSAFE("THREADSAFE", "MAIN", c0);
+			usleep(1000);;
+			for(uint32_t i = 0; i < 5; ++i)
+			{
+				MICROPROFILE_SCOPEI_THREADSAFE("THREADSAFE", "Inner0", c1);
+				usleep(1000);
+				for(uint32_t j = 0; j < 4; ++j)
+				{
+					MICROPROFILE_SCOPEI_THREADSAFE("THREADSAFE", "Inner1", c4);
+					usleep(500);
+					MICROPROFILE_SCOPEI_THREADSAFE("THREADSAFE", "Inner2", c2);
+					usleep(150);
+					MICROPROFILE_SCOPEI_THREADSAFE("THREADSAFE", "Inner3", c3);
+					usleep(150);
+					MICROPROFILE_SCOPEI_THREADSAFE("THREADSAFE", "Inner4", c3);
+					usleep(150);
+				}
+			}
+			break;
 		}
 	}
 }
@@ -266,6 +284,13 @@ int SDL_main(int argc, char** argv)
 	std::thread t2(WorkerThread, 2);
 	std::thread t3(WorkerThread, 3);
 
+
+	std::thread t42(WorkerThread, 42);
+	std::thread t43(WorkerThread, 43);
+	std::thread t44(WorkerThread, 44);
+	std::thread t45(WorkerThread, 45);
+
+
 	glewExperimental=1;
 	GLenum err=glewInit();
 	if(err!=GLEW_OK)
@@ -335,10 +360,10 @@ int SDL_main(int argc, char** argv)
 
 		}
 
-
-		MicroProfileLeave(MainTok);
+		static uint64_t nMain = 0;
+		MicroProfileLeave(MainTok, nMain);
 		MicroProfileFlip();
-		MicroProfileEnter(MainTok);
+		nMain = MicroProfileEnter(MainTok);
 		{
 			CheckGLError();
 			glMatrixMode(GL_PROJECTION);
@@ -394,7 +419,6 @@ int SDL_main(int argc, char** argv)
 		}
 		if(g_KeyboardState.keys[SDLK_RSHIFT] & BUTTON_RELEASED)
 		{
-			uprintf("FLIP DET\n");
 			MicroProfileToggleFlipDetailed();
 		}
 
@@ -407,6 +431,10 @@ int SDL_main(int argc, char** argv)
 	t1.join();
 	t2.join();
 	t3.join();
+	t42.join();
+	t43.join();
+	t44.join();
+	t45.join();
 	return 0;
 }
 
