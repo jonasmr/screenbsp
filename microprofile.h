@@ -1,15 +1,17 @@
 #pragma once
 // TODO: 
+//
 // blinking
 // line over
 // scroll legends
-// active vs full vs current
 // buffer overflow signal + handling
-// multithread
 // graph in detailed
 // borders
 // line skipping
-// thread safe counters
+// multiple groups in bar view
+// thread enabling in detailed
+// GPU
+
 
 #include <stdint.h>
 #include <string.h>
@@ -295,9 +297,7 @@ struct
 
 	uint64_t DisplayPoolStart;
 	uint64_t DisplayPoolEnd;
-
-
-
+	
 	MicroProfileThreadLog* pFreeThreadLogList;
 
 
@@ -375,12 +375,10 @@ void MicroProfileOnThreadCreate(const char* pThreadName)
 	MP_ASSERT(g_MicroProfileThreadLog == 0);
 	MicroProfileThreadLog* pLog = 0;
 	MicroProfileThreadLog* pNext = 0;
-	do
-	{
-		pLog = S.pFreeThreadLogList;
-		pNext = pLog->pNext;
-	}while(!MP_CAS((void**)&S.pFreeThreadLogList, pNext, pLog));
-
+	pLog = S.pFreeThreadLogList;
+	MP_ASSERT(pLog);
+	pNext = pLog->pNext;
+	S.pFreeThreadLogList = pNext;
 	g_MicroProfileThreadLog = pLog;
 	int len = strlen(pThreadName);
 	int maxlen = sizeof(pLog->ThreadName)-1;
@@ -450,27 +448,6 @@ uint64_t MicroProfileEnter(MicroProfileToken nToken_)
 		MicroProfileToken nToken = nToken_ & 0xffff;
 		uint64_t nTick = MP_TICK();
 		MicroProfileLogPut(nToken_, nTick, MicroProfileLogEntry::EEnter);
-
-
-		// if(S.nActiveGroup == 0xffff)
-		// {
-		// 	MicroProfileThreadLog* pLog = g_MicroProfileThreadLog;
-		// 	MP_ASSERT(pLog != 0); //MicroProfileOnThreadCreate wasn't called
-		// 	uint32_t nPos = pLog->nLogPut;
-		// 	uint32_t nNextPos = (nPos+1);
-		// 	nNextPos = nNextPos % MICROPROFILE_LOG_BUFFER_SIZE;
-		// 	if(nNextPos == pLog->nLogGet)
-		// 	{
-		// 		uprintf("WARNING BUFFER FULL!!!\n");
-		// 	}
-		// 	else
-		// 	{
-		// 		pLog->Log[nPos].nToken = nToken_;
-		// 		pLog->Log[nPos].nTick = nTick;
-		// 		pLog->Log[nPos].eType = MicroProfileLogEntry::EEnter;
-		// 		pLog->nLogPut = nNextPos;
-		// 	}
-		// }
 		return nTick;
 	}
 	return 0;
@@ -518,15 +495,10 @@ void MicroProfileFlip()
 	}
 	
 	static uint64_t nFlipStart = MP_TICK();
-		// uint64_t nTick = MP_TICK();
-		// S.FrameTimer[nToken] = MicroProfileAddTimer(S.FrameTimer[nToken], 1,nTick - nTickStart);
 	uint64_t nTick = MP_TICK();
 	S.FrameTimer[0] = MicroProfileAddTimer(S.FrameTimer[0], 1, nTick - nFlipStart);
 	nFlipStart = nTick;
 
-	// S.FrameTimers[0].nTicks += MP_TICK() - S.nStart[0];
-	// S.FrameTimers[0].nCount++;
-	// S.nStart[0] = MP_TICK();
 	for(uint32_t i = 0; i < S.nTotalTimers; ++i)
 	{
 		uint64_t nTicks = MicroProfileGetPackedTicks(S.FrameTimer[i]);
@@ -589,8 +561,6 @@ void MicroProfileFlip()
 			S.DisplayPoolEnd = MP_TICK();
 		}
 	}
-//	memset(&S.FrameTimers[0], 0, sizeof(S.FrameTimers[0]) * S.nTotalTimers);
-
 	for(uint32_t i = 0; i < MICROPROFILE_LOG_MAX_THREADS; ++i)
 	{
 		S.Pool[i].nLogGet = nPutStart[i];
