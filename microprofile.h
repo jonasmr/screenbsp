@@ -1,15 +1,14 @@
 #pragma once
 // TODO: 
 //
-// blinking
-// line over
-// scroll legends
+// blinking/ line over
+// scrolling
 // buffer overflow signal + handling
 // graph in detailed
-// borders
-// line skipping
+// drawing line skipping
 // multiple groups in bar view
 // thread enabling in detailed
+// menu
 // GPU
 
 
@@ -290,6 +289,9 @@ struct
 
 	uint32_t 				nMouseX;
 	uint32_t 				nMouseY;
+	uint32_t 				nMouseLeft;
+	uint32_t 				nMouseRight;
+	uint32_t 				nActiveMenu;
 
 
 	MicroProfileThreadLog Pool[MICROPROFILE_LOG_MAX_THREADS];
@@ -348,6 +350,7 @@ void MicroProfileInit()
 		S.fGraphBaseTime = 40.f;
 		S.nWidth = 100;
 		S.nHeight = 100;
+		S.nActiveMenu = (uint32_t)-1;
 
 		for(uint32_t i = 0; i < MICROPROFILE_LOG_MAX_THREADS; ++i)
 		{
@@ -1102,20 +1105,145 @@ void MicroProfileDraw(uint32_t nWidth, uint32_t nHeight)
 	uint32_t nX = 0;
 	uint32_t nY = 0;
 	char buffer[128];
-	MicroProfileDrawBox(nX, nY, nWidth, (S.nBarHeight+1)+1, g_nMicroProfileBackColors[1]);
 
 	if(S.nDisplay & MP_DRAW_DETAILED)
 	{
-		snprintf(buffer, 127, "MicroProfile Detailed Aggregate:%d", S.nAggregateFlip);
-		MicroProfileDrawText(nX, nY, -1, buffer);
 		MicroProfileDrawDetailedView(nWidth, nHeight);
+		// snprintf(buffer, 127, "MicroProfile Detailed Aggregate:%d", S.nAggregateFlip);
+		// MicroProfileDrawText(nX, nY, -1, buffer);
 	}
 	else if(0 != (S.nDisplay & MP_DRAW_BARS) && S.nBars)
 	{
-		snprintf(buffer, 127, "MicroProfile Group:'%s' Aggregate:%d", S.GroupInfo[S.nActiveGroup].pName, S.nAggregateFlip);
-		MicroProfileDrawText(nX, nY, -1, buffer);
 		MicroProfileDrawBarView(nWidth, nHeight);
+		// snprintf(buffer, 127, "MicroProfile Group:'%s' Aggregate:%d", S.GroupInfo[S.nActiveGroup].pName, S.nAggregateFlip);
+		// MicroProfileDrawText(nX, nY, -1, buffer);
 	}
+	{
+
+		MicroProfileDrawBox(nX, nY, nWidth, (S.nBarHeight+1)+1, g_nMicroProfileBackColors[1]);
+
+#define MICROPROFILE_MENU_MAX 16
+		const char* pMenuText[MICROPROFILE_MENU_MAX] = {0};
+		uint32_t 	nMenuX[MICROPROFILE_MENU_MAX] = {0};
+
+		uint32_t nNumMenuItems = 0;
+
+
+		//microprofile
+		snprintf(buffer, 127, "MicroProfile");
+		MicroProfileDrawText(nX, nY, -1, buffer);
+		nX += (sizeof("MicroProfile")+2) * (MICROPROFILE_TEXT_WIDTH+1);
+		//mode
+		pMenuText[nNumMenuItems++] = (S.nDisplay & MP_DRAW_DETAILED) != 0 ? "Detailed" : "Timers";
+		pMenuText[nNumMenuItems++] = "Group";
+		pMenuText[nNumMenuItems++] = "Thread";
+		pMenuText[nNumMenuItems++] = "Aggregate";
+		typedef std::function<const char* (int)> SubmenuCallback; 
+		typedef std::function<void(int)> ClickCallback;
+		SubmenuCallback GroupCallback[] = 
+		{	[] (int index) -> const char*{
+				switch(index)
+				{
+					case 0: return "Detailed";
+					case 1: return "Timers";
+					default: return 0;
+				}
+			},
+			[] (int index) -> const char*{
+				if(index < MICROPROFILE_MAX_GROUPS && S.GroupInfo[index].pName)
+					return S.GroupInfo[index].pName;
+				else
+					return 0;
+			},
+
+		};
+		ClickCallback CBClick[] = 
+		{
+			[](int nIndex)
+			{
+				if(0 == nIndex)
+					S.nDisplay = MP_DRAW_DETAILED;
+				else
+					S.nDisplay = MP_DRAW_BARS;
+			},
+			[](int nIndex)
+			{
+				S.nActiveGroup = nIndex;
+				// if(0 == nIndex)
+				// 	S.nDisplay = MP_DRAW_DETAILED;
+				// else
+				// 	S.nDisplay = MP_DRAW_BARS;
+			},
+		};
+
+
+		uint32_t nSelectMenu = (uint32_t)-1;
+		for(uint32_t i = 0; i < nNumMenuItems; ++i)
+		{
+			nMenuX[i] = nX;
+			int nLen = strlen(pMenuText[i]);
+			int nEnd = nX + nLen * (MICROPROFILE_TEXT_WIDTH+1);
+			if(S.nMouseY <= MICROPROFILE_TEXT_HEIGHT && S.nMouseX <= nEnd && S.nMouseX >= nX)
+			{
+				MicroProfileDrawBox(nX-1, nY, 1+nLen * (MICROPROFILE_TEXT_WIDTH+1), (S.nBarHeight+1)+1, 0x888888);
+				nSelectMenu = i;
+			}
+			MicroProfileDrawText(nX, nY, -1, pMenuText[i]);
+			nX += (nLen+1) * (MICROPROFILE_TEXT_WIDTH+1);
+		}
+		uint32_t nMenu = nSelectMenu != (uint32_t)-1 ? nSelectMenu : S.nActiveMenu;
+		S.nActiveMenu = nMenu;
+		//uprintf("SELECTING MENU %d\n", nMenu);
+		if((uint32_t)-1 != nMenu)
+		{
+			nX = nMenuX[nMenu];
+			nY += MICROPROFILE_TEXT_HEIGHT+1;
+			SubmenuCallback CB = GroupCallback[nMenu];
+			int nNumLines = 0;
+			const char* pString = CB(nNumLines);
+			uint32_t nWidth = 0, nHeight = 0;
+			while(pString)
+			{
+				nWidth = MicroProfileMax<int>(nWidth, strlen(pString));
+				nNumLines++;
+				pString = CB(nNumLines);
+			}
+			nWidth = nWidth * (MICROPROFILE_TEXT_WIDTH+1);
+			nHeight = nNumLines * (MICROPROFILE_TEXT_HEIGHT+1);
+			if(S.nMouseY <= nY + nHeight+0 && S.nMouseY >= nY-0 && S.nMouseX <= nX + nWidth+0 && S.nMouseX >= nX-0)
+			{
+				S.nActiveMenu = nMenu;
+			}
+			else if(nSelectMenu == (uint32_t)-1)
+			{
+				S.nActiveMenu = (uint32_t)-1;
+			}
+			MicroProfileDrawBox(nX, nY, nWidth, nHeight, g_nMicroProfileBackColors[1]);
+			for(int i = 0; i < nNumLines; ++i)
+			{
+				const char* pString = CB(i);
+				if(S.nMouseY >= nY && S.nMouseY < nY + MICROPROFILE_TEXT_HEIGHT + 1)
+				{
+					if(S.nMouseLeft || S.nMouseRight)
+					{
+						CBClick[nMenu](i);
+					}
+					MicroProfileDrawBox(nX, nY, nWidth, MICROPROFILE_TEXT_HEIGHT + 1, 0x888888);
+				}
+				MicroProfileDrawText(nX, nY, -1, pString);
+				nY += MICROPROFILE_TEXT_HEIGHT+1;
+			}
+		}
+		if(0)
+		{
+			MicroProfileDrawText(nX, nY, -1, "Aggregate");
+			nY += (sizeof("Aggregate") + 1) * (MICROPROFILE_TEXT_WIDTH+1);
+		}
+	}
+
+
+	S.nMouseLeft = S.nMouseRight = 0;
+
 }
 void MicroProfileMouseMove(uint32_t nX, uint32_t nY)
 {
@@ -1169,6 +1297,8 @@ void MicroProfileToggleGraph(MicroProfileToken nToken)
 }
 void MicroProfileMouseClick(uint32_t nLeft, uint32_t nRight)
 {
+	S.nMouseLeft = nLeft;
+	S.nMouseRight = nRight;
 	if(nLeft)
 	{
 		uint32_t nBaseHeight = 2*(S.nBarHeight + 1);
