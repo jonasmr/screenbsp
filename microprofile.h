@@ -1209,10 +1209,13 @@ void MicroProfileDraw(uint32_t nWidth, uint32_t nHeight)
 		MicroProfileDrawText(nX, nY, -1, buffer);
 		nX += (sizeof("MicroProfile")+2) * (MICROPROFILE_TEXT_WIDTH+1);
 		//mode
-		pMenuText[nNumMenuItems++] = (S.nDisplay & MP_DRAW_DETAILED) != 0 ? "Detailed" : "Timers";
+		pMenuText[nNumMenuItems++] = "Mode";
 		pMenuText[nNumMenuItems++] = "Group";
 		pMenuText[nNumMenuItems++] = "Thread";
 		pMenuText[nNumMenuItems++] = "Aggregate";
+		pMenuText[nNumMenuItems++] = "Timers";
+		const int nPauseIndex = nNumMenuItems;
+		pMenuText[nNumMenuItems++] = S.nFlipLog ? "Pause" : "Unpause";
 
 
 		typedef std::function<const char* (int, bool&)> SubmenuCallback; 
@@ -1255,7 +1258,7 @@ void MicroProfileDraw(uint32_t nWidth, uint32_t nHeight)
 				else if(index-1 < MICROPROFILE_LOG_MAX_THREADS)
 				{
 					bSelected = S.nThreadActive[index-1];
-					return S.Pool[index-1].ThreadName;
+					return S.Pool[index-1].ThreadName[0]?&S.Pool[index-1].ThreadName[0]:0;
 				}
 				return 0;
 			},
@@ -1275,7 +1278,20 @@ void MicroProfileDraw(uint32_t nWidth, uint32_t nHeight)
 				}
 				return 0;
 			},
-
+			[] (int index, bool& bSelected) -> const char*{
+				bSelected = 0 != (S.nBars & (1 << index));
+				switch(index)
+				{
+					case 0: return "Timers";
+					case 1: return "Average";
+					case 2: return "Max";
+					case 3: return "Call Count";
+				}
+				return 0;
+			},
+			[] (int index, bool& bSelected) -> const char*{
+				return 0;
+			},
 		};
 		ClickCallback CBClick[] = 
 		{
@@ -1306,6 +1322,13 @@ void MicroProfileDraw(uint32_t nWidth, uint32_t nHeight)
 			{
 				S.nAggregateFlip = g_AggregatePresets[nIndex];
 			},
+			[](int nIndex)
+			{
+				S.nBars ^= (1 << nIndex);
+			},
+			[](int nIndex)
+			{
+			},
 		};
 
 
@@ -1319,6 +1342,12 @@ void MicroProfileDraw(uint32_t nWidth, uint32_t nHeight)
 			{
 				MicroProfileDrawBox(nX-1, nY, 1+nLen * (MICROPROFILE_TEXT_WIDTH+1), (S.nBarHeight+1)+1, 0x888888);
 				nSelectMenu = i;
+				if((S.nMouseLeft || S.nMouseRight) && i == nPauseIndex)
+				{
+					S.nFlipLog = !S.nFlipLog;
+				}
+
+
 			}
 			MicroProfileDrawText(nX, nY, -1, pMenuText[i]);
 			nX += (nLen+1) * (MICROPROFILE_TEXT_WIDTH+1);
