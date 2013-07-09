@@ -106,7 +106,7 @@ inline uint64_t MicroProfileAddTimer(uint64_t nTimer, uint64_t nCount, uint64_t 
 	nPackedCount += nCount;
 	MP_ASSERT(nPackedCount <= 0xffff);
 	nPackedTicks += nTicks;
-	return MicroProfilePackTimer(nCount, nPackedTicks);
+	return MicroProfilePackTimer(nPackedCount, nPackedTicks);
 }
 
 
@@ -429,7 +429,7 @@ MicroProfileToken MicroProfileGetToken(const char* pGroup, const char* pName, ui
 	{
 		S.GroupInfo[S.nGroupCount].pName = pGroup;
 		S.GroupInfo[S.nGroupCount].nGroupIndex = S.nGroupCount;
-		S.GroupInfo[S.nGroupCount].nNumTimers = 1;
+		S.GroupInfo[S.nGroupCount].nNumTimers = 0;
 		nGroupIndex = S.nGroupCount++;
 		S.nGroupMask = (S.nGroupMask<<1)|1;
 		uprintf("***** CREATED group %s index %d mask %08x\n", pGroup, nGroupIndex, 1 << nGroupIndex);
@@ -493,7 +493,7 @@ void MicroProfileLeave(MicroProfileToken nToken_, uint64_t nTickStart)
 	{
 		MicroProfileToken nToken = nToken_ & 0xffff;
 		uint64_t nTick = MP_TICK();
-		S.FrameTimer[nToken] = MicroProfileAddTimer(S.FrameTimer[nToken], 1,nTick - nTickStart);
+		S.FrameTimer[nToken] = MicroProfileAddTimer(S.FrameTimer[nToken], 1, nTick - nTickStart);
 		MicroProfileLogPut(nToken_, nTick, MicroProfileLogEntry::ELeave);
 	}
 }
@@ -537,7 +537,6 @@ void MicroProfileFlip()
 		S.MaxTimers[i] = MicroProfileMax(S.MaxTimers[i], nTicks);
 		S.FrameTimer[i] = 0;
 	}
-
 	bool bFlipAggregate = false;
 	uint32_t nFlipFrequency = S.nAggregateFlip ? S.nAggregateFlip : 30;
 	if(S.nAggregateFlip <= ++S.nAggregateFlipCount)
@@ -1131,7 +1130,7 @@ void MicroProfileDrawBarView(uint32_t nScreenWidth, uint32_t nScreenHeight)
 	float* pMax = pTimers + 2 * nBlockSize;
 	float* pCallAverage = pTimers + 3 * nBlockSize;
 	MicroProfileCalcTimers(pTimers, pAverage, pMax, pCallAverage, S.nActiveGroup, nNumTimers);
-	for(uint32_t i = 0; i < nNumTimers+nNumGroups; ++i)
+	for(uint32_t i = 0; i < nNumTimers+nNumGroups+1; ++i)
 	{
 		MicroProfileDrawBox(nX, nY + i * (nHeight + 1), nScreenWidth, (nHeight+1)+1, g_nMicroProfileBackColors[nColorIndex++ & 1]);
 	}
@@ -1141,7 +1140,7 @@ void MicroProfileDrawBarView(uint32_t nScreenWidth, uint32_t nScreenHeight)
 		if(S.nActiveGroup & (1 << j))
 		{
 			MicroProfileDrawText(nX, nY + (1+nHeight) * nLegendOffset, (uint32_t)-1, S.GroupInfo[j].pName);
-			nLegendOffset += S.GroupInfo[j].nNumTimers;
+			nLegendOffset += S.GroupInfo[j].nNumTimers+1;
 		}
 	}
 	if(S.nBars & MP_DRAW_TIMERS)		
