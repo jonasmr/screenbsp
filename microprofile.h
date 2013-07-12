@@ -1301,13 +1301,12 @@ void MicroProfileDrawBarView(uint32_t nScreenWidth, uint32_t nScreenHeight)
 	// MicroProfileDrawGraph(nScreenWidth, nScreenHeight);
 }
 
-void MicroProfileDrawMenu(uint32_t nWidth, uint32_t nHeight)
+bool MicroProfileDrawMenu(uint32_t nWidth, uint32_t nHeight)
 {
 	uint32_t nX = 0;
 	uint32_t nY = 0;
+	bool bMouseOver = S.nMouseY < MICROPROFILE_TEXT_HEIGHT + 1;
 	char buffer[128];
-
-
 	MICROPROFILE_SCOPEI("MicroProfile", "Menu", 0x0373e3);
 	MicroProfileDrawBox(nX, nY, nWidth, (S.nBarHeight+1)+1, g_nMicroProfileBackColors[1]);
 
@@ -1457,8 +1456,6 @@ void MicroProfileDrawMenu(uint32_t nWidth, uint32_t nHeight)
 			{
 				S.nFlipLog = !S.nFlipLog;
 			}
-
-
 		}
 		MicroProfileDrawText(nX, nY, -1, pMenuText[i]);
 		nX += (nLen+1) * (MICROPROFILE_TEXT_WIDTH+1);
@@ -1499,6 +1496,7 @@ void MicroProfileDrawMenu(uint32_t nWidth, uint32_t nHeight)
 			const char* pString = CB(i, bSelected);
 			if(S.nMouseY >= nY && S.nMouseY < nY + MICROPROFILE_TEXT_HEIGHT + 1)
 			{
+				bMouseOver = true;
 				if(S.nMouseLeft || S.nMouseRight)
 				{
 					CBClick[nMenu](i);
@@ -1510,6 +1508,7 @@ void MicroProfileDrawMenu(uint32_t nWidth, uint32_t nHeight)
 			nY += MICROPROFILE_TEXT_HEIGHT+1;
 		}
 	}
+	return bMouseOver;
 }
 
 
@@ -1532,12 +1531,13 @@ void MicroProfileDraw(uint32_t nWidth, uint32_t nHeight)
 	{
 		MicroProfileDrawBarView(nWidth, nHeight);
 	}
-	MicroProfileDrawMenu(nWidth, nHeight);
-
-	if(S.nHoverToken != MICROPROFILE_INVALID_TOKEN)
+	if(!MicroProfileDrawMenu(nWidth, nHeight))
 	{
-		MicroProfileDrawFloatInfo(S.nMouseX, S.nMouseY, S.nHoverToken, S.nHoverTime);
+		if(S.nHoverToken != MICROPROFILE_INVALID_TOKEN)
+		{
+			MicroProfileDrawFloatInfo(S.nMouseX, S.nMouseY, S.nHoverToken, S.nHoverTime);
 
+		}
 	}
 
 	S.nActiveGroup = S.nMenuAllGroups ? (S.nGroupMask & (uint32_t)-1) : S.nMenuActiveGroup;
