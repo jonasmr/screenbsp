@@ -12,6 +12,7 @@
 // pix visualization
 // cross graph display
 // mouseover for both
+//faster internal drawing
 
 #include <stdint.h>
 #include <string.h>
@@ -112,6 +113,8 @@ inline uint64_t MicroProfileAddTimer(uint64_t nTimer, uint64_t nCount, uint64_t 
 
 void MicroProfileFlip(); //! called once per frame.
 void MicroProfileDraw(uint32_t nWidth, uint32_t nHeight); //! call if drawing microprofilers
+void MicroProfileToggleGraph(MicroProfileToken nToken);
+void MicroProfileDrawGraph(uint32_t nScreenWidth, uint32_t nScreenHeight);
 void MicroProfileSetAggregateCount(uint32_t nCount); //!Set no. of frames to aggregate over. 0 for infinite
 void MicroProfileNextAggregatePreset(); //! Flip over some aggregate presets
 void MicroProfilePrevAggregatePreset(); //! Flip over some aggregate presets
@@ -535,8 +538,6 @@ void MicroProfileFlip()
 	uint64_t nFrameEnd = MP_TICK();
 	S.nFrameStartPrev = S.nFrameStart;
 	S.nFrameStart = nFrameEnd;
-	//uprintf("FRAME START %llx , %fms\n", nFrameStart, MP_TICK_TO_MS(nFrameStart));
-
 
 	uint32_t nPutStart[MICROPROFILE_LOG_MAX_THREADS];
 	for(uint32_t i = 0; i < MICROPROFILE_LOG_MAX_THREADS; ++i)
@@ -562,7 +563,6 @@ void MicroProfileFlip()
 			MICROPROFILE_SCOPEI("MicroProfile", "Clear", 0x3355ee);
 			for(uint32_t i = 0; i < S.nTotalTimers; ++i)
 			{
-				//S.FrameTimer[i] = 0;
 				S.Frame[i].nTicks = 0;
 				S.Frame[i].nCount = 0;
 			}
@@ -581,7 +581,6 @@ void MicroProfileFlip()
 					nRange[0][0] = nGet;
 					nRange[0][1] = nPut;
 					nRange[1][0] = nRange[1][1] = 0;
-					//uprintf("LOG CNT %d\n",  (nPut - nGet));
 				}
 				else if(nPut != nGet)
 				{
@@ -591,9 +590,7 @@ void MicroProfileFlip()
 					nRange[0][1] = nGet + nCountEnd;
 					nRange[1][0] = 0;
 					nRange[1][1] = nPut;
-					//uprintf("LOG CNT %d\n", nPut + (nCountEnd - nGet));
 				}
-		//		uint32_t nSize = pLog->nLogPos;
 				uint32_t nMaxStackDepth = 0;
 				if(0==S.nThreadActive[i] && 0==S.nMenuAllThreads)
 					continue;
@@ -626,10 +623,6 @@ void MicroProfileFlip()
 								}
 								uint64_t nTicks = LE.nTick - nTickStart;
 								uint32_t nTimerIndex = LE.nToken&0xffff;
-								if(nTimerIndex == 0)
-								{
-									//uprintf("LEAVE ADD %f .. nul: %d\n", MP_TICK_TO_MS(nTicks), 0 == nStackPos);
-								}
 								S.Frame[nTimerIndex].nTicks += nTicks;
 								S.Frame[nTimerIndex].nCount += 1;
 							}
@@ -642,7 +635,6 @@ void MicroProfileFlip()
 					uint64_t nTicks = nFrameEnd - LE.nTick;
 					uint32_t nTimerIndex = LE.nToken&0xffff;
 					S.Frame[nTimerIndex].nTicks += nTicks;
-					//uprintf("Remains ADD %f .. nul: %d\n", MP_TICK_TO_MS(nTicks));
 				}
 			}
 		}
@@ -655,6 +647,39 @@ void MicroProfileFlip()
 				S.MaxTimers[i] = MicroProfileMax(S.MaxTimers[i], S.Frame[i].nTicks);
 			}
 		}
+//update graph
+
+//		uint32_t tidx = 0;
+		for(uint32_t i = 0; i < MICROPROFILE_MAX_GRAPHS; ++i)
+		{
+			if(S.Graph[i].nToken != MICROPROFILE_INVALID_TOKEN)
+			{
+				MicroProfileToken nToken = S.Graph[i].nToken;
+				float fMs = MicroProfileTickToNs(S.Frame[nToken&0xffff].nTicks) / 1000000.f;
+				float fPrc = MicroProfileMin(fMs * MICROPROFILE_FRAME_TIME_TO_PRC, 1.f);
+				S.Graph[i].fHistory[S.nGraphPut] = fPrc;
+			}
+
+		}
+		S.nGraphPut = (S.nGraphPut+1) % MICROPROFILE_GRAPH_HISTORY;
+
+	// for(uint32_t i = 0; i < S.nTotalTimers;++i)
+	// {
+	// 	if(0 == i || 0 != (MicroProfileGetGroupMask(S.TimerInfo[i].nToken) & S.nActiveGroup))
+	// 	{
+	// 		for(uint32_t j = 0; j < MICROPROFILE_MAX_GRAPHS; ++j)
+	// 		{
+	// 			if(S.Graph[j].nToken != MICROPROFILE_INVALID_TOKEN && S.TimerInfo[i].nToken == S.Graph[j].nToken)
+	// 			{
+	// 				S.Graph[j].fHistory[S.nGraphPut] = pTimers[1+tidx];
+	// 			}
+	// 		}
+	// 		tidx += 2;
+	// 	}
+	// }
+	// 
+
+
 	}
 #endif
 	bool bFlipAggregate = false;
@@ -666,6 +691,7 @@ void MicroProfileFlip()
 		S.nAggregateFrames = S.nAggregateFlipCount;
 		if(S.nAggregateFlip)// if 0 accumulate indefinitely
 		{
+			uprintf("CLEARING AGGR %d\n", S.nAggregateFlip);
 			memset(&S.AggregateTimers[0], 0, sizeof(S.Aggregate[0]) * S.nTotalTimers);
 			memset(&S.MaxTimers[0], 0, sizeof(S.MaxTimers[0]) * S.nTotalTimers);
 			S.nAggregateFlipCount = 0;
@@ -837,7 +863,7 @@ void MicroProfileDrawFloatInfo(uint32_t nX, uint32_t nY, uint32_t nToken, uint64
 		ppStrings[nTextCount++] = pBuffer;
 		pBuffer += 1 + snprintf(pBuffer,SZ, "%s", pTimerName);
 		
-		if(nTime != (uint64_t)-1)
+		if(nTime != (uint64_t)0)
 		{
 			ppStrings[nTextCount++] = "Time:";
 			ppStrings[nTextCount++] = pBuffer;
@@ -1086,39 +1112,6 @@ void MicroProfileLoopActiveGroups(uint32_t nX, uint32_t nY, const char* pName, s
 	#endif
 }
 
-uint32_t MicroProfileLoopActiveGroupsFake(uint32_t nX, uint32_t nY, const char* pName, std::function<void (uint32_t, uint32_t, uint32_t, uint32_t, uint32_t)> CB)
-{
-	// if(pName)
-	// 	MicroProfileDrawText(nX, nY, (uint32_t)-1, pName);
-
-
-	nY += S.nBarHeight + 2;
-	uint32_t nGroup = S.nActiveGroup;
-	uint32_t nGroupMask = (uint32_t)-1;
-	uint32_t nCount = 0;
-
-	for(uint32_t j = 0; j < MICROPROFILE_MAX_GROUPS; ++j)
-	{
-		uint32_t nMask = 1 << j;
-		if(nMask & nGroup)
-		{
-			nY += S.nBarHeight + 1;
-			for(uint32_t i = 0; i < S.nTotalTimers;++i)
-			{
-				uint32_t nTokenMask = MicroProfileGetGroupMask(S.TimerInfo[i].nToken);
-				if(nTokenMask & nMask)
-				{
-					//CB(i, nCount, nMask, nX, nY);
-					nCount += 2;
-					nY += S.nBarHeight + 1+ nCount;
-				}
-			}
-		}
-	}
-	return nY;
-}
-
-
 
 void MicroProfileCalcTimers(float* pTimers, float* pAverage, float* pMax, float* pCallAverage, uint16_t nGroup, uint32_t nSize)
 {
@@ -1200,22 +1193,30 @@ uint32_t MicroProfileDrawBarLegend(uint32_t nX, uint32_t nY)
 void MicroProfileDrawGraph(uint32_t nScreenWidth, uint32_t nScreenHeight)
 {
 	MICROPROFILE_SCOPEI("MicroProfile", "DrawGraph", 0xff0033);
+	bool bEnabled = false;
+	for(uint32_t i = 0; i < MICROPROFILE_MAX_GRAPHS; ++i)
+		if(S.Graph[i].nToken != MICROPROFILE_INVALID_TOKEN)
+			bEnabled = true;
+	if(!bEnabled)
+		return;
+	
 	uint32_t nX = nScreenWidth - MICROPROFILE_GRAPH_WIDTH;
 	uint32_t nY = nScreenHeight - MICROPROFILE_GRAPH_HEIGHT;
 	MicroProfileDrawBox(nX, nY, MICROPROFILE_GRAPH_WIDTH, MICROPROFILE_GRAPH_HEIGHT, 0x0);
+
+
 
 	
 	float fY = nScreenHeight;
 	float fDX = MICROPROFILE_GRAPH_WIDTH * 1.f / MICROPROFILE_GRAPH_HISTORY;  
 	float fDY = MICROPROFILE_GRAPH_HEIGHT;
-
 	uint32_t nPut = S.nGraphPut;
+	float* pGraphData = (float*)alloca(sizeof(float)* MICROPROFILE_GRAPH_HISTORY*2);
 	for(uint32_t i = 0; i < MICROPROFILE_MAX_GRAPHS; ++i)
 	{
 		if(S.Graph[i].nToken != MICROPROFILE_INVALID_TOKEN)
 		{
 			float fX = nX;
-			float* pGraphData = (float*)alloca(sizeof(float)* MICROPROFILE_GRAPH_HISTORY*2);
 			for(uint32_t j = 0; j < MICROPROFILE_GRAPH_HISTORY; ++j)
 			{
 				float fWeigth = S.Graph[i].fHistory[(j+nPut)%MICROPROFILE_GRAPH_HISTORY];
@@ -1281,24 +1282,6 @@ void MicroProfileDrawBarView(uint32_t nScreenWidth, uint32_t nScreenHeight)
 		nX += MicroProfileDrawBarCallCount(nX, nY, "Count") + 1; 
 	}
 	nX += MicroProfileDrawBarLegend(nX, nY) + 1;
-
-	uint32_t tidx = 0;
-	// for(uint32_t i = 0; i < S.nTotalTimers;++i)
-	// {
-	// 	if(0 == i || 0 != (MicroProfileGetGroupMask(S.TimerInfo[i].nToken) & S.nActiveGroup))
-	// 	{
-	// 		for(uint32_t j = 0; j < MICROPROFILE_MAX_GRAPHS; ++j)
-	// 		{
-	// 			if(S.Graph[j].nToken != MICROPROFILE_INVALID_TOKEN && S.TimerInfo[i].nToken == S.Graph[j].nToken)
-	// 			{
-	// 				S.Graph[j].fHistory[S.nGraphPut] = pTimers[1+tidx];
-	// 			}
-	// 		}
-	// 		tidx += 2;
-	// 	}
-	// }
-	// S.nGraphPut = (S.nGraphPut+1) % MICROPROFILE_GRAPH_HISTORY;
-	// MicroProfileDrawGraph(nScreenWidth, nScreenHeight);
 }
 
 bool MicroProfileDrawMenu(uint32_t nWidth, uint32_t nHeight)
@@ -1340,6 +1323,10 @@ bool MicroProfileDrawMenu(uint32_t nWidth, uint32_t nHeight)
 				case 1:
 					bSelected = S.nDisplay == MP_DRAW_BARS; 
 					return "Timers";
+				case 2:
+					bSelected = false; 
+					return "Off";
+
 				default: return 0;
 			}
 		},
@@ -1407,10 +1394,18 @@ bool MicroProfileDrawMenu(uint32_t nWidth, uint32_t nHeight)
 	{
 		[](int nIndex)
 		{
-			if(0 == nIndex)
-				S.nDisplay = MP_DRAW_DETAILED;
-			else
-				S.nDisplay = MP_DRAW_BARS;
+			switch(nIndex)
+			{
+				case 0:
+					S.nDisplay = MP_DRAW_DETAILED;
+					break;
+				case 1:
+					S.nDisplay = MP_DRAW_BARS;
+					break;
+				case 2:
+					S.nDisplay = 0;
+					break;
+			}
 		},
 		[](int nIndex)
 		{
@@ -1531,15 +1526,22 @@ void MicroProfileDraw(uint32_t nWidth, uint32_t nHeight)
 	{
 		MicroProfileDrawBarView(nWidth, nHeight);
 	}
-	if(!MicroProfileDrawMenu(nWidth, nHeight))
+
+	bool bMouseOverMenu = MicroProfileDrawMenu(nWidth, nHeight);
+	MicroProfileDrawGraph(nWidth, nHeight);
+
+	if(!bMouseOverMenu)
 	{
 		if(S.nHoverToken != MICROPROFILE_INVALID_TOKEN)
 		{
 			MicroProfileDrawFloatInfo(S.nMouseX, S.nMouseY, S.nHoverToken, S.nHoverTime);
-
+		}
+		if(S.nMouseLeft || S.nMouseRight)
+		{
+			if(S.nHoverToken != MICROPROFILE_INVALID_TOKEN)
+				MicroProfileToggleGraph(S.nHoverToken);
 		}
 	}
-
 	S.nActiveGroup = S.nMenuAllGroups ? (S.nGroupMask & (uint32_t)-1) : S.nMenuActiveGroup;
 	S.nMouseLeft = S.nMouseRight = 0;
 
@@ -1566,6 +1568,7 @@ void MicroProfileToggleFlipDetailed()
 
 void MicroProfileToggleGraph(MicroProfileToken nToken)
 {
+	nToken &= 0xffff;
 	int32_t nMinSort = 0x7fffffff;
 	int32_t nFreeIndex = -1;
 	int32_t nMinIndex = 0;
