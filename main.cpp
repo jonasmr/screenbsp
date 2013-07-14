@@ -156,17 +156,19 @@ void HandleEvent(SDL_Event* pEvt)
 		MicroProfileMouseMove(g_MouseState.position[0], pEvt->motion.y);
 		{
 			static int nPosX = -1;
+			static int nPosY = -1;
 			if(g_KeyboardState.keys[SDLK_LCTRL] & BUTTON_DOWN)
 			{
-				if(nPosX>0)
+				if(nPosX>=0 && nPosY>=0)
 				{
-					MicroProfileMoveGraph(0,pEvt->motion.x-nPosX);
+					MicroProfileMoveGraph(0,pEvt->motion.x-nPosX, pEvt->motion.y-nPosY);
 				}
 				nPosX = pEvt->motion.x;
+				nPosY = pEvt->motion.y;
 			}
 			else
 			{
-				nPosX = -1;
+				nPosX = nPosY = -1;
 			}
 		}
 		break;
@@ -190,11 +192,11 @@ void HandleEvent(SDL_Event* pEvt)
 		}
 		if(pEvt->button.button == SDL_BUTTON_WHEELUP)
 		{
-			MicroProfileMoveGraph(-1,0);
+			MicroProfileMoveGraph(-1,0,0);
 		}
 		else if(pEvt->button.button == SDL_BUTTON_WHEELDOWN)
 		{
-			MicroProfileMoveGraph(1,0);
+			MicroProfileMoveGraph(1,0,0);
 		}
 	// 	}
 	// 	break;
