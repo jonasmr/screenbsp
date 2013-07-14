@@ -174,7 +174,7 @@ void HandleEvent(SDL_Event* pEvt)
 	case SDL_MOUSEBUTTONUP:
 		if(pEvt->type == SDL_MOUSEBUTTONUP)
 		{
-			MicroProfileMouseClick(pEvt->button.button == 1, pEvt->button.button == 0);
+			MicroProfileMouseClick(pEvt->button.button == 1, pEvt->button.button == 3);
 		}
 		if(pEvt->button.button < MOUSE_BUTTON_MAX)
 		{
