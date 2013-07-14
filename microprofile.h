@@ -5,7 +5,10 @@
 // GPU timers
 // cross frame timers
 // pix visualization
-//faster internal drawing
+// internal drawing
+//  	border
+//		unify / cleanup
+//		faster
 
 #include <stdint.h>
 #include <string.h>
@@ -1639,6 +1642,13 @@ void MicroProfileMouseClick(uint32_t nLeft, uint32_t nRight)
 {
 	S.nMouseLeft = nLeft;
 	S.nMouseRight = nRight;
+
+	if(S.nMouseLeft && S.nMouseX < 12 && S.nMouseY < 12)
+	{
+		MicroProfileToggleDisplayMode();
+	}
+
+
 }
 
 void* g_pFUUU = 0;
