@@ -9,6 +9,9 @@
 //  	border
 //		unify / cleanup
 //		faster
+//make mouse callback cleaner
+// one move
+// one click .. everything should be derived from these
 
 #include <stdint.h>
 #include <string.h>
@@ -1085,15 +1088,14 @@ void MicroProfileCalcTimers(float* pTimers, float* pAverage, float* pMax, float*
 		[&](uint32_t nTimer, uint32_t nIdx, uint32_t nGroupMask, uint32_t nX, uint32_t nY){
 			uint32_t nAggregateFrames = S.nAggregateFrames ? S.nAggregateFrames : 1;
 			uint32_t nAggregateCount = S.Aggregate[nTimer].nCount ? S.Aggregate[nTimer].nCount : 1;
-			float fMs = MicroProfileTickToNs(S.Frame[nTimer].nTicks) / 1000000.f;
+			float fMs = MP_TICK_TO_MS(S.Frame[nTimer].nTicks);
 			float fPrc = MicroProfileMin(fMs * MICROPROFILE_FRAME_TIME_TO_PRC, 1.f);
-			float fAverageMs = MicroProfileTickToNs(S.Aggregate[nTimer].nTicks / nAggregateFrames) / 1000000.f;
+			float fAverageMs = MP_TICK_TO_MS(S.Aggregate[nTimer].nTicks / nAggregateFrames);
 			float fAveragePrc = MicroProfileMin(fAverageMs * MICROPROFILE_FRAME_TIME_TO_PRC, 1.f);
-			float fMaxMs = MicroProfileTickToNs(S.AggregateMax[nTimer]) / 1000000.f;
+			float fMaxMs = MP_TICK_TO_MS(S.AggregateMax[nTimer]);
 			float fMaxPrc = MicroProfileMin(fMaxMs * MICROPROFILE_FRAME_TIME_TO_PRC, 1.f);
-			float fCallAverageMs = MicroProfileTickToNs(S.Aggregate[nTimer].nTicks / nAggregateCount) / 1000000.f;
+			float fCallAverageMs = MP_TICK_TO_MS(S.Aggregate[nTimer].nTicks / nAggregateCount);
 			float fCallAveragePrc = MicroProfileMin(fCallAverageMs * MICROPROFILE_FRAME_TIME_TO_PRC, 1.f);
-			//ZASSERT(nCount++ < nSize);
 			pTimers[nIdx] = fMs;
 			pTimers[nIdx+1] = fPrc;
 			pAverage[nIdx] = fAverageMs;
@@ -1225,7 +1227,6 @@ bool MicroProfileDrawGraph(uint32_t nScreenWidth, uint32_t nScreenHeight)
 				uint32_t nIndex = MicroProfileGetTimerIndex(S.Graph[i].nToken);
 				uint32_t nColor = S.TimerInfo[nIndex].nColor;
 				const char* pName = S.TimerInfo[nIndex].pName;
-				//MicroProfileDrawBox(nX-nBoxSize-1, nY + 1 + nTextCount/2 * (nBoxSize + 1), nBoxSize, nBoxSize, nColor);
 				pColors[nTextCount/2] = nColor;
 				ppStrings[nTextCount++] = pName;
 				ppStrings[nTextCount++] = pBuffer;
