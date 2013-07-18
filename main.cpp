@@ -5,6 +5,7 @@
 #include <SDL.h>
 #include <string>
 #include <thread>
+#include <atomic>
 
 #include "base.h"
 #include "input.h"
@@ -254,6 +255,41 @@ void HandleEvent(SDL_Event* pEvt)
 int ProgramMain();
 void ProgramInit();
 
+
+std::atomic<int> foo{42};
+
+__attribute__ ((noinline))
+int cons__(std::atomic<int>& at, int* p0, int* p1)
+{
+	*p0 = 0;
+	int v = at.load(std::memory_order_consume);
+	int l = *p1;
+	return v + l;
+}
+
+__attribute__ ((noinline))
+int acq__(std::atomic<int>& at, int* p0, int* p1)
+{
+	*p0 = 0;
+	//int v = at.load(std::memory_order_acquire);
+	int v = at.load(std::memory_order_acq_rel);
+
+	//memory_order_acq_rel
+	int l = p1[v];
+	return v + l;
+}
+
+
+__attribute__ ((noinline))
+void sto___(std::atomic<int>& at, int r, int* p0, int* p1)
+{
+	*p0 = 0;
+	//at.store(r, std::memory_order_release);
+	at.store(r, std::memory_order_acq_rel);
+	//.memory_order_acq_rel
+	*p1 = 0;
+}
+
 #ifdef _WIN32
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw)
 #else
@@ -261,6 +297,11 @@ extern "C"
 int SDL_main(int argc, char** argv)
 #endif
 {
+	int p0 = 0, p1 = 0, p2 = 0, p3 = 0;
+	uprintf("foo %p\n", &foo);
+	sto___(foo, 1, &p0, &p1);
+	int x = acq__(foo,  &p0, &p1) + cons__(foo,  &p0, &p1);
+	uprintf("foo %d\n", x);
 	MicroProfileInit();
 	MicroProfileOnThreadCreate("Main");
 
