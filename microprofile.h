@@ -59,10 +59,8 @@ inline int64_t MicroProfileNsToTick(int64_t nNs)
 #define MICROPROFILE_DEFINE(var, group, name, color) MicroProfileToken g_mp_##var(group, name, color)
 #define MICROPROFILE_TOKEN_PASTE0(a, b) a ## b
 #define MICROPROFILE_TOKEN_PASTE(a, b)  MICROPROFILE_TOKEN_PASTE0(a,b)
-#define MICROPROFILE_SCOPE(var) MicroProfileScopeHandler<false> MICROPROFILE_TOKEN_PASTE(foo, __LINE__)(g_mp_##var)
-#define MICROPROFILE_SCOPE_THREADSAFE(var) MicroProfileScopeHandler<true> MICROPROFILE_TOKEN_PASTE(foo, __LINE__)(g_mp_##var)
-#define MICROPROFILE_SCOPEI(group, name, color) static MicroProfileToken MICROPROFILE_TOKEN_PASTE(g_mp,__LINE__) = MicroProfileGetToken(group, name, color); MicroProfileScopeHandler<false> MICROPROFILE_TOKEN_PASTE(foo,__LINE__)( MICROPROFILE_TOKEN_PASTE(g_mp,__LINE__))
-#define MICROPROFILE_SCOPEI_THREADSAFE(group, name, color) static MicroProfileToken MICROPROFILE_TOKEN_PASTE(g_mp,__LINE__) = MicroProfileGetToken(group, name, color); MicroProfileScopeHandler<true> MICROPROFILE_TOKEN_PASTE(foo,__LINE__)( MICROPROFILE_TOKEN_PASTE(g_mp,__LINE__))
+#define MICROPROFILE_SCOPE(var) MicroProfileScopeHandler MICROPROFILE_TOKEN_PASTE(foo, __LINE__)(g_mp_##var)
+#define MICROPROFILE_SCOPEI(group, name, color) static MicroProfileToken MICROPROFILE_TOKEN_PASTE(g_mp,__LINE__) = MicroProfileGetToken(group, name, color); MicroProfileScopeHandler MICROPROFILE_TOKEN_PASTE(foo,__LINE__)( MICROPROFILE_TOKEN_PASTE(g_mp,__LINE__))
 #define MICROPROFILE_TEXT_WIDTH 5
 #define MICROPROFILE_TEXT_HEIGHT 8
 #define MICROPROFILE_DETAILED_BAR_HEIGHT 12
@@ -140,7 +138,6 @@ void MicroProfileDrawBoxFade(uint32_t nX, uint32_t nY, uint32_t nX1, uint32_t nY
 void MicroProfileDrawLine2D(uint32_t nVertices, float* pVertices, uint32_t nColor);
 
 extern void* g_pFUUU;
-template<bool bThreadSafe>
 struct MicroProfileScopeHandler
 {
 	MicroProfileToken nToken;
@@ -151,18 +148,7 @@ struct MicroProfileScopeHandler
 	}
 	~MicroProfileScopeHandler()
 	{
-		if(bThreadSafe)
-		{
-			MicroProfileLeaveThreadSafe(nToken, nTick);
-		}
-		else
-		{
-			if((void*)this == g_pFUUU)
-			{
-				int a = 0;
-			}
-			MicroProfileLeave(nToken, nTick);
-		}
+		MicroProfileLeave(nToken, nTick);
 	}
 };
 
@@ -494,7 +480,6 @@ uint64_t MicroProfileEnter(MicroProfileToken nToken_)
 
 void MicroProfileLeave(MicroProfileToken nToken_, uint64_t nTickStart)
 {
-	// if(MicroProfileGetGroupMask(nToken_) & S.nActiveGroup)
 	if(MICROPROFILE_INVALID_TICK != nTickStart)
 	{
 		MicroProfileToken nToken = nToken_ & 0xffff;
@@ -502,17 +487,6 @@ void MicroProfileLeave(MicroProfileToken nToken_, uint64_t nTickStart)
 		MicroProfileLogPut(nToken_, nTick, MicroProfileLogEntry::ELeave);
 	}
 }
-
-void MicroProfileLeaveThreadSafe(MicroProfileToken nToken_, uint64_t nTickStart)
-{
-	if(MicroProfileGetGroupMask(nToken_) & S.nActiveGroup)
-	{
-		MicroProfileToken nToken = nToken_ & 0xffff;
-		uint64_t nTick = MP_TICK();
-		MicroProfileLogPut(nToken_, nTick, MicroProfileLogEntry::ELeave);
-	}
-}
-
 
 void MicroProfileFlip()
 {
