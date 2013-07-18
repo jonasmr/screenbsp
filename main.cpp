@@ -101,21 +101,22 @@ void WorkerThread(int threadId)
 			}
 			break;
 		default:
-			MICROPROFILE_SCOPEI_THREADSAFE("THREADSAFE", "MAIN", c0);
+			
+			MICROPROFILE_SCOPEI("THREADSAFE", "MAIN", c0);
 			usleep(1000);;
 			for(uint32_t i = 0; i < 5; ++i)
 			{
-				MICROPROFILE_SCOPEI_THREADSAFE("THREADSAFE", "Inner0", c1);
+				MICROPROFILE_SCOPEI("THREADSAFE", "Inner0", c1);
 				usleep(1000);
 				for(uint32_t j = 0; j < 4; ++j)
 				{
-					MICROPROFILE_SCOPEI_THREADSAFE("THREADSAFE", "Inner1", c4);
+					MICROPROFILE_SCOPEI("THREADSAFE", "Inner1", c4);
 					usleep(500);
-					MICROPROFILE_SCOPEI_THREADSAFE("THREADSAFE", "Inner2", c2);
+					MICROPROFILE_SCOPEI("THREADSAFE", "Inner2", c2);
 					usleep(150);
-					MICROPROFILE_SCOPEI_THREADSAFE("THREADSAFE", "Inner3", c3);
+					MICROPROFILE_SCOPEI("THREADSAFE", "Inner3", c3);
 					usleep(150);
-					MICROPROFILE_SCOPEI_THREADSAFE("THREADSAFE", "Inner4", c3);
+					MICROPROFILE_SCOPEI("THREADSAFE", "Inner4", c3);
 					usleep(150);
 				}
 			}
