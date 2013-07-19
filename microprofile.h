@@ -15,9 +15,6 @@
 // one move
 // one click .. everything should be derived from these
 // support for 48 groups
-// remove NS to tick functions
-
-// some hardcoded conversion constant somewhere..
 
 
 #include <stdint.h>
@@ -36,7 +33,7 @@ inline float MicroProfileTickToMs(int64_t nTicks)
 	{
         (void) mach_timebase_info(&sTimebaseInfo);
     }
-    return 1000000.f * (nTicks * sTimebaseInfo.numer / sTimebaseInfo.denom);
+    return 0.000001f * (nTicks * sTimebaseInfo.numer / sTimebaseInfo.denom);
 }
 
 
@@ -47,7 +44,7 @@ inline int64_t MicroProfileMsToTick(float fMs)
 	{
         (void) mach_timebase_info(&sTimebaseInfo);
     }
-    return fMs * 0.000001f * sTimebaseInfo.denom / sTimebaseInfo.numer;
+    return fMs * 1000000.f * sTimebaseInfo.denom / sTimebaseInfo.numer;
 }
 
 #define MP_BREAK() __builtin_trap()
