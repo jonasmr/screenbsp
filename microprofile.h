@@ -18,6 +18,7 @@
 
 #include <stdint.h>
 #include <string.h>
+
 #if 1
 #include <mach/mach.h>
 #include <mach/mach_time.h>
@@ -45,8 +46,6 @@ inline int64_t MicroProfileNsToTick(int64_t nNs)
     return nNs * sTimebaseInfo.denom / sTimebaseInfo.numer;
 }
 
-#define MP_CAS(ptr, value, old) OSAtomicCompareAndSwapPtr(old, value, (void**)ptr)
-#define MP_CAS_U64(ptr, value, old) OSAtomicCompareAndSwap64(old, value, (int64_t*)ptr)
 #define MP_BREAK() __builtin_trap()
 #elif defined(_WIN32)
 #define MP_BREAK() __debugbreak()
@@ -56,7 +55,7 @@ inline int64_t MicroProfileNsToTick(int64_t nNs)
 #define MP_TICK_TO_MS(a) (MicroProfileTickToNs(a) / 1000000.f)
 #define MP_MS_TO_TICK(a) (MicroProfileNsToTick(a*1000000.f))
 #define MICROPROFILE_DECLARE(var) extern MicroProfileToken g_mp_##var
-#define MICROPROFILE_DEFINE(var, group, name, color) MicroProfileToken g_mp_##var(group, name, color)
+#define MICROPROFILE_DEFINE(var, group, name, color) MicroProfileToken g_mp_##var = MicroProfileGetToken(group, name, color)
 #define MICROPROFILE_TOKEN_PASTE0(a, b) a ## b
 #define MICROPROFILE_TOKEN_PASTE(a, b)  MICROPROFILE_TOKEN_PASTE0(a,b)
 #define MICROPROFILE_SCOPE(var) MicroProfileScopeHandler MICROPROFILE_TOKEN_PASTE(foo, __LINE__)(g_mp_##var)
@@ -317,11 +316,15 @@ struct
 
 
 } g_MicroProfile;
-
 __thread MicroProfileThreadLog* g_MicroProfileThreadLog = 0;
-std::mutex g_MicroProfileMutex;
 static uint32_t 				g_nMicroProfileBackColors[2] = {  0x474747, 0x313131 };
 static uint32_t g_AggregatePresets[] = {0, 10, 20, 30, 60, 120};
+inline std::mutex& MicroProfileMutex()
+{
+	static std::mutex Mutex;
+	return Mutex;
+}
+
 
 
 template<typename T>
@@ -340,7 +343,7 @@ inline uint16_t MicroProfileGetGroupIndex(MicroProfileToken t){ return S.TimerIn
 
 void MicroProfileInit()
 {
-	std::lock_guard<std::mutex> Lock(g_MicroProfileMutex);
+	std::lock_guard<std::mutex> Lock(MicroProfileMutex());
 	static bool bOnce = true;
 	if(bOnce)
 	{
@@ -386,7 +389,7 @@ void MicroProfileInit()
 
 void MicroProfileOnThreadCreate(const char* pThreadName)
 {
-	std::lock_guard<std::mutex> Lock(g_MicroProfileMutex);
+	std::lock_guard<std::mutex> Lock(MicroProfileMutex());
 	MP_ASSERT(g_MicroProfileThreadLog == 0);
 	MicroProfileThreadLog* pLog = 0;
 	MicroProfileThreadLog* pNext = 0;
@@ -406,7 +409,8 @@ void MicroProfileOnThreadCreate(const char* pThreadName)
 
 MicroProfileToken MicroProfileGetToken(const char* pGroup, const char* pName, uint32_t nColor)
 {
-	std::lock_guard<std::mutex> Lock(g_MicroProfileMutex);
+	MicroProfileInit();
+	std::lock_guard<std::mutex> Lock(MicroProfileMutex());
 	uint16_t nGroupIndex = 0xffff;
 	for(uint32_t i = 0; i < S.nGroupCount; ++i)
 	{
