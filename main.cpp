@@ -28,6 +28,19 @@ uint32_t g_nQuit = 0;
 uint32_t g_lShowDebug = 1;
 uint32_t g_lShowDebugText = 1;
 
+MICROPROFILE_DECLARE(ThreadSafeMain);
+MICROPROFILE_DECLARE(ThreadSafeInner0);
+MICROPROFILE_DECLARE(ThreadSafeInner1);
+MICROPROFILE_DECLARE(ThreadSafeInner2);
+MICROPROFILE_DECLARE(ThreadSafeInner3);
+MICROPROFILE_DECLARE(ThreadSafeInner4);
+
+MICROPROFILE_DEFINE(ThreadSafeInner4,"ThreadSafe", "Inner4", 0xff00ff00);
+MICROPROFILE_DEFINE(ThreadSafeInner3,"ThreadSafe", "Inner3", 0xff00ff00);
+MICROPROFILE_DEFINE(ThreadSafeInner2,"ThreadSafe", "Inner2", 0xff00ff00);
+MICROPROFILE_DEFINE(ThreadSafeInner1,"ThreadSafe", "Inner1", 0xff00ff00);
+MICROPROFILE_DEFINE(ThreadSafeInner0,"ThreadSafe", "Inner0", 0xff00ff00);
+MICROPROFILE_DEFINE(ThreadSafeMain,"ThreadSafe", "Main", 0xff00ff00);
 
 //fake work
 void WorkerThread(int threadId)
@@ -102,21 +115,21 @@ void WorkerThread(int threadId)
 			break;
 		default:
 			
-			MICROPROFILE_SCOPEI("THREADSAFE", "MAIN", c0);
+			MICROPROFILE_SCOPE(ThreadSafeMain);
 			usleep(1000);;
 			for(uint32_t i = 0; i < 5; ++i)
 			{
-				MICROPROFILE_SCOPEI("THREADSAFE", "Inner0", c1);
+				MICROPROFILE_SCOPE(ThreadSafeInner0);
 				usleep(1000);
 				for(uint32_t j = 0; j < 4; ++j)
 				{
-					MICROPROFILE_SCOPEI("THREADSAFE", "Inner1", c4);
+					MICROPROFILE_SCOPE(ThreadSafeInner1);
 					usleep(500);
-					MICROPROFILE_SCOPEI("THREADSAFE", "Inner2", c2);
+					MICROPROFILE_SCOPE(ThreadSafeInner2);
 					usleep(150);
-					MICROPROFILE_SCOPEI("THREADSAFE", "Inner3", c3);
+					MICROPROFILE_SCOPE(ThreadSafeInner3);
 					usleep(150);
-					MICROPROFILE_SCOPEI("THREADSAFE", "Inner4", c3);
+					MICROPROFILE_SCOPE(ThreadSafeInner4);
 					usleep(150);
 				}
 			}
