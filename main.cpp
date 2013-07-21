@@ -147,7 +147,7 @@ void CheckGLError()
 	{
 	    errString = gluErrorString(errCode);
 		   uprintf ("UHOH: OpenGL Error: %s\n", errString);
-		   ZBREAK();
+		ZBREAK();
 	}
 }
 
@@ -304,6 +304,11 @@ void sto___(std::atomic<int>& at, int r, int* p0, int* p1)
 	*p1 = 0;
 }
 
+
+void MicroProfileQueryInitGL();
+
+
+
 #ifdef _WIN32
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw)
 #else
@@ -334,6 +339,19 @@ int SDL_main(int argc, char** argv)
 		return 1;
 	}
 
+	glewExperimental=1;
+	GLenum err=glewInit();
+	if(err!=GLEW_OK)
+	{
+		ZBREAK();
+	}
+	if(!GLEW_ARB_separate_shader_objects)
+	{
+		ZBREAK();
+	}
+
+	MicroProfileQueryInitGL();
+
 
 	//Microprofile test
 	std::thread t0(WorkerThread, 0);
@@ -347,17 +365,6 @@ int SDL_main(int argc, char** argv)
 	std::thread t44(WorkerThread, 44);
 	std::thread t45(WorkerThread, 45);
 
-
-	glewExperimental=1;
-	GLenum err=glewInit();
-	if(err!=GLEW_OK)
-	{
-		ZBREAK();
-	}
-	if(!GLEW_ARB_separate_shader_objects)
-	{
-		ZBREAK();
-	}
 
 	InputInit();
 	TextInit();
