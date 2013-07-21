@@ -36,11 +36,11 @@ MICROPROFILE_DECLARE(ThreadSafeInner3);
 MICROPROFILE_DECLARE(ThreadSafeInner4);
 
 MICROPROFILE_DEFINE(ThreadSafeInner4,"ThreadSafe", "Inner4", 0xff00ff00);
-MICROPROFILE_DEFINE(ThreadSafeInner3,"ThreadSafe", "Inner3", 0xff00ff00);
-MICROPROFILE_DEFINE(ThreadSafeInner2,"ThreadSafe", "Inner2", 0xff00ff00);
-MICROPROFILE_DEFINE(ThreadSafeInner1,"ThreadSafe", "Inner1", 0xff00ff00);
-MICROPROFILE_DEFINE(ThreadSafeInner0,"ThreadSafe", "Inner0", 0xff00ff00);
-MICROPROFILE_DEFINE(ThreadSafeMain,"ThreadSafe", "Main", 0xff00ff00);
+MICROPROFILE_DEFINE(ThreadSafeInner3,"ThreadSafe", "Inner3", randcolor());
+MICROPROFILE_DEFINE(ThreadSafeInner2,"ThreadSafe", "Inner2", randcolor());
+MICROPROFILE_DEFINE(ThreadSafeInner1,"ThreadSafe", "Inner1", randcolor());
+MICROPROFILE_DEFINE(ThreadSafeInner0,"ThreadSafe", "Inner0", randcolor());
+MICROPROFILE_DEFINE(ThreadSafeMain,"ThreadSafe", "Main", randcolor());
 
 //fake work
 void WorkerThread(int threadId)

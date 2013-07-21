@@ -69,3 +69,14 @@ void MicroProfileDrawLine2D(uint32_t nVertices, float* pVertices, uint32_t nColo
 	glEnd();
 }
 
+uint32_t MicroProfileGpuInsertTimeStamp()
+{
+	return 0;
+}
+uint64_t MicroProfileGpuGetTimeStamp(uint32_t nKey)
+{
+	return 2000;
+}
+
+
+
