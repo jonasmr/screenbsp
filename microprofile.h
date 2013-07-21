@@ -387,6 +387,9 @@ void MicroProfileInit()
 		S.nHeight = 100;
 		S.nActiveMenu = (uint32_t)-1;
 
+
+
+
 		for(uint32_t i = 0; i < MICROPROFILE_LOG_MAX_THREADS; ++i)
 		{
 			if(i + 1 < MICROPROFILE_LOG_MAX_THREADS)
@@ -400,7 +403,11 @@ void MicroProfileInit()
 			S.Pool[i].nPut.store(0, std::memory_order_relaxed);
 			S.Pool[i].nGet.store(0, std::memory_order_relaxed);
 		}
-		S.pFreeThreadLogList = &S.Pool[0];
+		S.Pool[0].pNext = 0;
+		S.Pool[0].nGpu = 1;
+		strcpy(S.Pool[0].ThreadName, "GPU");
+		g_MicroProfileGpuLog = &S.Pool[0];
+		S.pFreeThreadLogList = &S.Pool[1];
 	}
 }
 
@@ -549,7 +556,6 @@ void MicroProfileFlip()
 		}
 		else // GPU update is lagging 
 		{
-			MP_BREAK();
 			nPutStart[i] = S.Pool[i].nGpuGet[0]; 
 			nGetStart[i] = S.Pool[i].nGet.load(std::memory_order_relaxed);
 		}
@@ -732,7 +738,6 @@ void MicroProfileFlip()
 		}
 		else
 		{
-			MP_BREAK();
 			S.Pool[i].nGet.store(S.Pool[i].nGpuGet[0], std::memory_order_release);
 			for(uint32_t j = 0; j < MICROPROFILE_GPU_FRAME_DELAY-1; ++j)
 			{
