@@ -74,6 +74,7 @@ inline int64_t MicroProfileMsToTick(float fMs)
 #define MICROPROFILE_MAX_GRAPH_TIME 100.f
 #define MICROPROFILE_INVALID_TICK ((uint64_t)-1)
 #define MICROPROFILE_GPU_FRAME_DELAY 2 //must be > 0
+#define MICROPROFILE_PIX3_MODE 1
 
 
 typedef uint32_t MicroProfileToken;
@@ -240,7 +241,15 @@ struct MicroProfileLogEntry
 	};
 	EType eType;
 	MicroProfileToken nToken;
-	uint64_t nTick;
+	union
+	{
+		uint64_t nTick;
+		struct
+		{
+			uint32_t nStartRelative;
+			uint32_t nEndRelative;
+		};
+	};
 };
 
 struct MicroProfileThreadLog
@@ -251,9 +260,9 @@ struct MicroProfileThreadLog
 	std::atomic<uint32_t>	nPut;
 	std::atomic<uint32_t>	nGet;
 	uint32_t				nGpuGet[MICROPROFILE_GPU_FRAME_DELAY];
-	uint32_t 				nLogPos;
 	uint32_t 				nActive;
 	uint32_t 				nGpu;
+	uint32_t 				nLogPos;
 	enum
 	{
 		THREAD_MAX_LEN = 64,
@@ -613,7 +622,7 @@ void MicroProfileFlip()
 					continue;
 
 				uint64_t nFrameStart = pLog->nGpu ? nFrameStartGpu : nFrameStartCpu;
-				uint64_t nFrameEnd = pLog->nGpu ? nFrameStartGpu : nFrameStartCpu;
+				uint64_t nFrameEnd = pLog->nGpu ? nFrameEndGpu : nFrameEndCpu;
 
 				if(S.Pool[i].nGpu)
 				{
@@ -628,9 +637,6 @@ void MicroProfileFlip()
 						}
 					}
 				}
-
-
-
 				uint32_t nStack[MICROPROFILE_STACK_MAX];
 				uint32_t nStackPos = 0;
 
@@ -711,10 +717,119 @@ void MicroProfileFlip()
 		}
 		if(S.nFlipLog)
 		{
+			MICROPROFILE_SCOPEI("MicroProfile", "Pix3 Fixup", 0x3f8033);
 			for(uint32_t i = 0; i < MICROPROFILE_LOG_MAX_THREADS; ++i)
 			{
 				uint32_t nPut = nPutStart[i];
 				uint32_t nGet = nGetStart[i];
+#if MICROPROFILE_PIX3_MODE
+				MicroProfileThreadLog* pLog = &S.Pool[i];
+
+				uint64_t nFrameStart = pLog->nGpu ? nFrameStartGpu : nFrameStartCpu;
+				uint64_t nFrameEnd = pLog->nGpu ? nFrameEndGpu : nFrameEndCpu;
+
+				uint32_t nRanges[2][2] = 
+				{{0,0},{0,0},};
+				if(nPut > nGet)
+				{
+					nRanges[0][0] = nGet;
+					nRanges[0][1] = nPut;
+				}
+				else if(nPut != nGet)
+				{
+					nRanges[0][0] = nGet;
+					nRanges[0][1] = MICROPROFILE_LOG_BUFFER_SIZE;
+					nRanges[1][0] = 0;
+					nRanges[1][1] = nPut;
+				}
+				MicroProfileLogEntry StartEntries[MICROPROFILE_STACK_MAX];
+				uint32_t nStartEntryPos = MICROPROFILE_STACK_MAX;
+	
+				uint32_t nStack[MICROPROFILE_STACK_MAX];
+				uint32_t nStackPos = 0;
+				for(uint32_t j = 0; j < 2; ++j)
+				{
+					uint32_t nStart = nRanges[j][0];
+					uint32_t nEnd = nRanges[j][1];
+					for(uint32_t k = nStart; k != nEnd; ++k)
+					{
+						MicroProfileLogEntry& LE = pLog->Log[k];
+						switch(LE.eType)
+						{
+							case MicroProfileLogEntry::EEnter:
+							{
+								MP_ASSERT(nStackPos < MICROPROFILE_STACK_MAX);
+								nStack[nStackPos++] = i;
+							}
+							break;
+							case MicroProfileLogEntry::ELeave:
+							{
+								if(0 == nStackPos)
+								{
+									MP_ASSERT(nStartEntryPos);
+									nStartEntryPos--;
+									StartEntries[nStartEntryPos].eType = MicroProfileLogEntry::EEnter;
+									StartEntries[nStartEntryPos].nToken = LE.nToken;						
+									StartEntries[nStartEntryPos].nStartRelative = 0;
+									StartEntries[nStartEntryPos].nEndRelative = LE.nTick - nFrameStart;
+								}
+								else
+								{
+//									MP_ASSERT(pLog->Log[nStack[nStackPos-1]].nToken == LE.nToken);
+									uint32_t nStartIndex = nStack[nStackPos-1];
+									MicroProfileLogEntry& LEEnter = pLog->Log[nStartIndex];
+									uint64_t nTickStart = LEEnter.nTick;
+									uint64_t nTickEnd = LE.nTick;
+									LEEnter.nToken = (LEEnter.nToken&0xffff)|(nStackPos<<16);
+									LEEnter.nStartRelative = nTickStart - nFrameStart;
+									LEEnter.nEndRelative = nTickEnd - nFrameStart;
+									nStackPos--;
+								}
+							}
+							break;
+						}
+					}
+				}
+				for(uint32_t i = 0; i < nStackPos; ++i)
+				{
+					MicroProfileLogEntry& LEEnter = pLog->Log[nStack[i]];
+					uint64_t nTickStart = LEEnter.nTick;
+					uint64_t nTickEnd = nFrameEnd;
+					LEEnter.nToken = (LEEnter.nToken&0xffff)|((nStackPos-1-i) << 16);
+					LEEnter.nStartRelative = nTickStart - nFrameStart;
+					LEEnter.nEndRelative = nTickEnd = nFrameStart;
+				}
+				uint32_t nOut = 0;
+				MicroProfileThreadLog* pDest = &S.DisplayPool[i];
+				if(MICROPROFILE_STACK_MAX != nStartEntryPos)
+				{
+					uint32_t nDepth = 0;
+					uint32_t nCount = (MICROPROFILE_STACK_MAX-nStartEntryPos);
+					for(uint32_t j = nStartEntryPos; j < MICROPROFILE_STACK_MAX; ++j)
+					{
+						MicroProfileLogEntry& Out = pDest->Log[nOut++];
+						Out.eType = MicroProfileLogEntry::EEnter;
+						Out.nToken = (StartEntries[nStartEntryPos].nToken&0xffff)|((nDepth++)<<16);
+						Out.nStartRelative = StartEntries[j].nStartRelative;
+						Out.nEndRelative = StartEntries[j].nEndRelative;
+					}
+				}
+				for(uint32_t j = 0; j < 2; ++j)
+				{
+					uint32_t nStart = nRanges[j][0];
+					uint32_t nEnd = nRanges[j][1];
+					for(uint32_t k = nStart; k != nEnd; ++k)
+					{
+						MicroProfileLogEntry& LE = pLog->Log[k];
+						if(MicroProfileLogEntry::EEnter == LE.eType)
+						{
+							pDest->Log[nOut++] = LE;
+						}
+					}
+				}
+				S.DisplayPool[i].nGet.store(0, std::memory_order_relaxed);
+				S.DisplayPool[i].nPut.store(nOut, std::memory_order_relaxed);
+#else
 				if(nPut > nGet)
 				{
 					MP_ASSERT(nPut < MICROPROFILE_LOG_BUFFER_SIZE);
@@ -734,7 +849,8 @@ void MicroProfileFlip()
 					S.DisplayPool[i].nLogPos = 0;
 				}
 				S.DisplayPool[i].nGet.store(0, std::memory_order_relaxed);
-				S.DisplayPool[i].nPut.store(0, std::memory_order_relaxed);
+				S.DisplayPool[i].nPut.store(S.DisplayPool[i].nLogPos, std::memory_order_relaxed);
+#endif
 				//S.DisplayPool[i].nOwningThread = S.Pool[i].nOwningThread;
 				S.DisplayPool[i].nGpu = S.Pool[i].nGpu;
 				memcpy(&S.DisplayPool[i].ThreadName[0], &S.Pool[i].ThreadName[0], sizeof(S.Pool[i].ThreadName));
@@ -1008,19 +1124,73 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 		MicroProfileThreadLog* pLog = &S.DisplayPool[j];
 		uint32_t nSize = pLog->nLogPos;
 		uint32_t nMaxStackDepth = 0;
-		if(0==S.nThreadActive[j] && 0==S.nMenuAllThreads)
+		if(0 == nSize || (0==S.nThreadActive[j] && 0==S.nMenuAllThreads))
 			continue;
 
 		uint64_t nFrameStart = pLog->nGpu ? nFrameStartGpu : nFrameStartCpu;
 		uint64_t nFrameEnd = pLog->nGpu ? nFrameEndGpu : nFrameEndCpu;
 
+
 		nY += 3;
 		MicroProfileDrawText(nX, nY, (uint32_t)-1, &pLog->ThreadName[0]);
 		nY += 3;
 		nY += MICROPROFILE_TEXT_HEIGHT + 1;
+#if MICROPROFILE_PIX3_MODE
+		uint32_t nGet = pLog->nGet.load(std::memory_order_relaxed);
+		uint32_t nPut = pLog->nPut.load(std::memory_order_relaxed);
+		uint32_t nYDelta = (MICROPROFILE_DETAILED_BAR_HEIGHT+1);
+		for(uint32_t i = nGet; i < nPut; ++i)
+		{
+			MicroProfileLogEntry* pEntry = pLog->Log + i;
+			MP_ASSERT(MicroProfileLogEntry::EEnter == pEntry->eType);
+			{
+				uint32_t nTickStart = pEntry->nStartRelative;
+				uint32_t nTickEnd = pEntry->nEndRelative;
 
+				uint32_t nColor = S.TimerInfo[ pEntry->nToken & 0xffff ].nColor;
+				uint32_t nStackPos = pEntry->nToken >> 16;
+
+				float fMsStart = MicroProfileTickToMs(nTickStart - nBaseTicks);
+				float fMsEnd = MicroProfileTickToMs(nTickEnd - nBaseTicks);
+				MP_ASSERT(fMsStart <= fMsEnd);
+				float fXStart = nX + fMsStart * fMsToScreen;
+				float fXEnd = nX + fMsEnd * fMsToScreen;
+				float fYStart = nY + nStackPos * nYDelta;
+				float fYEnd = fYStart + (MICROPROFILE_DETAILED_BAR_HEIGHT);
+				uint32_t nIntegerWidth = fXEnd - fXStart;
+				float fXDist = MicroProfileMax(fXStart - fMouseX, fMouseX - fXEnd);
+				if(fXDist < fHoverDist)
+				{
+					if(fYStart <= fMouseY && fMouseY <= fYEnd)
+					{
+						fHoverDist = fXDist;
+						nHoverToken = pEntry->nToken;
+						nHoverTime = nTickEnd - nTickStart;
+					}
+				}
+
+				if(nIntegerWidth)
+				{
+					MicroProfileDrawBoxFade(fXStart, fYStart, fXEnd, fYEnd, nColor);
+				}
+				else
+				{
+					float fXAvg = 0.5f * (fXStart + fXEnd);
+					float fLine[] = {
+						fXAvg, fYStart + 0.5f,
+						fXAvg, fYEnd + 0.5f
+
+					};
+					MicroProfileDrawLine2D(2, &fLine[0], nColor);
+				}
+			}
+		}
+
+		nY += nMaxStackDepth * nYDelta;
+#else
 		uint32_t nStack[MICROPROFILE_STACK_MAX];
 		uint32_t nStackPos = 0;
+		uint32_t nYDelta = (MICROPROFILE_DETAILED_BAR_HEIGHT+1);
 		for(uint32_t i = 0; i < nSize; ++i)
 		{
 			MicroProfileLogEntry& LE = pLog->Log[i];
@@ -1051,7 +1221,7 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 					float fXEnd = nX + fMsEnd * fMsToScreen;
 
 
-					float fYStart = nY + nStackPos * (MICROPROFILE_DETAILED_BAR_HEIGHT+1);
+					float fYStart = nY + nStackPos * nYDelta;
 					float fYEnd = fYStart + (MICROPROFILE_DETAILED_BAR_HEIGHT);
 					uint32_t nIntegerWidth = fXEnd - fXStart;
 					float fXDist = MicroProfileMax(fXStart - fMouseX, fMouseX - fXEnd);
@@ -1085,7 +1255,8 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 				break;
 			}
 		}
-		nY += nMaxStackDepth * (MICROPROFILE_DETAILED_BAR_HEIGHT+1);
+		nY += nMaxStackDepth * nYDelta;
+#endif
 	}
 
 	for(float f = fMsBase; f < fMsEnd; ++i)
