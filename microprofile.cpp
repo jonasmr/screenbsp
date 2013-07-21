@@ -3,6 +3,8 @@
 #include "glinc.h"
 #include "text.h"
 
+
+
 void MicroProfileDrawText(uint32_t nX, uint32_t nY, uint32_t nColor, const char* pText)
 {
 	TextBegin();
@@ -69,13 +71,40 @@ void MicroProfileDrawLine2D(uint32_t nVertices, float* pVertices, uint32_t nColo
 	glEnd();
 }
 
+#define NUM_QUERIES (8<<10)
+
+
+GLuint g_GlTimers[NUM_QUERIES];
+GLuint g_GlTimerPos = (GLuint)-1;
+
+
+void MicroProfileQueryInitGL()
+{
+	g_GlTimerPos = 0;
+	glGenQueries(NUM_QUERIES, &g_GlTimers[0]);		
+	CheckGLError();
+}
+
 uint32_t MicroProfileGpuInsertTimeStamp()
 {
-	return 0;
+	uint32_t nIndex = (g_GlTimerPos+1)%NUM_QUERIES;
+	CheckGLError();
+	#if 0
+	glQueryCounter(g_GlTimers[nIndex], GL_TIMESTAMP);
+	#endif
+	CheckGLError();
+	return nIndex;
 }
 uint64_t MicroProfileGpuGetTimeStamp(uint32_t nKey)
 {
-	return 2000;
+	#if 0
+	uint64_t result;
+	glGetQueryObjectui64v(g_GlTimers[nKey], GL_QUERY_RESULT, &result);
+	CheckGLError();
+	return result;
+	#else
+	return 1;
+	#endif
 }
 
 
