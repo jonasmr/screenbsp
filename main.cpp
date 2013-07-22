@@ -350,6 +350,7 @@ int SDL_main(int argc, char** argv)
 		ZBREAK();
 	}
 
+
 	MicroProfileQueryInitGL();
 
 
