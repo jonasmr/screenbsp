@@ -20,7 +20,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#if 1
+#if defined(__APPLE__)
 #include <mach/mach.h>
 #include <mach/mach_time.h>
 #include <unistd.h>
@@ -147,8 +147,6 @@ void MicroProfileDrawBoxFade(uint32_t nX, uint32_t nY, uint32_t nX1, uint32_t nY
 void MicroProfileDrawLine2D(uint32_t nVertices, float* pVertices, uint32_t nColor);
 uint32_t MicroProfileGpuInsertTimeStamp();
 uint64_t MicroProfileGpuGetTimeStamp(uint32_t nKey);
-
-
 
 
 extern void* g_pFUUU;
@@ -797,7 +795,7 @@ void MicroProfileFlip()
 					uint64_t nTickEnd = nFrameEnd;
 					LEEnter.nToken = (LEEnter.nToken&0xffff)|((nStackPos-1-i) << 16);
 					LEEnter.nStartRelative = nTickStart - nFrameStart;
-					LEEnter.nEndRelative = nTickEnd = nFrameStart;
+					LEEnter.nEndRelative = nTickEnd - nFrameStart;
 				}
 				uint32_t nOut = 0;
 				MicroProfileThreadLog* pDest = &S.DisplayPool[i];
