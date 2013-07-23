@@ -10,7 +10,10 @@
 // support for 48/64 groups
 // presets
 // target framerate
-// windows
+// finish gpu markers
+// frame end marker
+// splitters in graph
+// exclusive time
 
 
 #include <stdint.h>
@@ -48,7 +51,7 @@ inline int64_t MicroProfileMsToTick(float fMs)
 #define MP_THREAD_LOCAL __thread
 #elif defined(_WIN32)
 #include <Windows.h>
-int64_t MicroProfileGetTick()
+inline int64_t MicroProfileGetTick()
 {
 	int64_t ticks;
 	QueryPerformanceCounter((LARGE_INTEGER*)&ticks);
@@ -800,8 +803,8 @@ void MicroProfileFlip()
 									StartEntries[nStartEntryPos].eType = MicroProfileLogEntry::EEnter;
 									StartEntries[nStartEntryPos].nToken = LE.nToken;						
 									StartEntries[nStartEntryPos].nStartRelative = 0;
-									StartEntries[nStartEntryPos].nEndRelative = LE.nTick - nFrameStart;
-									MP_ASSERT(StartEntries[nStartEntryPos].nStartRelative <= (int64_t)(LE.nTick - nFrameStart));
+									StartEntries[nStartEntryPos].nEndRelative = LE.nTick < nFrameStart ? 1 : LE.nTick - nFrameStart;
+
 								}
 								else
 								{
@@ -1897,6 +1900,5 @@ void MicroProfileMoveGraph(int nZoom, int nPanX, int nPanY)
 	if(S.nOffsetY<0)
 		S.nOffsetY = 0;
 }
-
 
 #endif

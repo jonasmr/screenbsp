@@ -1,5 +1,3 @@
-
-
 #include <stdio.h>
 #include <stdarg.h>
 #include <SDL.h>
@@ -22,21 +20,41 @@
 #include <windows.h>
 void usleep(__int64 usec) 
 { 
-	HANDLE timer; 
-	LARGE_INTEGER ft; 
 
-	ft.QuadPart = -(10*usec); // Convert to 100 nanosecond interval, negative value indicates relative time
 
-	timer = CreateWaitableTimer(NULL, TRUE, NULL); 
-	SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0); 
-	WaitForSingleObject(timer, INFINITE); 
-	CloseHandle(timer); 
+	if(usec > 20000)
+	{
+		Sleep(usec/1000);
+	}
+	else if(usec >= 1000)
+	{
+		timeBeginPeriod(1);
+		Sleep(usec/1000);
+		timeEndPeriod(1);
+	}
+	else
+	{
+		__int64 time1 = 0, time2 = 0, freq = 0;
+		QueryPerformanceCounter((LARGE_INTEGER *) &time1);
+		QueryPerformanceFrequency((LARGE_INTEGER *)&freq);
+
+		do {
+			QueryPerformanceCounter((LARGE_INTEGER *) &time2);
+		} while((time2-time1)*1000000ll/freq < usec);
+	}
 }
 #endif
 
 SDL_Surface* g_Surface;
-uint32_t g_BaseWidth =  800;
-uint32_t g_BaseHeight =  600;
+#ifdef _WIN32
+#define START_WIDTH 1600
+#define START_HEIGHT 1080
+#else
+#define START_WIDTH 800
+#define START_HEIGHT 600
+#endif
+uint32_t g_BaseWidth = START_WIDTH;
+uint32_t g_BaseHeight = START_HEIGHT;
 uint32_t g_Width = g_BaseWidth;
 uint32_t g_Height =  g_BaseHeight;
 uint32_t g_nQuit = 0;
@@ -284,59 +302,12 @@ void HandleEvent(SDL_Event* pEvt)
 int ProgramMain();
 void ProgramInit();
 
-
-std::atomic<int> foo;
-
-
-
-
-
-int cons__(std::atomic<int>& at, int* p0, int* p1)
-{
-	*p0 = 0;
-	int v = at.load(std::memory_order_consume);
-	int l = *p1;
-	return v + l;
-}
-
-int acq__(std::atomic<int>& at, int* p0, int* p1)
-{
-	*p0 = 0;
-	//int v = at.load(std::memory_order_acquire);
-	int v = at.load(std::memory_order_acq_rel);
-
-	//memory_order_acq_rel
-	int l = p1[v];
-	return v + l;
-}
-
-
-void sto___(std::atomic<int>& at, int r, int* p0, int* p1)
-{
-	*p0 = 0;
-	//at.store(r, std::memory_order_release);
-	at.store(r, std::memory_order_acq_rel);
-	//.memory_order_acq_rel
-	*p1 = 0;
-}
-
-
 void MicroProfileQueryInitGL();
 
-
-
-#ifdef _WIN32
-int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw)
-#else
 extern "C" 
-int SDL_main(int argc, char** argv)
-#endif
+int SDL_main(int argc, char* argv[])
 {
-	int p0 = 0, p1 = 0, p2 = 0, p3 = 0;
-	uprintf("foo %p\n", &foo);
-	sto___(foo, 1, &p0, &p1);
-	int x = acq__(foo,  &p0, &p1) + cons__(foo,  &p0, &p1);
-	uprintf("foo %d\n", x);
+
 	MicroProfileInit();
 	MicroProfileOnThreadCreate("Main");
 
