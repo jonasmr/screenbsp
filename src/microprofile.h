@@ -45,8 +45,38 @@ inline int64_t MicroProfileMsToTick(float fMs)
 
 //#define MP_BREAK() __asm__("int $3")
 #define MP_BREAK() __builtin_trap()
+#define MP_THREAD_LOCAL __thread
 #elif defined(_WIN32)
+#include <Windows.h>
+int64_t MicroProfileGetTick()
+{
+	int64_t ticks;
+	QueryPerformanceCounter((LARGE_INTEGER*)&ticks);
+	return ticks;
+}
+
+inline float MicroProfileTickToMs(int64_t nTicks)
+{
+	static int64_t nTicksPerSecond = 0;	
+	if(nTicksPerSecond == 0) 
+	{
+		QueryPerformanceFrequency((LARGE_INTEGER*)&nTicksPerSecond);
+	}
+	return (nTicks * 1000.f / nTicksPerSecond);
+}
+inline int64_t MicroProfileMsToTick(float fMs)
+{
+	static int64_t nTicksPerSecond = 0;	
+	if(nTicksPerSecond == 0) 
+	{
+		QueryPerformanceFrequency((LARGE_INTEGER*)&nTicksPerSecond);
+	}
+	return (int64_t)(fMs * 0.001f * nTicksPerSecond);
+}
+
+#define MP_TICK() MicroProfileGetTick()
 #define MP_BREAK() __debugbreak()
+#define MP_THREAD_LOCAL __declspec(thread)
 #endif
 
 #define MP_ASSERT(a) do{if(!(a)){MP_BREAK();} }while(0)
@@ -97,7 +127,7 @@ inline uint16_t MicroProfileGetGroupMask(MicroProfileToken t){ return ((t>>16)&0
 inline MicroProfileToken MicroProfileMakeToken(uint16_t nGroupMask, uint16_t nTimer){ return ((uint32_t)nGroupMask<<16) | nTimer;}
 inline uint64_t MicroProfileGetPackedCount(uint64_t nTimer)
 {
-	return nTimer >> 48llu;
+	return nTimer >> 48ll;
 }
 inline uint64_t MicroProfileGetPackedTicks(uint64_t nTimer)
 {
@@ -105,7 +135,7 @@ inline uint64_t MicroProfileGetPackedTicks(uint64_t nTimer)
 }
 inline uint64_t MicroProfilePackTimer(int nCount, uint64_t nTicks)
 {
-	return ((0x000000000000ffff&(uint64_t)nCount) << 48llu) | (nTicks&0xffffffffffff);
+	return ((0x000000000000ffff&(uint64_t)nCount) << 48ll) | (nTicks&0xffffffffffff);
 }
 inline uint64_t MicroProfileAddTimer(uint64_t nTimer, uint64_t nCount, uint64_t nTicks)
 {
@@ -346,7 +376,7 @@ struct
 } g_MicroProfile;
 
 MicroProfileThreadLog*			g_MicroProfileGpuLog = 0;
-__thread MicroProfileThreadLog* g_MicroProfileThreadLog = 0;
+MP_THREAD_LOCAL MicroProfileThreadLog* g_MicroProfileThreadLog = 0;
 static uint32_t 				g_nMicroProfileBackColors[2] = {  0x474747, 0x313131 };
 static uint32_t g_AggregatePresets[] = {0, 10, 20, 30, 60, 120};
 
@@ -598,7 +628,7 @@ void MicroProfileFlip()
 			{
 				uint32_t nPut = nPutStart[i];
 				uint32_t nGet = nGetStart[i];
-				uint32_t nRange[2][2]{ {0, 0}, {0, 0}, };
+				uint32_t nRange[2][2] = { {0, 0}, {0, 0}, };
 				MicroProfileThreadLog* pLog = &S.Pool[i];
 
 				if(nPut > nGet)
@@ -1580,7 +1610,7 @@ bool MicroProfileDrawMenu(uint32_t nWidth, uint32_t nHeight)
 				else
 				{
 					static char buf[128];
-					snprintf(buf, sizeof(buffer)-1, "%7d", val);
+					snprintf(buf, sizeof(buf)-1, "%7d", val);
 					return buf;
 				}
 			}

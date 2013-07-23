@@ -2,4 +2,4 @@
 
 struct SObject;
 struct SWorldObject;
-struct Manipulator;
+class Manipulator;
