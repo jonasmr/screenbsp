@@ -32,7 +32,7 @@ $(TARGET): $(C_OBJS) $(CPP_OBJS)
 
 
 clean: depend
-	rm *.o bsp
+	rm *.o $(TARGET)
 
 depend: $(CPP_SOURCES) $(C_SOURCES)
 	$(CC) -MM $(CFLAGS) $(C_SOURCES) > .depend
