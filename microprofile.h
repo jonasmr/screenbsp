@@ -1,6 +1,5 @@
 #pragma once
 // TODO: 
-// 		drawing line skipping
 // internal drawing
 //  	border
 //		unify / cleanup
