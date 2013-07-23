@@ -7,12 +7,11 @@
 // make mouse callback cleaner
 // one move
 // one click .. everything should be derived from these
-// support for 48/64 groups
 // presets
 // target framerate
 // windows
-// on demand buffer alloc
 
+///gpugpugpu
 
 #include <stdint.h>
 #include <string.h>
@@ -106,8 +105,10 @@ inline int64_t MicroProfileMsToTick(float fMs)
 //#define MICROPROFILE_PIX3_HEIGHT 7
 #define MICROPROFILE_PIX3_HEIGHT (MICROPROFILE_DETAILED_BAR_HEIGHT-4)
 
+#define MICROPROFILE_GROUP_MASK_ALL 0xffffffffffff
 
-typedef uint32_t MicroProfileToken;
+
+typedef uint64_t MicroProfileToken;
 typedef uint16_t MicroProfileGroupId;
 
 #define MICROPROFILE_INVALID_TOKEN (uint32_t)-1
@@ -124,30 +125,8 @@ uint64_t MicroProfileEnter(MicroProfileToken nToken);
 void MicroProfileLeave(MicroProfileToken nToken, uint64_t nTick);
 void MicroProfileLeaveThreadSafe(MicroProfileToken nToken, uint64_t nTick);
 inline uint16_t MicroProfileGetTimerIndex(MicroProfileToken t){ return (t&0xffff); }
-inline uint16_t MicroProfileGetGroupMask(MicroProfileToken t){ return ((t>>16)&0xffff);}
-inline MicroProfileToken MicroProfileMakeToken(uint16_t nGroupMask, uint16_t nTimer){ return ((uint32_t)nGroupMask<<16) | nTimer;}
-// inline uint64_t MicroProfileGetPackedCount(uint64_t nTimer)
-// {
-// 	return nTimer >> 48ll;
-// }
-// inline uint64_t MicroProfileGetPackedTicks(uint64_t nTimer)
-// {
-// 	return nTimer & 0xffffffffffff;
-// }
-// inline uint64_t MicroProfilePackTimer(int nCount, uint64_t nTicks)
-// {
-// 	return ((0x000000000000ffff&(uint64_t)nCount) << 48ll) | (nTicks&0xffffffffffff);
-// }
-// inline uint64_t MicroProfileAddTimer(uint64_t nTimer, uint64_t nCount, uint64_t nTicks)
-// {
-// 	uint64_t nPackedCount = MicroProfileGetPackedCount(nTimer);
-// 	uint64_t nPackedTicks = MicroProfileGetPackedTicks(nTimer);
-// 	nPackedCount += nCount;
-// 	MP_ASSERT(nPackedCount <= 0xffff);
-// 	nPackedTicks += nTicks;
-// 	return MicroProfilePackTimer(nPackedCount, nPackedTicks);
-// }
-
+inline uint64_t MicroProfileGetGroupMask(MicroProfileToken t){ return ((t>>16)&MICROPROFILE_GROUP_MASK_ALL);}
+inline MicroProfileToken MicroProfileMakeToken(uint64_t nGroupMask, uint16_t nTimer){ return (nGroupMask<<16) | nTimer;}
 
 void MicroProfileFlip(); //! called once per frame.
 void MicroProfileDraw(uint32_t nWidth, uint32_t nHeight); //! call if drawing microprofilers
@@ -207,11 +186,11 @@ struct MicroProfileScopeHandler
 
 #define S g_MicroProfile
 #define MICROPROFILE_MAX_TIMERS 1024
-#define MICROPROFILE_MAX_GROUPS 16
+#define MICROPROFILE_MAX_GROUPS 48
 #define MICROPROFILE_MAX_GRAPHS 5
 #define MICROPROFILE_GRAPH_HISTORY 128
 #define MICROPROFILE_LOG_BUFFER_SIZE (((2048)<<10)/sizeof(MicroProfileLogEntry))
-#define MICROPROFILE_LOG_MAX_THREADS 16
+#define MICROPROFILE_LOG_MAX_THREADS 32
 #define MICROPROFILE_STACK_MAX 64
 
 
@@ -309,17 +288,17 @@ struct
 	
 	uint32_t nDisplay;
 	uint32_t nBars;
-	uint32_t nActiveGroup;
+	uint64_t nActiveGroup;
 
 	//menu/mouse over stuff
-	uint32_t nMenuActiveGroup;
+	uint64_t nMenuActiveGroup;
 	uint32_t nMenuAllGroups;
 	uint32_t nMenuAllThreads;
 	uint32_t nHoverToken;
 	uint32_t nHoverTime;
 	uint32_t nOverflow;
 
-	uint32_t nGroupMask;
+	uint64_t nGroupMask;
 	uint32_t nDirty;
 	uint32_t nStoredGroup;
 	uint32_t nFlipLog;
@@ -489,11 +468,11 @@ MicroProfileToken MicroProfileGetToken(const char* pGroup, const char* pName, ui
 		S.GroupInfo[S.nGroupCount].Type = Type;
 		nGroupIndex = S.nGroupCount++;
 		S.nGroupMask = (S.nGroupMask<<1)|1;
-		uprintf("***** CREATED group %s index %d mask %08x\n", pGroup, nGroupIndex, 1 << nGroupIndex);
-		ZASSERT(nGroupIndex < 16);//limit is 16 groups
+		uprintf("***** CREATED group %s index %d mask %08x\n", pGroup, nGroupIndex, 1ll << nGroupIndex);
+		ZASSERT(nGroupIndex < 48 );//limit is 48 groups
 	}
 	uint16_t nTimerIndex = S.nTotalTimers++;
-	uint16_t nGroupMask = 1 << nGroupIndex;
+	uint64_t nGroupMask = 1ll << nGroupIndex;
 	MicroProfileToken nToken = MicroProfileMakeToken(nGroupMask, nTimerIndex);
 	S.GroupInfo[nGroupIndex].nNumTimers++;
 	MP_ASSERT(S.GroupInfo[nGroupIndex].Type == Type); //dont mix cpu & gpu timers in the same group
@@ -512,7 +491,6 @@ inline void MicroProfileLogPut(MicroProfileToken nToken_, uint64_t nTick, MicroP
 {
 	if(S.nDisplay)
 	{
-		// MicroProfileThreadLog* pLog = g_MicroProfileThreadLog;
 		MP_ASSERT(pLog != 0); //this assert is hit if MicroProfileOnCreateThread is not called
 		uint32_t nPos = pLog->nPut.load(std::memory_order_relaxed);
 		uint32_t nNextPos = (nPos+1) % MICROPROFILE_LOG_BUFFER_SIZE;
@@ -699,7 +677,7 @@ void MicroProfileFlip()
 									nStackPos--;
 								}
 								uint64_t nTicks = LE.nTick - nTickStart;
-								uint32_t nTimerIndex = LE.nToken&0xffff;
+								uint32_t nTimerIndex = MicroProfileGetTimerIndex(LE.nToken);
 								S.Frame[nTimerIndex].nTicks += nTicks;
 								S.Frame[nTimerIndex].nCount += 1;
 							}
@@ -729,7 +707,7 @@ void MicroProfileFlip()
 			if(S.Graph[i].nToken != MICROPROFILE_INVALID_TOKEN)
 			{
 				MicroProfileToken nToken = S.Graph[i].nToken;
-				S.Graph[i].nHistory[S.nGraphPut] = S.Frame[nToken&0xffff].nTicks;
+				S.Graph[i].nHistory[S.nGraphPut] = S.Frame[MicroProfileGetTimerIndex(nToken)].nTicks;
 			}
 		}
 		S.nGraphPut = (S.nGraphPut+1) % MICROPROFILE_GRAPH_HISTORY;
@@ -957,13 +935,13 @@ void MicroProfilePrevAggregatePreset()
 
 void MicroProfileNextGroup()
 {
-	if(0xffff == S.nActiveGroup) return;
+	if(MICROPROFILE_GROUP_MASK_ALL == S.nActiveGroup) return;
 	S.nActiveGroup = (S.nActiveGroup+1)%S.nGroupCount;
 	MicroProfileClearGraph();
 }
 void MicroProfilePrevGroup()
 {
-	if(0xffff == S.nActiveGroup) return;
+	if(MICROPROFILE_GROUP_MASK_ALL == S.nActiveGroup) return;
 	S.nActiveGroup = (S.nActiveGroup+S.nGroupCount-1)%S.nGroupCount;
 	MicroProfileClearGraph();
 }
@@ -982,7 +960,7 @@ void MicroProfileToggleDisplayMode()
 		{
 			S.nDisplay = 2;
 			S.nStoredGroup = S.nActiveGroup;
-			S.nActiveGroup = 0xffff;
+			S.nActiveGroup = MICROPROFILE_GROUP_MASK_ALL;
 		}
 		break;		
 		case 0:
@@ -1208,7 +1186,7 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 				uint32_t nTickStart = pEntry->nStartRelative;
 				uint32_t nTickEnd = pEntry->nEndRelative;
 
-				uint32_t nColor = S.TimerInfo[ pEntry->nToken & 0xffff ].nColor;
+				uint32_t nColor = S.TimerInfo[ MicroProfileGetTimerIndex(pEntry->nToken) ].nColor;
 				if(pEntry == pMouseOver)
 					nColor = nHoverColor;
 				uint32_t nStackPos = pEntry->nStackDepth;
@@ -1282,24 +1260,24 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 
 
 
-void MicroProfileLoopActiveGroups(uint32_t nX, uint32_t nY, const char* pName, std::function<void (uint32_t, uint32_t, uint32_t, uint32_t, uint32_t)> CB)
+void MicroProfileLoopActiveGroups(uint32_t nX, uint32_t nY, const char* pName, std::function<void (uint32_t, uint32_t, uint64_t, uint32_t, uint32_t)> CB)
 {
 	if(pName)
 		MicroProfileDrawText(nX, nY, (uint32_t)-1, pName);
 
 	nY += S.nBarHeight + 2;
 	uint32_t nGroup = S.nActiveGroup;
-	uint32_t nGroupMask = (uint32_t)-1;
+	uint64_t nGroupMask = (uint64_t)-1;
 	uint32_t nCount = 0;
 	for(uint32_t j = 0; j < MICROPROFILE_MAX_GROUPS; ++j)
 	{
-		uint32_t nMask = 1 << j;
+		uint64_t nMask = 1ll << j;
 		if(nMask & nGroup)
 		{
 			nY += S.nBarHeight + 1;
 			for(uint32_t i = 0; i < S.nTotalTimers;++i)
 			{
-				uint32_t nTokenMask = MicroProfileGetGroupMask(S.TimerInfo[i].nToken);
+				uint64_t nTokenMask = MicroProfileGetGroupMask(S.TimerInfo[i].nToken);
 				if(nTokenMask & nMask)
 				{
 					CB(i, nCount, nMask, nX, nY);
@@ -1312,11 +1290,11 @@ void MicroProfileLoopActiveGroups(uint32_t nX, uint32_t nY, const char* pName, s
 }
 
 
-void MicroProfileCalcTimers(float* pTimers, float* pAverage, float* pMax, float* pCallAverage, uint16_t nGroup, uint32_t nSize)
+void MicroProfileCalcTimers(float* pTimers, float* pAverage, float* pMax, float* pCallAverage, uint64_t nGroup, uint32_t nSize)
 {
 	MICROPROFILE_SCOPEI("MicroProfile", "MicroProfileCalcTimers", 0x773300);
 	MicroProfileLoopActiveGroups(0, 0, 0, 
-		[&](uint32_t nTimer, uint32_t nIdx, uint32_t nGroupMask, uint32_t nX, uint32_t nY){
+		[&](uint32_t nTimer, uint32_t nIdx, uint64_t nGroupMask, uint32_t nX, uint32_t nY){
 			uint32_t nAggregateFrames = S.nAggregateFrames ? S.nAggregateFrames : 1;
 			uint32_t nAggregateCount = S.Aggregate[nTimer].nCount ? S.Aggregate[nTimer].nCount : 1;
 			float fMs = MicroProfileTickToMs(S.Frame[nTimer].nTicks);
@@ -1348,7 +1326,7 @@ uint32_t MicroProfileDrawBarArray(uint32_t nX, uint32_t nY, float* pTimers, cons
 	const uint32_t nTextWidth = 6 * (1+MICROPROFILE_TEXT_WIDTH);
 	const float fWidth = S.nBarWidth;
 	MicroProfileLoopActiveGroups(nX, nY, pName, 
-		[=](uint32_t nTimer, uint32_t nIdx, uint32_t nGroupMask, uint32_t nX, uint32_t nY){
+		[=](uint32_t nTimer, uint32_t nIdx, uint64_t nGroupMask, uint32_t nX, uint32_t nY){
 			//HER:
 			char sBuffer[SBUF_MAX];
 			snprintf(sBuffer, SBUF_MAX-1, "%5.2f", pTimers[nIdx]);
@@ -1363,7 +1341,7 @@ uint32_t MicroProfileDrawBarArray(uint32_t nX, uint32_t nY, float* pTimers, cons
 uint32_t MicroProfileDrawBarCallCount(uint32_t nX, uint32_t nY, const char* pName)
 {
 	MicroProfileLoopActiveGroups(nX, nY, pName, 
-		[](uint32_t nTimer, uint32_t nIdx, uint32_t nGroupMask, uint32_t nX, uint32_t nY){
+		[](uint32_t nTimer, uint32_t nIdx, uint64_t nGroupMask, uint32_t nX, uint32_t nY){
 			char sBuffer[SBUF_MAX];
 			snprintf(sBuffer, SBUF_MAX-1, "%5d", S.Frame[nTimer].nCount);//fix
 			MicroProfileDrawText(nX, nY, (uint32_t)-1, sBuffer);
@@ -1377,7 +1355,7 @@ uint32_t MicroProfileDrawBarCallCount(uint32_t nX, uint32_t nY, const char* pNam
 uint32_t MicroProfileDrawBarLegend(uint32_t nX, uint32_t nY)
 {
 	MicroProfileLoopActiveGroups(nX, nY, 0, 
-		[](uint32_t nTimer, uint32_t nIdx, uint32_t nGroupMask, uint32_t nX, uint32_t nY){
+		[](uint32_t nTimer, uint32_t nIdx, uint64_t nGroupMask, uint32_t nX, uint32_t nY){
 			MicroProfileDrawText(nX, nY, S.TimerInfo[nTimer].nColor, S.TimerInfo[nTimer].pName);
 			if(S.nMouseY >= nY && S.nMouseY < nY + MICROPROFILE_TEXT_HEIGHT+1  && S.nMouseX < nX + 20 * (MICROPROFILE_TEXT_WIDTH+1))
 			{
@@ -1498,7 +1476,7 @@ void MicroProfileDrawBarView(uint32_t nScreenWidth, uint32_t nScreenHeight)
 	uint32_t nNumGroups = 0;
 	for(uint32 j = 0; j < MICROPROFILE_MAX_GROUPS; ++j)
 	{
-		if(S.nActiveGroup & (1 << j))
+		if(S.nActiveGroup & (1ll << j))
 		{
 			nNumTimers += S.GroupInfo[j].nNumTimers;
 			nNumGroups += 1;
@@ -1517,7 +1495,7 @@ void MicroProfileDrawBarView(uint32_t nScreenWidth, uint32_t nScreenHeight)
 	uint32_t nLegendOffset = 1;
 	for(uint32 j = 0; j < MICROPROFILE_MAX_GROUPS; ++j)
 	{
-		if(S.nActiveGroup & (1 << j))
+		if(S.nActiveGroup & (1ll << j))
 		{
 			MicroProfileDrawText(nX, nY + (1+nHeight) * nLegendOffset, (uint32_t)-1, S.GroupInfo[j].pName);
 			nLegendOffset += S.GroupInfo[j].nNumTimers+1;
@@ -1598,7 +1576,7 @@ bool MicroProfileDrawMenu(uint32_t nWidth, uint32_t nHeight)
 			else
 			{
 				index = index-1;
-				bSelected = 0 != (S.nMenuActiveGroup & (1 << index));
+				bSelected = 0 != (S.nMenuActiveGroup & (1ll << index));
 				if(index < MICROPROFILE_MAX_GROUPS && S.GroupInfo[index].pName)
 					return S.GroupInfo[index].pName;
 				else
@@ -1613,9 +1591,16 @@ bool MicroProfileDrawMenu(uint32_t nWidth, uint32_t nHeight)
 			}
 			else if(index-1 < MICROPROFILE_LOG_MAX_THREADS)
 			{
-				bSelected = S.nThreadActive[index-1];
-				MP_ASSERT(S.Pool[index-1]);
-				return S.Pool[index-1]->ThreadName[0]?&S.Pool[index-1]->ThreadName[0]:0;
+				if(S.Pool[index-1])
+				{
+					bSelected = S.nThreadActive[index-1];
+					return S.Pool[index-1]->ThreadName[0]?&S.Pool[index-1]->ThreadName[0]:0;
+				}
+				else
+				{
+					bSelected = false;
+					return 0;
+				}
 			}
 			return 0;
 		},
@@ -1675,7 +1660,7 @@ bool MicroProfileDrawMenu(uint32_t nWidth, uint32_t nHeight)
 			if(nIndex == 0)
 				S.nMenuAllGroups = 1-S.nMenuAllGroups;
 			else
-				S.nMenuActiveGroup ^= (1 << (nIndex-1));
+				S.nMenuActiveGroup ^= (1ll << (nIndex-1));
 		},
 		[](int nIndex)
 		{
@@ -1814,7 +1799,7 @@ void MicroProfileDraw(uint32_t nWidth, uint32_t nHeight)
 				MicroProfileToggleGraph(S.nHoverToken);
 		}
 	}
-	S.nActiveGroup = S.nMenuAllGroups ? (S.nGroupMask & (uint32_t)-1) : S.nMenuActiveGroup;
+	S.nActiveGroup = S.nMenuAllGroups ? (S.nGroupMask & (uint64_t)-1) : S.nMenuActiveGroup;
 	S.nMouseLeft = S.nMouseRight = 0;
 	if(S.nOverflow)
 		S.nOverflow--;
