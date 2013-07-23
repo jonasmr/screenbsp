@@ -308,7 +308,6 @@ extern "C"
 int SDL_main(int argc, char* argv[])
 {
 
-	MicroProfileInit();
 	MicroProfileOnThreadCreate("Main");
 
 	if(SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER) < 0) {

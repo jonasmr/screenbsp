@@ -14,7 +14,24 @@
 // frame end marker
 // splitters in graph
 // exclusive time
+// disabling of microprofiler.
 
+
+#define MICROPROFILE_ENABLED 1
+
+#if 0 == MICROPROFILE_ENABLED
+
+#define MICROPROFILE_DECLARE(var)
+#define MICROPROFILE_DEFINE(var, group, name, color)
+#define MICROPROFILE_DECLARE_GPU(var)
+#define MICROPROFILE_DEFINE_GPU(var, group, name, color)
+#define MICROPROFILE_SCOPE(var) do{}while(0)
+#define MICROPROFILE_SCOPEI(group, name, color) do{}while(0)
+#define MICROPROFILE_SCOPEGPU(var) do{}while(0)
+#define MICROPROFILE_SCOPEGPUI(group, name, color) do{}while(0)
+#define MicroProfileOnThreadCreate(foo) do{}while(0)
+
+#else
 
 #include <stdint.h>
 #include <string.h>
@@ -459,6 +476,7 @@ void MicroProfileInit()
 
 void MicroProfileOnThreadCreate(const char* pThreadName)
 {
+	MicroProfileInit();
 	std::lock_guard<std::mutex> Lock(MicroProfileMutex());
 	MP_ASSERT(g_MicroProfileThreadLog == 0);
 	MicroProfileThreadLog* pLog = 0;
@@ -1900,5 +1918,7 @@ void MicroProfileMoveGraph(int nZoom, int nPanX, int nPanY)
 	if(S.nOffsetY<0)
 		S.nOffsetY = 0;
 }
+
+#endif
 
 #endif
