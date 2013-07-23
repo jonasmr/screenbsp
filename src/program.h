@@ -9,7 +9,13 @@ enum
 	MAX_WORLD_OBJECTS = 2048,
 };
 
-struct __attribute__((aligned(16))) SObject
+#ifdef __APPLE__
+#define __ALIGN16 __attribute__((aligned(16))) 
+#elif defined(_WIN32)
+#define __ALIGN16 __declspec(align(16))
+#endif
+
+struct __ALIGN16 SObject
 {
 	m mObjectToWorld;
 	v3 vSize;

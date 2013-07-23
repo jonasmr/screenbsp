@@ -1,3 +1,7 @@
 .depend
 /*\.o$
 bsp
+syntax: glob
+build/
+bullet-2.81/
+sdl/

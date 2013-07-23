@@ -18,6 +18,21 @@
 #include "microprofile.h"
 #include "physics.h"
 
+#ifdef _WIN32
+#include <windows.h>
+void usleep(__int64 usec) 
+{ 
+	HANDLE timer; 
+	LARGE_INTEGER ft; 
+
+	ft.QuadPart = -(10*usec); // Convert to 100 nanosecond interval, negative value indicates relative time
+
+	timer = CreateWaitableTimer(NULL, TRUE, NULL); 
+	SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0); 
+	WaitForSingleObject(timer, INFINITE); 
+	CloseHandle(timer); 
+}
+#endif
 
 SDL_Surface* g_Surface;
 uint32_t g_BaseWidth =  800;
@@ -270,9 +285,12 @@ int ProgramMain();
 void ProgramInit();
 
 
-std::atomic<int> foo{42};
+std::atomic<int> foo;
 
-__attribute__ ((noinline))
+
+
+
+
 int cons__(std::atomic<int>& at, int* p0, int* p1)
 {
 	*p0 = 0;
@@ -281,7 +299,6 @@ int cons__(std::atomic<int>& at, int* p0, int* p1)
 	return v + l;
 }
 
-__attribute__ ((noinline))
 int acq__(std::atomic<int>& at, int* p0, int* p1)
 {
 	*p0 = 0;
@@ -294,7 +311,6 @@ int acq__(std::atomic<int>& at, int* p0, int* p1)
 }
 
 
-__attribute__ ((noinline))
 void sto___(std::atomic<int>& at, int r, int* p0, int* p1)
 {
 	*p0 = 0;
