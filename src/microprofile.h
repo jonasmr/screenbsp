@@ -4,13 +4,14 @@
 //  	border
 //		unify / cleanup
 //		faster
-//make mouse callback cleaner
+// make mouse callback cleaner
 // one move
 // one click .. everything should be derived from these
 // support for 48/64 groups
 // presets
 // target framerate
 // windows
+// on demand buffer alloc
 
 
 #include <stdint.h>
@@ -125,27 +126,27 @@ void MicroProfileLeaveThreadSafe(MicroProfileToken nToken, uint64_t nTick);
 inline uint16_t MicroProfileGetTimerIndex(MicroProfileToken t){ return (t&0xffff); }
 inline uint16_t MicroProfileGetGroupMask(MicroProfileToken t){ return ((t>>16)&0xffff);}
 inline MicroProfileToken MicroProfileMakeToken(uint16_t nGroupMask, uint16_t nTimer){ return ((uint32_t)nGroupMask<<16) | nTimer;}
-inline uint64_t MicroProfileGetPackedCount(uint64_t nTimer)
-{
-	return nTimer >> 48ll;
-}
-inline uint64_t MicroProfileGetPackedTicks(uint64_t nTimer)
-{
-	return nTimer & 0xffffffffffff;
-}
-inline uint64_t MicroProfilePackTimer(int nCount, uint64_t nTicks)
-{
-	return ((0x000000000000ffff&(uint64_t)nCount) << 48ll) | (nTicks&0xffffffffffff);
-}
-inline uint64_t MicroProfileAddTimer(uint64_t nTimer, uint64_t nCount, uint64_t nTicks)
-{
-	uint64_t nPackedCount = MicroProfileGetPackedCount(nTimer);
-	uint64_t nPackedTicks = MicroProfileGetPackedTicks(nTimer);
-	nPackedCount += nCount;
-	MP_ASSERT(nPackedCount <= 0xffff);
-	nPackedTicks += nTicks;
-	return MicroProfilePackTimer(nPackedCount, nPackedTicks);
-}
+// inline uint64_t MicroProfileGetPackedCount(uint64_t nTimer)
+// {
+// 	return nTimer >> 48ll;
+// }
+// inline uint64_t MicroProfileGetPackedTicks(uint64_t nTimer)
+// {
+// 	return nTimer & 0xffffffffffff;
+// }
+// inline uint64_t MicroProfilePackTimer(int nCount, uint64_t nTicks)
+// {
+// 	return ((0x000000000000ffff&(uint64_t)nCount) << 48ll) | (nTicks&0xffffffffffff);
+// }
+// inline uint64_t MicroProfileAddTimer(uint64_t nTimer, uint64_t nCount, uint64_t nTicks)
+// {
+// 	uint64_t nPackedCount = MicroProfileGetPackedCount(nTimer);
+// 	uint64_t nPackedTicks = MicroProfileGetPackedTicks(nTimer);
+// 	nPackedCount += nCount;
+// 	MP_ASSERT(nPackedCount <= 0xffff);
+// 	nPackedTicks += nTicks;
+// 	return MicroProfilePackTimer(nPackedCount, nPackedTicks);
+// }
 
 
 void MicroProfileFlip(); //! called once per frame.
@@ -209,7 +210,7 @@ struct MicroProfileScopeHandler
 #define MICROPROFILE_MAX_GROUPS 16
 #define MICROPROFILE_MAX_GRAPHS 5
 #define MICROPROFILE_GRAPH_HISTORY 128
-#define MICROPROFILE_LOG_BUFFER_SIZE (((4*2048)<<10)/sizeof(MicroProfileLogEntry))
+#define MICROPROFILE_LOG_BUFFER_SIZE (((2048)<<10)/sizeof(MicroProfileLogEntry))
 #define MICROPROFILE_LOG_MAX_THREADS 16
 #define MICROPROFILE_STACK_MAX 64
 
@@ -290,7 +291,6 @@ struct MicroProfileThreadLog
 	uint32_t				nGpuGet[MICROPROFILE_GPU_FRAME_DELAY];
 	uint32_t 				nActive;
 	uint32_t 				nGpu;
-	uint32_t 				nLogPos;
 	enum
 	{
 		THREAD_MAX_LEN = 64,
@@ -360,8 +360,11 @@ struct
 	uint32_t 				nActiveMenu;
 
 	uint32_t				nThreadActive[MICROPROFILE_LOG_MAX_THREADS];
-	MicroProfileThreadLog 	Pool[MICROPROFILE_LOG_MAX_THREADS];
-	MicroProfileThreadLog 	DisplayPool[MICROPROFILE_LOG_MAX_THREADS];
+	MicroProfileThreadLog* 	Pool[MICROPROFILE_LOG_MAX_THREADS];
+	MicroProfileThreadLog* 	DisplayPool[MICROPROFILE_LOG_MAX_THREADS];
+	uint32_t				nNumLogs;
+	uint32_t 				nNumDisplayLogs;
+	uint32_t 				nMemUsage;
 
 	uint64_t DisplayPoolFrameStartCpu;
 	uint64_t DisplayPoolFrameEndCpu;
@@ -369,7 +372,6 @@ struct
 	uint64_t DisplayPoolFrameEndGpu;
 	MicroProfileLogEntry* pDisplayMouseOver;
 	
-	MicroProfileThreadLog* pFreeThreadLogList;
 
 
 
@@ -380,9 +382,9 @@ MP_THREAD_LOCAL MicroProfileThreadLog* g_MicroProfileThreadLog = 0;
 static uint32_t 				g_nMicroProfileBackColors[2] = {  0x474747, 0x313131 };
 static uint32_t g_AggregatePresets[] = {0, 10, 20, 30, 60, 120};
 
-inline std::mutex& MicroProfileMutex()
+inline std::recursive_mutex& MicroProfileMutex()
 {
-	static std::mutex Mutex;
+	static std::recursive_mutex Mutex;
 	return Mutex;
 }
 
@@ -399,13 +401,17 @@ inline uint16_t MicroProfileGetGroupIndex(MicroProfileToken t){ return S.TimerIn
 
 
 #include "debug.h"
+MicroProfileThreadLog* MicroProfileCreateThreadLog(const char* pName);
+
 
 void MicroProfileInit()
 {
-	std::lock_guard<std::mutex> Lock(MicroProfileMutex());
+	std::lock_guard<std::recursive_mutex> Lock(MicroProfileMutex());
 	static bool bOnce = true;
 	if(bOnce)
 	{
+		uprintf("SIZE IS %dmb\n", sizeof(S)>>10);
+		S.nMemUsage += sizeof(S);
 		bOnce = false;
 		memset(&S, 0, sizeof(S));
 		S.nGroupCount = 0;
@@ -428,48 +434,36 @@ void MicroProfileInit()
 		S.nHeight = 100;
 		S.nActiveMenu = (uint32_t)-1;
 
+		MicroProfileThreadLog* pGpu = MicroProfileCreateThreadLog("GPU");
+		g_MicroProfileGpuLog = pGpu;
+		pGpu->nGpu = 1;
 
-
-
-		for(uint32_t i = 0; i < MICROPROFILE_LOG_MAX_THREADS; ++i)
-		{
-			if(i + 1 < MICROPROFILE_LOG_MAX_THREADS)
-			{
-				S.Pool[i].pNext = &S.Pool[i+1];
-			}
-			else
-			{
-				S.Pool[i].pNext = 0;
-			}
-			S.Pool[i].nPut.store(0, std::memory_order_relaxed);
-			S.Pool[i].nGet.store(0, std::memory_order_relaxed);
-			S.Pool[i].nGpu = 0;
-		}
-		S.Pool[0].pNext = 0;
-		S.Pool[0].nGpu = 1;
-		strcpy(S.Pool[0].ThreadName, "GPU");
-		g_MicroProfileGpuLog = &S.Pool[0];
-		S.pFreeThreadLogList = &S.Pool[1];
 	}
 }
 
 
-void MicroProfileOnThreadCreate(const char* pThreadName)
+MicroProfileThreadLog* MicroProfileCreateThreadLog(const char* pName)
 {
-	std::lock_guard<std::mutex> Lock(MicroProfileMutex());
-	MP_ASSERT(g_MicroProfileThreadLog == 0);
-	MicroProfileThreadLog* pLog = 0;
-	MicroProfileThreadLog* pNext = 0;
-	pLog = S.pFreeThreadLogList;
-	MP_ASSERT(pLog);
-	pNext = pLog->pNext;
-	S.pFreeThreadLogList = pNext;
-	g_MicroProfileThreadLog = pLog;
-	int len = strlen(pThreadName);
+	MicroProfileThreadLog* pLog = new MicroProfileThreadLog;
+	S.nMemUsage += sizeof(MicroProfileThreadLog);
+	uprintf("***** MEM USAGE %dkb\n", S.nMemUsage >> 10);
+	memset(pLog, 0, sizeof(*pLog));
+	int len = strlen(pName);
 	int maxlen = sizeof(pLog->ThreadName)-1;
 	len = len < maxlen ? len : maxlen;
-	memcpy(&pLog->ThreadName[0], pThreadName, len);
+	memcpy(&pLog->ThreadName[0], pName, len);
 	pLog->ThreadName[len] = '\0';
+	return pLog;
+}
+
+void MicroProfileOnThreadCreate(const char* pThreadName)
+{
+	std::lock_guard<std::recursive_mutex> Lock(MicroProfileMutex());
+	MP_ASSERT(g_MicroProfileThreadLog == 0);
+	MicroProfileThreadLog* pLog = MicroProfileCreateThreadLog(pThreadName);
+	MP_ASSERT(pLog);
+	g_MicroProfileThreadLog = pLog;
+	S.Pool[S.nNumLogs++] = pLog;
 }
 
 
@@ -477,7 +471,7 @@ void MicroProfileOnThreadCreate(const char* pThreadName)
 MicroProfileToken MicroProfileGetToken(const char* pGroup, const char* pName, uint32_t nColor, MicroProfileTokenType Type)
 {
 	MicroProfileInit();
-	std::lock_guard<std::mutex> Lock(MicroProfileMutex());
+	std::lock_guard<std::recursive_mutex> Lock(MicroProfileMutex());
 	uint16_t nGroupIndex = 0xffff;
 	for(uint32_t i = 0; i < S.nGroupCount; ++i)
 	{
@@ -581,6 +575,8 @@ void MicroProfileGpuLeave(MicroProfileToken nToken_, uint64_t nTickStart)
 }
 void MicroProfileFlip()
 {
+	std::lock_guard<std::recursive_mutex> Lock(MicroProfileMutex());
+
 	MICROPROFILE_SCOPEI("MicroProfile", "MicroProfileFlip", 0x3355ee);
 	uint64_t nFrameStartCpu = S.nFrameStartCpu;
 	uint64_t nFrameEndCpu = MP_TICK();
@@ -601,15 +597,24 @@ void MicroProfileFlip()
 	uint32_t nGetStart[MICROPROFILE_LOG_MAX_THREADS];
 	for(uint32_t i = 0; i < MICROPROFILE_LOG_MAX_THREADS; ++i)
 	{
-		if(!S.Pool[i].nGpu)
+		MicroProfileThreadLog* pLog = S.Pool[i];
+		if(!pLog)
 		{
-			nPutStart[i] = S.Pool[i].nPut.load(std::memory_order_acquire);
-			nGetStart[i] = S.Pool[i].nGet.load(std::memory_order_relaxed);
+				nPutStart[i] = 0;
+				nGetStart[i] = 0;
 		}
-		else // GPU update is lagging 
+		else
 		{
-			nPutStart[i] = S.Pool[i].nGpuGet[0]; 
-			nGetStart[i] = S.Pool[i].nGet.load(std::memory_order_relaxed);
+			if(!pLog->nGpu)
+			{
+				nPutStart[i] = pLog->nPut.load(std::memory_order_acquire);
+				nGetStart[i] = pLog->nGet.load(std::memory_order_relaxed);
+			}
+			else // GPU update is lagging 
+			{
+				nPutStart[i] = pLog->nGpuGet[0]; 
+				nGetStart[i] = pLog->nGet.load(std::memory_order_relaxed);
+			}
 		}
 	}
 	if(S.nFlipLog)
@@ -629,7 +634,8 @@ void MicroProfileFlip()
 				uint32_t nPut = nPutStart[i];
 				uint32_t nGet = nGetStart[i];
 				uint32_t nRange[2][2] = { {0, 0}, {0, 0}, };
-				MicroProfileThreadLog* pLog = &S.Pool[i];
+				MicroProfileThreadLog* pLog = S.Pool[i];
+				if(!pLog) continue;
 
 				if(nPut > nGet)
 				{
@@ -653,7 +659,7 @@ void MicroProfileFlip()
 				uint64_t nFrameStart = pLog->nGpu ? nFrameStartGpu : nFrameStartCpu;
 				uint64_t nFrameEnd = pLog->nGpu ? nFrameEndGpu : nFrameEndCpu;
 
-				if(S.Pool[i].nGpu)
+				if(pLog->nGpu)
 				{
 					for(uint32_t j = 0; j < 2; ++j)
 					{
@@ -751,8 +757,9 @@ void MicroProfileFlip()
 			{
 				uint32_t nPut = nPutStart[i];
 				uint32_t nGet = nGetStart[i];
-				MicroProfileThreadLog* pLog = &S.Pool[i];
-				pLog->nLogPos = 1;
+				MicroProfileThreadLog* pLog = S.Pool[i];
+				if(!pLog)
+					continue;
 
 				uint64_t nFrameStart = pLog->nGpu ? nFrameStartGpu : nFrameStartCpu;
 				uint64_t nFrameEnd = pLog->nGpu ? nFrameEndGpu : nFrameEndCpu;
@@ -835,7 +842,14 @@ void MicroProfileFlip()
 					MP_ASSERT(nTickStart <= nTickEnd);
 				}
 				uint32_t nOut = 0;
-				MicroProfileThreadLog* pDest = &S.DisplayPool[i];
+				MicroProfileThreadLog* pDest = S.DisplayPool[i];
+				if(!pDest)
+				{
+					S.DisplayPool[i] = new MicroProfileThreadLog;
+					S.nMemUsage += sizeof(MicroProfileThreadLog);
+					uprintf("***** MEM USAGE %dkb\n", S.nMemUsage >> 10);
+					pDest = S.DisplayPool[i];
+				}
 				uint32_t nStackDepth = 0;
 				if(MICROPROFILE_STACK_MAX != nStartEntryPos)
 				{
@@ -869,11 +883,11 @@ void MicroProfileFlip()
 						}
 					}
 				}
-				S.DisplayPool[i].nGet.store(0, std::memory_order_relaxed);
-				S.DisplayPool[i].nPut.store(nOut, std::memory_order_relaxed);
-				//S.DisplayPool[i].nOwningThread = S.Pool[i].nOwningThread;
-				S.DisplayPool[i].nGpu = S.Pool[i].nGpu;
-				memcpy(&S.DisplayPool[i].ThreadName[0], &S.Pool[i].ThreadName[0], sizeof(S.Pool[i].ThreadName));
+				pDest->nGet.store(0, std::memory_order_relaxed);
+				pDest->nPut.store(nOut, std::memory_order_relaxed);
+				//pDest->nOwningThread = S.Pool[i].nOwningThread;
+				pDest->nGpu = pLog->nGpu;
+				memcpy(&pDest->ThreadName[0], &pLog->ThreadName[0], sizeof(pLog->ThreadName));
 			}
 			S.DisplayPoolFrameStartCpu = nFrameStartCpu;
 			S.DisplayPoolFrameEndCpu = nFrameEndCpu;
@@ -883,18 +897,22 @@ void MicroProfileFlip()
 	}
 	for(uint32_t i = 0; i < MICROPROFILE_LOG_MAX_THREADS; ++i)
 	{
-		if(!S.Pool[i].nGpu)
+		MicroProfileThreadLog* pLog = S.Pool[i];
+		if(pLog)
 		{
-			S.Pool[i].nGet.store(nPutStart[i], std::memory_order_release);
-		}
-		else
-		{
-			S.Pool[i].nGet.store(S.Pool[i].nGpuGet[0], std::memory_order_release);
-			for(uint32_t j = 0; j < MICROPROFILE_GPU_FRAME_DELAY-1; ++j)
+			if(!pLog->nGpu)
 			{
-				S.Pool[i].nGpuGet[j] = S.Pool[i].nGpuGet[j+1];
+				pLog->nGet.store(nPutStart[i], std::memory_order_release);
 			}
-			S.Pool[i].nGpuGet[MICROPROFILE_GPU_FRAME_DELAY-1] = nPutStart[i];
+			else
+			{
+				pLog->nGet.store(pLog->nGpuGet[0], std::memory_order_release);
+				for(uint32_t j = 0; j < MICROPROFILE_GPU_FRAME_DELAY-1; ++j)
+				{
+					pLog->nGpuGet[j] = pLog->nGpuGet[j+1];
+				}
+				pLog->nGpuGet[MICROPROFILE_GPU_FRAME_DELAY-1] = nPutStart[i];
+			}
 		}
 	}
 }
@@ -1158,14 +1176,14 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 		nHoverCounterDelta = -10;
 	else if(nHoverCounter < 100)
 		nHoverCounterDelta = 10;
-	MP_ASSERT(nHoverCounter>=0 && nHoverCounter<= 255);
-	nHoverCounter &= 0XFF;
 	uint32_t nHoverColor = (nHoverCounter<<24)|(nHoverCounter<<16)|(nHoverCounter<<8)|nHoverCounter;
-	uint32_t nLinesDrawn[MICROPROFILE_STACK_MAX]={0};
 
+	uint32_t nLinesDrawn[MICROPROFILE_STACK_MAX]={0};
 	for(uint32_t j = 0; j < MICROPROFILE_LOG_MAX_THREADS; ++j)
 	{
-		MicroProfileThreadLog* pLog = &S.DisplayPool[j];
+		MicroProfileThreadLog* pLog = S.DisplayPool[j];
+		if(!pLog)
+			continue;
 		uint32_t nSize = pLog->nPut != pLog->nGet;
 		uint32_t nMaxStackDepth = 0;
 		if(0 == nSize || (0==S.nThreadActive[j] && 0==S.nMenuAllThreads))
@@ -1596,7 +1614,8 @@ bool MicroProfileDrawMenu(uint32_t nWidth, uint32_t nHeight)
 			else if(index-1 < MICROPROFILE_LOG_MAX_THREADS)
 			{
 				bSelected = S.nThreadActive[index-1];
-				return S.Pool[index-1].ThreadName[0]?&S.Pool[index-1].ThreadName[0]:0;
+				MP_ASSERT(S.Pool[index-1]);
+				return S.Pool[index-1]->ThreadName[0]?&S.Pool[index-1]->ThreadName[0]:0;
 			}
 			return 0;
 		},
