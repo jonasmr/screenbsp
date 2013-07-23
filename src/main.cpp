@@ -77,11 +77,16 @@ void WorkerThread(int threadId)
 		case 0:
 		{
 			usleep(100);
-			{MICROPROFILE_SCOPEI("Thread0", "Work Thread0", c4); usleep(200);
-			{MICROPROFILE_SCOPEI("Thread0", "Work Thread1", c3); usleep(200);
-			{MICROPROFILE_SCOPEI("Thread0", "Work Thread2", c2); usleep(200);
-			{MICROPROFILE_SCOPEI("Thread0", "Work Thread3", c1); usleep(200);
-			}}}}
+			{MICROPROFILE_SCOPEI("Thread0..", "Work Thread0", c4); usleep(200);
+			{MICROPROFILE_SCOPEI("Thread011", "Work Thread1", c3); usleep(200);
+			{MICROPROFILE_SCOPEI("Thread0111", "Work Thread2", c2); usleep(200);
+			{MICROPROFILE_SCOPEI("Thread0222", "Work Thread3", c1); usleep(200);
+			{MICROPROFILE_SCOPEI("Thread0222", "Work Thread3", c1); usleep(200);
+			{MICROPROFILE_SCOPEI("Thread022222", "Work Thread3", c1); usleep(200);
+			{MICROPROFILE_SCOPEI("Thread02223333", "Work Thread3", c1); usleep(200);
+			{MICROPROFILE_SCOPEI("Thread02223333444", "Work Thread3", c1); usleep(200);
+			{MICROPROFILE_SCOPEI("Thread022233335555", "Work Thread3", c1); usleep(200);
+			}}}}}}}}}
 		}
 		break;
 		
@@ -97,10 +102,10 @@ void WorkerThread(int threadId)
 			{
 				usleep(1000);
 				{MICROPROFILE_SCOPEI("Thread2", "Worker2", c0); usleep(200);
-				{MICROPROFILE_SCOPEI("Thread2", "InnerWork0", c1); usleep(100);
-				{MICROPROFILE_SCOPEI("Thread2", "InnerWork1", c2); usleep(100);
-				{MICROPROFILE_SCOPEI("Thread2", "InnerWork2", c3); usleep(100);
-				{MICROPROFILE_SCOPEI("Thread2", "InnerWork3", c4); usleep(100);
+				{MICROPROFILE_SCOPEI("Thread21", "InnerWork0", c1); usleep(100);
+				{MICROPROFILE_SCOPEI("Thread22", "InnerWork1", c2); usleep(100);
+				{MICROPROFILE_SCOPEI("Thread23", "InnerWork2", c3); usleep(100);
+				{MICROPROFILE_SCOPEI("Thread24", "InnerWork3", c4); usleep(100);
 				}}}}}
 			}
 			break;
@@ -114,13 +119,13 @@ void WorkerThread(int threadId)
 					usleep(100);
 					for(uint32_t j = 0; j < 4; ++j)
 					{
-						MICROPROFILE_SCOPEI("ThreadWork", "Inner1", c4);
+						MICROPROFILE_SCOPEI("ThreadWork1", "Inner1", c4);
 						usleep(50);
-						MICROPROFILE_SCOPEI("ThreadWork", "Inner2", c2);
+						MICROPROFILE_SCOPEI("ThreadWork2", "Inner2", c2);
 						usleep(50);
-						MICROPROFILE_SCOPEI("ThreadWork", "Inner3", c3);
+						MICROPROFILE_SCOPEI("ThreadWork3", "Inner3", c3);
 						usleep(50);
-						MICROPROFILE_SCOPEI("ThreadWork", "Inner4", c3);
+						MICROPROFILE_SCOPEI("ThreadWork4", "Inner4", c3);
 						usleep(50);
 					}
 				}
