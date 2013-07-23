@@ -3,8 +3,7 @@
 #include "glinc.h"
 #include "text.h"
 
-
-
+#if MICROPROFILE_ENABLED
 void MicroProfileDrawText(uint32_t nX, uint32_t nY, uint32_t nColor, const char* pText)
 {
 	TextBegin();
@@ -106,6 +105,4 @@ uint64_t MicroProfileGpuGetTimeStamp(uint32_t nKey)
 	return 1;
 	#endif
 }
-
-
-
+#endif
