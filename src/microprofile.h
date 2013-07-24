@@ -8,7 +8,6 @@
 // one move
 // one click .. everything should be derived from these
 // presets
-// target framerate
 // finish gpu markers
 // frame end marker
 // splitters in graph
@@ -1427,7 +1426,7 @@ bool MicroProfileDrawGraph(uint32_t nScreenWidth, uint32_t nScreenHeight)
 	float fDX = MICROPROFILE_GRAPH_WIDTH * 1.f / MICROPROFILE_GRAPH_HISTORY;  
 	float fDY = MICROPROFILE_GRAPH_HEIGHT;
 	uint32_t nPut = S.nGraphPut;
-	float fToPrc = S.fRcpReferenceTime * 4 / 3;
+	float fToPrc = S.fRcpReferenceTime * 3 / 4;
 	float* pGraphData = (float*)alloca(sizeof(float)* MICROPROFILE_GRAPH_HISTORY*2);
 	for(uint32_t i = 0; i < MICROPROFILE_MAX_GRAPHS; ++i)
 	{
