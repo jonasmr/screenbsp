@@ -6,8 +6,12 @@
 #if MICROPROFILE_ENABLED
 void MicroProfileDrawText(uint32_t nX, uint32_t nY, uint32_t nColor, const char* pText)
 {
+	MICROPROFILE_SCOPEI("MicroProfile", "TextDraw", 0xff88ee);
 	TextBegin();
-	TextPut(nX, nY, pText, -1);
+	{
+		MICROPROFILE_SCOPEI("MicroProfile", "TextPut", 0xff88ee);
+		TextPut(nX, nY, pText, -1);
+	}
 	TextEnd();
 }
 void MicroProfileDrawBox(uint32_t nX, uint32_t nY, uint32_t nWidth, uint32_t nHeight, uint32_t nColor)
