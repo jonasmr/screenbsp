@@ -184,6 +184,9 @@ void CheckGLError()
 	}
 }
 
+uint32_t g_MicroProfileMouseX = 0;
+uint32_t g_MicroProfileMouseY = 0;
+int g_MicroProfileMouseDelta = 0;
 
 void HandleEvent(SDL_Event* pEvt)
 {
@@ -201,30 +204,31 @@ void HandleEvent(SDL_Event* pEvt)
 	case SDL_MOUSEMOTION:
 		g_MouseState.position[0] = pEvt->motion.x;
 		g_MouseState.position[1] = g_Height-pEvt->motion.y; // flip to match opengl
-		MicroProfileMouseMove(g_MouseState.position[0], pEvt->motion.y);
-		{
-			static int nPosX = -1;
-			static int nPosY = -1;
-			if(g_KeyboardState.keys[SDLK_LCTRL] & BUTTON_DOWN)
-			{
-				if(nPosX>=0 && nPosY>=0)
-				{
-					MicroProfileMoveGraph(0,pEvt->motion.x-nPosX, pEvt->motion.y-nPosY);
-				}
-				nPosX = pEvt->motion.x;
-				nPosY = pEvt->motion.y;
-			}
-			else
-			{
-				nPosX = nPosY = -1;
-			}
-		}
+		g_MicroProfileMouseX = g_MouseState.position[0];
+		g_MicroProfileMouseY = pEvt->motion.y;
+		//MicroProfileMouseMove(g_MouseState.position[0], pEvt->motion.y);
+		//{
+		//	static int nPosX = -1;
+		//	static int nPosY = -1;
+		//	if(g_KeyboardState.keys[SDLK_LCTRL] & BUTTON_DOWN)
+		//	{
+		//		if(nPosX>=0 && nPosY>=0)
+		//		{
+		//			MicroProfileMoveGraph(0,pEvt->motion.x-nPosX, pEvt->motion.y-nPosY);
+		//		}
+		//		nPosX = pEvt->motion.x;
+		//		nPosY = pEvt->motion.y;
+		//	}
+		//	else
+		//	{
+		//		nPosX = nPosY = -1;
+		//	}
+		//}
 		break;
 	case SDL_MOUSEBUTTONDOWN:
 	case SDL_MOUSEBUTTONUP:
 		if(pEvt->type == SDL_MOUSEBUTTONUP)
 		{
-			MicroProfileMouseClick(pEvt->button.button == 1, pEvt->button.button == 3);
 		}
 		if(pEvt->button.button < MOUSE_BUTTON_MAX)
 		{
@@ -240,11 +244,11 @@ void HandleEvent(SDL_Event* pEvt)
 		}
 		if(pEvt->button.button == SDL_BUTTON_WHEELUP)
 		{
-			MicroProfileMoveGraph(-1,0,0);
+			g_MicroProfileMouseDelta--;
 		}
 		else if(pEvt->button.button == SDL_BUTTON_WHEELDOWN)
 		{
-			MicroProfileMoveGraph(1,0,0);
+			g_MicroProfileMouseDelta++;
 		}
 	// 	}
 	// 	break;
@@ -416,6 +420,12 @@ int SDL_main(int argc, char* argv[])
 			}
 
 		}
+
+
+		//MicroProfileMouseClick();pEvt->button.button == 1, pEvt->button.button == 3);
+		MicroProfileMouseButton(g_MouseState.button[1] & BUTTON_DOWN ? 1 : 0, g_MouseState.button[3] & BUTTON_DOWN ? 1 : 0);
+		MicroProfileMousePosition(g_MicroProfileMouseX, g_MicroProfileMouseY, g_MicroProfileMouseDelta);
+		g_MicroProfileMouseDelta = 0;
 
 		static uint64_t nMain = 0;
 		MicroProfileLeave(MainTok, nMain);

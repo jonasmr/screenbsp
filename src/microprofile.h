@@ -4,9 +4,6 @@
 //  	border
 //		unify / cleanup
 //		faster
-// make mouse callback cleaner
-// one move
-// one click .. everything should be derived from these
 // presets
 // finish gpu markers
 // frame end marker
@@ -16,7 +13,7 @@
 ///gpugpugpu
 
 #define MICROPROFILE_ENABLED 1
-
+//#pragma optimize("", off)
 #if 0 == MICROPROFILE_ENABLED
 
 #define MICROPROFILE_DECLARE(var)
@@ -137,7 +134,7 @@ inline int64_t MicroProfileGetTick()
 #define MICROPROFILE_BORDER_SIZE 1
 #define MICROPROFILE_MAX_GRAPH_TIME 100.f
 #define MICROPROFILE_INVALID_TICK ((uint64_t)-1)
-#define MICROPROFILE_GPU_FRAME_DELAY 2 //must be > 0
+#define MICROPROFILE_GPU_FRAME_DELAY 3 //must be > 0
 #define MICROPROFILE_PIX3_MODE 1
 //#define MICROPROFILE_PIX3_HEIGHT 7
 #define MICROPROFILE_PIX3_HEIGHT (MICROPROFILE_DETAILED_BAR_HEIGHT-4)
@@ -182,9 +179,8 @@ void MicroProfileToggleMaxTimers(); //Toggle max view
 void MicroProfileToggleCallCount(); // Toggle call count view
 void MicroProfileClearGraph();
 void MicroProfileToggleFlipDetailed();
-void MicroProfileMouseMove(uint32_t nX, uint32_t nY);
-void MicroProfileMouseClick(uint32_t nLeft, uint32_t nRight);
-void MicroProfileMoveGraph(int nDir, int nPanX, int nPanY);
+void MicroProfileMousePosition(uint32_t nX, uint32_t nY, int nWheelDelta);
+void MicroProfileMouseButton(uint32_t nLeft, uint32_t nRight);
 void MicroProfileOnThreadCreate(const char* pThreadName); //should be called from newly created threads
 
 //UNDEFINED: MUST BE IMPLEMENTED ELSEWHERE
@@ -393,6 +389,9 @@ struct
 
 	uint32_t 				nMouseX;
 	uint32_t 				nMouseY;
+	int						nMouseWheelDelta;
+	uint32_t				nMouseDownLeft;
+	uint32_t				nMouseDownRight;
 	uint32_t 				nMouseLeft;
 	uint32_t 				nMouseRight;
 	uint32_t 				nActiveMenu;
@@ -629,9 +628,8 @@ void MicroProfileGpuLeave(MicroProfileToken nToken_, uint64_t nTickStart)
 }
 void MicroProfileFlip()
 {
-	std::lock_guard<std::recursive_mutex> Lock(MicroProfileMutex());
-
 	MICROPROFILE_SCOPEI("MicroProfile", "MicroProfileFlip", 0x3355ee);
+	std::lock_guard<std::recursive_mutex> Lock(MicroProfileMutex());
 	uint64_t nFrameStartCpu = S.nFrameStartCpu;
 	uint64_t nFrameEndCpu = MP_TICK();
 	S.nFrameStartCpuPrev = S.nFrameStartCpu;
@@ -1204,7 +1202,7 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 
 	float fMsBase = S.fGraphBaseTimePos;
 	uint64_t nBaseTicksCpu = MicroProfileMsToTick(fMsBase, MicroProfileTicksPerSecondCpu());
-	uint64_t nBaseTicksGpu = MicroProfileMsToTick(fMsBase, MicroProfileTicksPerSecondCpu());
+	uint64_t nBaseTicksGpu = MicroProfileMsToTick(fMsBase, MicroProfileTicksPerSecondGpu());
 	float fMs = S.fGraphBaseTime;
 	float fMsEnd = fMs + fMsBase;
 	float fWidth = nWidth;
@@ -1256,8 +1254,9 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 		uint64_t nFrameEnd = pLog->nGpu ? nFrameEndGpu : nFrameEndCpu;
 
 		bool bGpu = pLog->nGpu != 0;
+		uprintf(" LALA %d .. plog %p ll %d\n", j, pLog, pLog->nGpu);
 		float fToMs = MicroProfileTickToMsMultiplier(bGpu ? MicroProfileTicksPerSecondGpu() : MicroProfileTicksPerSecondCpu());
-		uint64_t nBaseTicks = bGpu ? nBaseTicksGpu : nBaseTicksCpu;
+		int64_t nBaseTicks = bGpu ? nBaseTicksGpu : nBaseTicksCpu;
 
 
 		nY += 3;
@@ -1272,8 +1271,8 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 			MicroProfileLogEntry* pEntry = pLog->Log + i;
 			MP_ASSERT(MicroProfileLogEntry::EEnter == pEntry->eType);
 			{
-				uint32_t nTickStart = pEntry->nStartRelative;
-				uint32_t nTickEnd = pEntry->nEndRelative;
+				int32_t nTickStart = pEntry->nStartRelative;
+				int32_t nTickEnd = pEntry->nEndRelative;
 
 				uint32_t nColor = S.TimerInfo[ MicroProfileGetTimerIndex(pEntry->nToken) ].nColor;
 				if(pEntry == pMouseOver)
@@ -1912,51 +1911,103 @@ bool MicroProfileDrawMenu(uint32_t nWidth, uint32_t nHeight)
 }
 
 
+void MicroProfileMoveGraph()
+{
+	int nZoom = S.nMouseWheelDelta;
+	int nPanX = 0;
+	int nPanY = 0;
+	static int X = 0, Y = 0;
+	if(S.nMouseDownLeft)
+	{
+		nPanX = S.nMouseX - X;
+		nPanY = S.nMouseY - Y;
+	}
+	X = S.nMouseX;
+	Y = S.nMouseY;
+
+	if(nZoom)
+	{
+		float fBasePos = S.fGraphBaseTimePos;
+		float fBaseTime = S.fGraphBaseTime;
+		float fMousePrc = MicroProfileMax((S.nMouseX - 10.f) / S.nWidth ,0.f);
+		float fMouseTimeCenter = fMousePrc * fBaseTime + fBasePos;
+		if(nZoom > 0)
+		{
+			S.fGraphBaseTime *= 1.05f;
+			S.fGraphBaseTime = MicroProfileMin(S.fGraphBaseTime, (float)MICROPROFILE_MAX_GRAPH_TIME);
+		}
+		else
+			S.fGraphBaseTime /= 1.05f;
+
+		S.fGraphBaseTimePos = fMouseTimeCenter - fMousePrc * S.fGraphBaseTime;
+		S.fGraphBaseTimePos = MicroProfileMax(0.f, S.fGraphBaseTimePos);
+	}
+	if(nPanX)
+	{
+		S.fGraphBaseTimePos -= nPanX * 2 * S.fGraphBaseTime / S.nWidth;
+		S.fGraphBaseTimePos = MicroProfileMax(S.fGraphBaseTimePos, 0.f);
+		S.fGraphBaseTimePos = MicroProfileMin(S.fGraphBaseTimePos, MICROPROFILE_MAX_GRAPH_TIME - S.fGraphBaseTime);
+	}
+	S.nOffsetY -= nPanY;
+	if(S.nOffsetY<0)
+		S.nOffsetY = 0;
+}
+
 void MicroProfileDraw(uint32_t nWidth, uint32_t nHeight)
 {
 	MICROPROFILE_SCOPEI("MicroProfile", "Draw", 0x737373);
-	if(!S.nDisplay)
-		return;
-	S.nWidth = nWidth;
-	S.nHeight = nHeight;
-	S.nHoverToken = MICROPROFILE_INVALID_TOKEN;
-	S.nHoverTime = 0;
-
-
-	if(S.nDisplay & MP_DRAW_DETAILED)
+	if(S.nMouseLeft && S.nMouseX < 12 && S.nMouseY < 12)
 	{
-		MicroProfileDrawDetailedView(nWidth, nHeight);
-	}
-	else if(0 != (S.nDisplay & MP_DRAW_BARS) && S.nBars)
-	{
-		MicroProfileDrawBarView(nWidth, nHeight);
+		MicroProfileToggleDisplayMode();
 	}
 
-	bool bMouseOverMenu = MicroProfileDrawMenu(nWidth, nHeight);
-	bool bMouseOverGraph = MicroProfileDrawGraph(nWidth, nHeight);
-
-	if(!bMouseOverMenu && !bMouseOverGraph)
+	if(S.nDisplay)
 	{
-		if(S.nHoverToken != MICROPROFILE_INVALID_TOKEN)
+		S.nWidth = nWidth;
+		S.nHeight = nHeight;
+		S.nHoverToken = MICROPROFILE_INVALID_TOKEN;
+		S.nHoverTime = 0;
+
+		MicroProfileMoveGraph();
+
+
+		if(S.nDisplay & MP_DRAW_DETAILED)
 		{
-			MicroProfileDrawFloatTooltip(S.nMouseX, S.nMouseY, S.nHoverToken, S.nHoverTime);
+			MicroProfileDrawDetailedView(nWidth, nHeight);
 		}
-		if(S.nMouseLeft || S.nMouseRight)
+		else if(0 != (S.nDisplay & MP_DRAW_BARS) && S.nBars)
+		{
+			MicroProfileDrawBarView(nWidth, nHeight);
+		}
+
+		bool bMouseOverMenu = MicroProfileDrawMenu(nWidth, nHeight);
+		bool bMouseOverGraph = MicroProfileDrawGraph(nWidth, nHeight);
+
+		if(!bMouseOverMenu && !bMouseOverGraph)
 		{
 			if(S.nHoverToken != MICROPROFILE_INVALID_TOKEN)
-				MicroProfileToggleGraph(S.nHoverToken);
+			{
+				MicroProfileDrawFloatTooltip(S.nMouseX, S.nMouseY, S.nHoverToken, S.nHoverTime);
+			}
+			if(S.nMouseLeft || S.nMouseRight)
+			{
+				if(S.nHoverToken != MICROPROFILE_INVALID_TOKEN)
+					MicroProfileToggleGraph(S.nHoverToken);
+			}
 		}
+		S.nActiveGroup = S.nMenuAllGroups ? (S.nGroupMask & (uint64_t)-1) : S.nMenuActiveGroup;
 	}
-	S.nActiveGroup = S.nMenuAllGroups ? (S.nGroupMask & (uint64_t)-1) : S.nMenuActiveGroup;
 	S.nMouseLeft = S.nMouseRight = 0;
+	S.nMouseWheelDelta = 0;
 	if(S.nOverflow)
 		S.nOverflow--;
 
 }
-void MicroProfileMouseMove(uint32_t nX, uint32_t nY)
+void MicroProfileMousePosition(uint32_t nX, uint32_t nY, int nWheelDelta)
 {
 	S.nMouseX = nX;
 	S.nMouseY = nY;
+	S.nMouseWheelDelta = nWheelDelta;
 }
 void MicroProfileClearGraph()
 {
@@ -2004,51 +2055,22 @@ void MicroProfileToggleGraph(MicroProfileToken nToken)
 	S.Graph[nIndex].nKey = nMaxSort+1;
 	memset(&S.Graph[nIndex].nHistory[0], 0, sizeof(S.Graph[nIndex].nHistory));
 }
-void MicroProfileMouseClick(uint32_t nLeft, uint32_t nRight)
+void MicroProfileMouseButton(uint32_t nLeft, uint32_t nRight)
 {
-	S.nMouseLeft = nLeft;
-	S.nMouseRight = nRight;
+	uprintf("NRIGHT %d", nRight);
+	if(0 == nLeft && S.nMouseDownLeft)
+		S.nMouseLeft = 1;
+	if(0 == nRight && S.nMouseDownRight)
+		S.nMouseRight = 1;
 
-	if(S.nMouseLeft && S.nMouseX < 12 && S.nMouseY < 12)
-	{
-		MicroProfileToggleDisplayMode();
-	}
-
-
+	S.nMouseDownLeft = nLeft;
+	S.nMouseDownRight = nRight;
+	
 }
 
 void* g_pFUUU = 0;
 
 
-void MicroProfileMoveGraph(int nZoom, int nPanX, int nPanY)
-{
-	if(nZoom)
-	{
-		float fBasePos = S.fGraphBaseTimePos;
-		float fBaseTime = S.fGraphBaseTime;
-		float fMousePrc = MicroProfileMax((S.nMouseX - 10.f) / S.nWidth ,0.f);
-		float fMouseTimeCenter = fMousePrc * fBaseTime + fBasePos;
-		if(nZoom > 0)
-		{
-			S.fGraphBaseTime *= 1.05f;
-			S.fGraphBaseTime = MicroProfileMin(S.fGraphBaseTime, (float)MICROPROFILE_MAX_GRAPH_TIME);
-		}
-		else
-			S.fGraphBaseTime /= 1.05f;
-
-		S.fGraphBaseTimePos = fMouseTimeCenter - fMousePrc * S.fGraphBaseTime;
-		S.fGraphBaseTimePos = MicroProfileMax(0.f, S.fGraphBaseTimePos);
-	}
-	if(nPanX)
-	{
-		S.fGraphBaseTimePos -= nPanX * 2 * S.fGraphBaseTime / S.nWidth;
-		S.fGraphBaseTimePos = MicroProfileMax(S.fGraphBaseTimePos, 0.f);
-		S.fGraphBaseTimePos = MicroProfileMin(S.fGraphBaseTimePos, MICROPROFILE_MAX_GRAPH_TIME - S.fGraphBaseTime);
-	}
-	S.nOffsetY -= nPanY;
-	if(S.nOffsetY<0)
-		S.nOffsetY = 0;
-}
 
 #endif
 #endif
