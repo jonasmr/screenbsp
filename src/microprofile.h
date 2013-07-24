@@ -10,14 +10,12 @@
 // presets
 // finish gpu markers
 // frame end marker
-// splitters in graph
 // exclusive time
 // disabling of microprofiler.
 
 ///gpugpugpu
 
 #define MICROPROFILE_ENABLED 1
-
 
 #if 0 == MICROPROFILE_ENABLED
 
@@ -42,31 +40,53 @@
 #include <unistd.h>
 #include <libkern/OSAtomic.h>
 #define MP_TICK() mach_absolute_time()
-inline float MicroProfileTickToMs(int64_t nTicks)
+//inline float MicroProfileTickToMs(int64_t nTicks)
+//{
+//	static mach_timebase_info_data_t sTimebaseInfo;	
+//	if(sTimebaseInfo.denom == 0) 
+//	{
+//        (void) mach_timebase_info(&sTimebaseInfo);
+//    }
+//    return 0.000001f * (nTicks * sTimebaseInfo.numer / sTimebaseInfo.denom);
+//}
+//
+//
+//inline int64_t MicroProfileMsToTick(float fMs)
+//{
+//	static mach_timebase_info_data_t sTimebaseInfo;	
+//	if(sTimebaseInfo.denom == 0) 
+//	{
+//        (void) mach_timebase_info(&sTimebaseInfo);
+//    }
+//    return fMs * 1000000.f * sTimebaseInfo.denom / sTimebaseInfo.numer;
+//}
+inline int64_t MicroProfileTicksPerSecondCpu()
 {
-	static mach_timebase_info_data_t sTimebaseInfo;	
-	if(sTimebaseInfo.denom == 0) 
+	static int64_t nTicksPerSecond = 0;	
+	if(nTicksPerSecond == 0) 
 	{
-        (void) mach_timebase_info(&sTimebaseInfo);
-    }
-    return 0.000001f * (nTicks * sTimebaseInfo.numer / sTimebaseInfo.denom);
+		mach_timebase_info_data_t sTimebaseInfo;	
+		mach_timebase_info(&sTimebaseInfo);
+		nTicksPerSecond = 1000000000ll * sTimebaseInfo.denom / sTimebaseInfo.numer;
+	}
+	return nTicksPerSecond;
 }
 
 
-inline int64_t MicroProfileMsToTick(float fMs)
-{
-	static mach_timebase_info_data_t sTimebaseInfo;	
-	if(sTimebaseInfo.denom == 0) 
-	{
-        (void) mach_timebase_info(&sTimebaseInfo);
-    }
-    return fMs * 1000000.f * sTimebaseInfo.denom / sTimebaseInfo.numer;
-}
 
 #define MP_BREAK() __builtin_trap()
 #define MP_THREAD_LOCAL __thread
 #elif defined(_WIN32)
-#include <Windows.h>
+#include <windows.h>
+inline int64_t MicroProfileTicksPerSecondCpu()
+{
+	static int64_t nTicksPerSecond = 0;	
+	if(nTicksPerSecond == 0) 
+	{
+		QueryPerformanceFrequency((LARGE_INTEGER*)&nTicksPerSecond);
+	}
+	return nTicksPerSecond;
+}
 inline int64_t MicroProfileGetTick()
 {
 	int64_t ticks;
@@ -74,24 +94,24 @@ inline int64_t MicroProfileGetTick()
 	return ticks;
 }
 
-inline float MicroProfileTickToMs(int64_t nTicks)
-{
-	static int64_t nTicksPerSecond = 0;	
-	if(nTicksPerSecond == 0) 
-	{
-		QueryPerformanceFrequency((LARGE_INTEGER*)&nTicksPerSecond);
-	}
-	return (nTicks * 1000.f / nTicksPerSecond);
-}
-inline int64_t MicroProfileMsToTick(float fMs)
-{
-	static int64_t nTicksPerSecond = 0;	
-	if(nTicksPerSecond == 0) 
-	{
-		QueryPerformanceFrequency((LARGE_INTEGER*)&nTicksPerSecond);
-	}
-	return (int64_t)(fMs * 0.001f * nTicksPerSecond);
-}
+//inline float MicroProfileTickToMs(int64_t nTicks)
+//{
+//	static int64_t nTicksPerSecond = 0;	
+//	if(nTicksPerSecond == 0) 
+//	{
+//		QueryPerformanceFrequency((LARGE_INTEGER*)&nTicksPerSecond);
+//	}
+//	return (nTicks * 1000.f / nTicksPerSecond);
+//}
+//inline int64_t MicroProfileMsToTick(float fMs)
+//{
+//	static int64_t nTicksPerSecond = 0;	
+//	if(nTicksPerSecond == 0) 
+//	{
+//		QueryPerformanceFrequency((LARGE_INTEGER*)&nTicksPerSecond);
+//	}
+//	return (int64_t)(fMs * 0.001f * nTicksPerSecond);
+//}
 
 #define MP_TICK() MicroProfileGetTick()
 #define MP_BREAK() __debugbreak()
@@ -140,7 +160,8 @@ void MicroProfileInit();
 MicroProfileToken MicroProfileGetToken(const char* sGroup, const char* sName, uint32_t nColor, MicroProfileTokenType Token = MicroProfileTokenTypeCpu);
 uint64_t MicroProfileEnter(MicroProfileToken nToken);
 void MicroProfileLeave(MicroProfileToken nToken, uint64_t nTick);
-void MicroProfileLeaveThreadSafe(MicroProfileToken nToken, uint64_t nTick);
+uint64_t MicroProfileGpuEnter(MicroProfileToken nToken);
+void MicroProfileGpuLeave(MicroProfileToken nToken, uint64_t nTick);
 inline uint16_t MicroProfileGetTimerIndex(MicroProfileToken t){ return (t&0xffff); }
 inline uint64_t MicroProfileGetGroupMask(MicroProfileToken t){ return ((t>>16)&MICROPROFILE_GROUP_MASK_ALL);}
 inline MicroProfileToken MicroProfileMakeToken(uint64_t nGroupMask, uint16_t nTimer){ return (nGroupMask<<16) | nTimer;}
@@ -173,7 +194,7 @@ void MicroProfileDrawBoxFade(uint32_t nX, uint32_t nY, uint32_t nX1, uint32_t nY
 void MicroProfileDrawLine2D(uint32_t nVertices, float* pVertices, uint32_t nColor);
 uint32_t MicroProfileGpuInsertTimeStamp();
 uint64_t MicroProfileGpuGetTimeStamp(uint32_t nKey);
-
+uint64_t MicroProfileTicksPerSecondGpu();
 
 extern void* g_pFUUU;
 struct MicroProfileScopeHandler
@@ -190,16 +211,35 @@ struct MicroProfileScopeHandler
 	}
 };
 
+struct MicroProfileScopeGpuHandler
+{
+	MicroProfileToken nToken;
+	uint64_t nTick;
+	MicroProfileScopeGpuHandler(MicroProfileToken Token):nToken(Token)
+	{
+		nTick = MicroProfileGpuEnter(nToken);
+	}
+	~MicroProfileScopeGpuHandler()
+	{
+		MicroProfileGpuLeave(nToken, nTick);
+	}
+};
 
 
 
 #ifdef MICRO_PROFILE_IMPL
+
+#ifdef _WIN32
+#define _VARIADIC_MAX 6 //hrmph
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 #include <thread>
 #include <mutex>
 #include <atomic>
+
 
 #define S g_MicroProfile
 #define MICROPROFILE_MAX_TIMERS 1024
@@ -395,6 +435,16 @@ template<typename T>
 T MicroProfileMax(T a, T b)
 { return a > b ? a : b; }
 
+inline int64_t MicroProfileMsToTick(float fMs, int64_t nTicksPerSecond)
+{
+	return (int64_t)(fMs*0.001f*nTicksPerSecond);
+}
+
+inline float MicroProfileTickToMsMultiplier(int64_t nTicksPerSecond)
+{
+	return 1000.f / nTicksPerSecond;
+}
+
 
 inline uint16_t MicroProfileGetGroupIndex(MicroProfileToken t){ return S.TimerInfo[MicroProfileGetTimerIndex(t)].nGroupIndex;}
 
@@ -439,6 +489,7 @@ void MicroProfileInit()
 
 		MicroProfileThreadLog* pGpu = MicroProfileCreateThreadLog("GPU");
 		g_MicroProfileGpuLog = pGpu;
+		S.Pool[S.nNumLogs++] = pGpu;
 		pGpu->nGpu = 1;
 
 	}
@@ -588,7 +639,8 @@ void MicroProfileFlip()
 
 	uint32_t nQueryIndex = MicroProfileGpuInsertTimeStamp();
 	uint64_t nFrameStartGpu = S.nFrameStartGpu[0] != (uint32_t)-1 ? MicroProfileGpuGetTimeStamp(S.nFrameStartGpu[0]) : 0;
-	uint64_t nFrameEndGpu = S.nFrameStartGpu[0] != (uint32_t)-1 ? MicroProfileGpuGetTimeStamp(S.nFrameStartGpu[1]) : 0;
+	uint64_t nFrameEndGpu = S.nFrameStartGpu[1] != (uint32_t)-1 ? MicroProfileGpuGetTimeStamp(S.nFrameStartGpu[1]) : nFrameStartGpu+1;
+	uprintf("measuring between %d and %d  .... %llx %llx\n", S.nFrameStartGpu[0], S.nFrameStartGpu[1], nFrameStartGpu, nFrameEndGpu);
 	for(uint32_t i = 0; i < MICROPROFILE_GPU_FRAME_DELAY; ++i)
 	{
 		S.nFrameStartGpu[i] = S.nFrameStartGpu[i+1];
@@ -670,7 +722,10 @@ void MicroProfileFlip()
 						uint32_t nEnd = nRange[j][1];
 						for(uint32_t k = nStart; k < nEnd; ++k)
 						{
-							pLog->Log[k].nTick = MicroProfileGpuGetTimeStamp((uint32_t)pLog->Log[k].nTick);
+							
+							int64_t nRet = MicroProfileGpuGetTimeStamp((uint32_t)pLog->Log[k].nTick);
+							uprintf("and fetching %d .. got %llx\n", pLog->Log[k].nTick, nRet);
+							pLog->Log[k].nTick = nRet;
 
 						}
 					}
@@ -914,7 +969,7 @@ void MicroProfileFlip()
 				{
 					pLog->nGpuGet[j] = pLog->nGpuGet[j+1];
 				}
-				pLog->nGpuGet[MICROPROFILE_GPU_FRAME_DELAY-1] = nPutStart[i];
+				pLog->nGpuGet[MICROPROFILE_GPU_FRAME_DELAY-1] =  pLog->nPut.load(std::memory_order_relaxed);
 			}
 		}
 	}
@@ -1062,11 +1117,17 @@ void MicroProfileDrawFloatTooltip(uint32_t nX, uint32_t nY, uint32_t nToken, uin
 	uint32_t nAggregateFrames = S.nAggregateFrames ? S.nAggregateFrames : 1;
 	uint32_t nAggregateCount = S.Aggregate[nIndex].nCount ? S.Aggregate[nIndex].nCount : 1;
 
-	float fMs = MicroProfileTickToMs(nTime);
-	float fFrameMs = MicroProfileTickToMs(S.Frame[nIndex].nTicks);
-	float fAverage = MicroProfileTickToMs(S.Aggregate[nIndex].nTicks/nAggregateFrames);
-	float fCallAverage = MicroProfileTickToMs(S.Aggregate[nIndex].nTicks / nAggregateCount);
-	float fMax = MicroProfileTickToMs(S.AggregateMax[nIndex]);
+	uint32_t nGroupId = MicroProfileGetGroupIndex(nToken);
+	uint32_t nTimerId = MicroProfileGetTimerIndex(nToken);
+	bool bGpu = S.GroupInfo[nGroupId].Type == MicroProfileTokenTypeGpu;
+
+	float fToMs = MicroProfileTickToMsMultiplier(bGpu ? MicroProfileTicksPerSecondGpu() : MicroProfileTicksPerSecondCpu());
+
+	float fMs = fToMs * (nTime);
+	float fFrameMs = fToMs * (S.Frame[nIndex].nTicks);
+	float fAverage = fToMs * (S.Aggregate[nIndex].nTicks/nAggregateFrames);
+	float fCallAverage = fToMs * (S.Aggregate[nIndex].nTicks / nAggregateCount);
+	float fMax = fToMs * (S.AggregateMax[nIndex]);
 
 	{
 		#define MAX_STRINGS 16
@@ -1075,8 +1136,6 @@ void MicroProfileDrawFloatTooltip(uint32_t nX, uint32_t nY, uint32_t nToken, uin
 		const char* pBufferStart = &buffer[0];
 		char* pBuffer = &buffer[0];
 
-		uint32_t nGroupId = MicroProfileGetGroupIndex(nToken);
-		uint32_t nTimerId = MicroProfileGetTimerIndex(nToken);
 		const char* pGroupName = S.GroupInfo[nGroupId].pName;
 		const char* pTimerName = S.TimerInfo[nTimerId].pName;
 #define SZ (intptr_t)(sizeof(buffer)-1-(pBufferStart - pBuffer))
@@ -1144,7 +1203,8 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 	int nY = nBaseY - S.nOffsetY;
 
 	float fMsBase = S.fGraphBaseTimePos;
-	uint64_t nBaseTicks = MicroProfileMsToTick(fMsBase);
+	uint64_t nBaseTicksCpu = MicroProfileMsToTick(fMsBase, MicroProfileTicksPerSecondCpu());
+	uint64_t nBaseTicksGpu = MicroProfileMsToTick(fMsBase, MicroProfileTicksPerSecondCpu());
 	float fMs = S.fGraphBaseTime;
 	float fMsEnd = fMs + fMsBase;
 	float fWidth = nWidth;
@@ -1195,6 +1255,10 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 		uint64_t nFrameStart = pLog->nGpu ? nFrameStartGpu : nFrameStartCpu;
 		uint64_t nFrameEnd = pLog->nGpu ? nFrameEndGpu : nFrameEndCpu;
 
+		bool bGpu = pLog->nGpu != 0;
+		float fToMs = MicroProfileTickToMsMultiplier(bGpu ? MicroProfileTicksPerSecondGpu() : MicroProfileTicksPerSecondCpu());
+		uint64_t nBaseTicks = bGpu ? nBaseTicksGpu : nBaseTicksCpu;
+
 
 		nY += 3;
 		MicroProfileDrawText(nX, nY, (uint32_t)-1, &pLog->ThreadName[0]);
@@ -1216,8 +1280,8 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 					nColor = nHoverColor;
 				uint32_t nStackPos = pEntry->nStackDepth;
 				nMaxStackDepth = MicroProfileMax(nMaxStackDepth, nStackPos);
-				float fMsStart = MicroProfileTickToMs(nTickStart - nBaseTicks);
-				float fMsEnd = MicroProfileTickToMs(nTickEnd - nBaseTicks);
+				float fMsStart = fToMs * (nTickStart - nBaseTicks);
+				float fMsEnd = fToMs * (nTickEnd - nBaseTicks);
 				MP_ASSERT(fMsStart <= fMsEnd);
 				float fXStart = nX + fMsStart * fMsToScreen;
 				float fXEnd = nX + fMsEnd * fMsToScreen;
@@ -1285,7 +1349,7 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 
 
 
-void MicroProfileLoopActiveGroups(uint32_t nX, uint32_t nY, const char* pName, std::function<void (uint32_t, uint32_t, uint64_t, uint32_t, uint32_t)> CB)
+void MicroProfileLoopActiveGroups(uint32_t nX, uint32_t nY, const char* pName, std::function<void (uint32_t, uint32_t, uint64_t, uint32_t, uint32_t, float)> CB)
 {
 	if(pName)
 		MicroProfileDrawText(nX, nY, (uint32_t)-1, pName);
@@ -1300,12 +1364,14 @@ void MicroProfileLoopActiveGroups(uint32_t nX, uint32_t nY, const char* pName, s
 		if(nMask & nGroup)
 		{
 			nY += S.nBarHeight + 1;
+			float fToMs = MicroProfileTickToMsMultiplier(S.GroupInfo[j].Type == MicroProfileTokenTypeGpu ? MicroProfileTicksPerSecondGpu() : MicroProfileTicksPerSecondCpu());
+
 			for(uint32_t i = 0; i < S.nTotalTimers;++i)
 			{
 				uint64_t nTokenMask = MicroProfileGetGroupMask(S.TimerInfo[i].nToken);
 				if(nTokenMask & nMask)
 				{
-					CB(i, nCount, nMask, nX, nY);
+					CB(i, nCount, nMask, nX, nY, fToMs);
 					nCount += 2;
 					nY += S.nBarHeight + 1;
 				}
@@ -1319,17 +1385,17 @@ void MicroProfileCalcTimers(float* pTimers, float* pAverage, float* pMax, float*
 {
 	MICROPROFILE_SCOPEI("MicroProfile", "MicroProfileCalcTimers", 0x773300);
 	MicroProfileLoopActiveGroups(0, 0, 0, 
-		[&](uint32_t nTimer, uint32_t nIdx, uint64_t nGroupMask, uint32_t nX, uint32_t nY){
+		[&](uint32_t nTimer, uint32_t nIdx, uint64_t nGroupMask, uint32_t nX, uint32_t nY, float fToMs){
 			uint32_t nAggregateFrames = S.nAggregateFrames ? S.nAggregateFrames : 1;
 			uint32_t nAggregateCount = S.Aggregate[nTimer].nCount ? S.Aggregate[nTimer].nCount : 1;
 			float fToPrc = S.fRcpReferenceTime;
-			float fMs = MicroProfileTickToMs(S.Frame[nTimer].nTicks);
+			float fMs = fToMs * (S.Frame[nTimer].nTicks);
 			float fPrc = MicroProfileMin(fMs * fToPrc, 1.f);
-			float fAverageMs = MicroProfileTickToMs(S.Aggregate[nTimer].nTicks / nAggregateFrames);
+			float fAverageMs = fToMs * (S.Aggregate[nTimer].nTicks / nAggregateFrames);
 			float fAveragePrc = MicroProfileMin(fAverageMs * fToPrc, 1.f);
-			float fMaxMs = MicroProfileTickToMs(S.AggregateMax[nTimer]);
+			float fMaxMs = fToMs * (S.AggregateMax[nTimer]);
 			float fMaxPrc = MicroProfileMin(fMaxMs * fToPrc, 1.f);
-			float fCallAverageMs = MicroProfileTickToMs(S.Aggregate[nTimer].nTicks / nAggregateCount);
+			float fCallAverageMs = fToMs * (S.Aggregate[nTimer].nTicks / nAggregateCount);
 			float fCallAveragePrc = MicroProfileMin(fCallAverageMs * fToPrc, 1.f);
 			pTimers[nIdx] = fMs;
 			pTimers[nIdx+1] = fPrc;
@@ -1352,8 +1418,7 @@ uint32_t MicroProfileDrawBarArray(uint32_t nX, uint32_t nY, float* pTimers, cons
 	const uint32_t nTextWidth = 6 * (1+MICROPROFILE_TEXT_WIDTH);
 	const float fWidth = S.nBarWidth;
 	MicroProfileLoopActiveGroups(nX, nY, pName, 
-		[=](uint32_t nTimer, uint32_t nIdx, uint64_t nGroupMask, uint32_t nX, uint32_t nY){
-			//HER:
+		[=](uint32_t nTimer, uint32_t nIdx, uint64_t nGroupMask, uint32_t nX, uint32_t nY, float fToMs){
 			char sBuffer[SBUF_MAX];
 			snprintf(sBuffer, SBUF_MAX-1, "%5.2f", pTimers[nIdx]);
 			MicroProfileDrawBoxFade(nX + nTextWidth, nY, nX + nTextWidth + fWidth * pTimers[nIdx+1], nY + nHeight, S.TimerInfo[nTimer].nColor);
@@ -1367,7 +1432,7 @@ uint32_t MicroProfileDrawBarArray(uint32_t nX, uint32_t nY, float* pTimers, cons
 uint32_t MicroProfileDrawBarCallCount(uint32_t nX, uint32_t nY, const char* pName)
 {
 	MicroProfileLoopActiveGroups(nX, nY, pName, 
-		[](uint32_t nTimer, uint32_t nIdx, uint64_t nGroupMask, uint32_t nX, uint32_t nY){
+		[](uint32_t nTimer, uint32_t nIdx, uint64_t nGroupMask, uint32_t nX, uint32_t nY, float fToMs){
 			char sBuffer[SBUF_MAX];
 			snprintf(sBuffer, SBUF_MAX-1, "%5d", S.Frame[nTimer].nCount);//fix
 			MicroProfileDrawText(nX, nY, (uint32_t)-1, sBuffer);
@@ -1381,7 +1446,7 @@ uint32_t MicroProfileDrawBarCallCount(uint32_t nX, uint32_t nY, const char* pNam
 uint32_t MicroProfileDrawBarLegend(uint32_t nX, uint32_t nY)
 {
 	MicroProfileLoopActiveGroups(nX, nY, 0, 
-		[](uint32_t nTimer, uint32_t nIdx, uint64_t nGroupMask, uint32_t nX, uint32_t nY){
+		[](uint32_t nTimer, uint32_t nIdx, uint64_t nGroupMask, uint32_t nX, uint32_t nY, float fToMs){
 			MicroProfileDrawText(nX, nY, S.TimerInfo[nTimer].nColor, S.TimerInfo[nTimer].pName);
 			if(S.nMouseY >= nY && S.nMouseY < nY + MICROPROFILE_TEXT_HEIGHT+1  && S.nMouseX < nX + 20 * (MICROPROFILE_TEXT_WIDTH+1))
 			{
@@ -1426,16 +1491,20 @@ bool MicroProfileDrawGraph(uint32_t nScreenWidth, uint32_t nScreenHeight)
 	float fDX = MICROPROFILE_GRAPH_WIDTH * 1.f / MICROPROFILE_GRAPH_HISTORY;  
 	float fDY = MICROPROFILE_GRAPH_HEIGHT;
 	uint32_t nPut = S.nGraphPut;
-	float fToPrc = S.fRcpReferenceTime * 3 / 4;
 	float* pGraphData = (float*)alloca(sizeof(float)* MICROPROFILE_GRAPH_HISTORY*2);
 	for(uint32_t i = 0; i < MICROPROFILE_MAX_GRAPHS; ++i)
 	{
 		if(S.Graph[i].nToken != MICROPROFILE_INVALID_TOKEN)
 		{
+			uint32_t nGroupId = MicroProfileGetGroupIndex(S.Graph[i].nToken);
+			bool bGpu = S.GroupInfo[nGroupId].Type == MicroProfileTokenTypeGpu;
+			float fToMs = MicroProfileTickToMsMultiplier(bGpu ? MicroProfileTicksPerSecondGpu() : MicroProfileTicksPerSecondCpu());
+			float fToPrc = fToMs * S.fRcpReferenceTime * 3 / 4;
+
 			float fX = nX;
 			for(uint32_t j = 0; j < MICROPROFILE_GRAPH_HISTORY; ++j)
 			{
-				float fWeigth = MicroProfileMin(fToPrc * MicroProfileTickToMs(S.Graph[i].nHistory[(j+nPut)%MICROPROFILE_GRAPH_HISTORY]), 1.f);
+				float fWeigth = MicroProfileMin(fToPrc * (S.Graph[i].nHistory[(j+nPut)%MICROPROFILE_GRAPH_HISTORY]), 1.f);
 				pGraphData[(j*2)] = fX;
 				pGraphData[(j*2)+1] = fY - fDY * fWeigth;
 				fX += fDX;
@@ -1479,17 +1548,22 @@ bool MicroProfileDrawGraph(uint32_t nScreenWidth, uint32_t nScreenHeight)
 		const uint32_t nBoxSize = MICROPROFILE_TEXT_HEIGHT;
 		uint32_t nX = S.nMouseX;
 		uint32_t nY = S.nMouseY + 20;
+
+		float fToMs = MicroProfileTickToMsMultiplier(MicroProfileTicksPerSecondCpu());
 		for(uint32_t i = 0; i < MICROPROFILE_MAX_GRAPHS; ++i)
 		{
 			if(S.Graph[i].nToken != MICROPROFILE_INVALID_TOKEN)
 			{
+				uint32_t nGroupId = MicroProfileGetGroupIndex(S.Graph[i].nToken);
+				bool bGpu = S.GroupInfo[nGroupId].Type == MicroProfileTokenTypeGpu;
+				float fToMs = MicroProfileTickToMsMultiplier(bGpu ? MicroProfileTicksPerSecondGpu() : MicroProfileTicksPerSecondCpu());
 				uint32_t nIndex = MicroProfileGetTimerIndex(S.Graph[i].nToken);
 				uint32_t nColor = S.TimerInfo[nIndex].nColor;
 				const char* pName = S.TimerInfo[nIndex].pName;
 				pColors[nTextCount/2] = nColor;
 				ppStrings[nTextCount++] = pName;
 				ppStrings[nTextCount++] = pBuffer;
-				pBuffer += 1 + snprintf(pBuffer, SZ, "%5.2fms", MicroProfileTickToMs(S.Graph[i].nHistory[nGraphIndex]));
+				pBuffer += 1 + snprintf(pBuffer, SZ, "%5.2fms", fToMs * (S.Graph[i].nHistory[nGraphIndex]));
 			}
 		}
 		if(nTextCount)
@@ -1977,5 +2051,4 @@ void MicroProfileMoveGraph(int nZoom, int nPanX, int nPanY)
 }
 
 #endif
-
 #endif

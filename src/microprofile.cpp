@@ -92,15 +92,16 @@ uint32_t MicroProfileGpuInsertTimeStamp()
 {
 	uint32_t nIndex = (g_GlTimerPos+1)%NUM_QUERIES;
 	CheckGLError();
-	#if 1
+	#ifndef __APPLE__
 	glQueryCounter(g_GlTimers[nIndex], GL_TIMESTAMP);
 	#endif
+	g_GlTimerPos = nIndex;
 	CheckGLError();
 	return nIndex;
 }
 uint64_t MicroProfileGpuGetTimeStamp(uint32_t nKey)
 {
-	#if 1
+	#ifndef __APPLE__
 	uint64_t result;
 	glGetQueryObjectui64v(g_GlTimers[nKey], GL_QUERY_RESULT, &result);
 	CheckGLError();
@@ -108,5 +109,10 @@ uint64_t MicroProfileGpuGetTimeStamp(uint32_t nKey)
 	#else
 	return 1;
 	#endif
+}
+
+uint64_t MicroProfileTicksPerSecondGpu()
+{
+	return 1000000000ll;
 }
 #endif

@@ -387,8 +387,14 @@ int SDL_main(int argc, char* argv[])
 		{
 			srand(0);
 			MICROPROFILE_SCOPEI("MAIN", "DebugRender", 0x00eeee);
-			DebugDrawFlush();
-			TextFlush();
+			{
+				MICROPROFILE_SCOPEGPUI("GPU", "Render Debug", 0x88dd44);
+				DebugDrawFlush();
+			}
+			{
+				MICROPROFILE_SCOPEGPUI("GPU", "Render Text", 0x88dd44);
+				TextFlush();
+			}
 			MICROPROFILE_SCOPEI("MAIN", "DUMMY", randcolor());
 
 			for(int i = 0; i < 5; ++i)
@@ -416,6 +422,8 @@ int SDL_main(int argc, char* argv[])
 		MicroProfileFlip();
 		nMain = MicroProfileEnter(MainTok);
 		{
+			MICROPROFILE_SCOPEGPUI("GPU", "MicroProfileDraw", 0x88dd44);
+
 			CheckGLError();
 			glMatrixMode(GL_PROJECTION);
 			glLoadIdentity();
@@ -427,8 +435,9 @@ int SDL_main(int argc, char* argv[])
 			glDisable(GL_DEPTH_TEST);
 			glDisable(GL_CULL_FACE);
 			CheckGLError();
+			MicroProfileDraw(g_Width, g_Height);
 		}
-		MicroProfileDraw(g_Width, g_Height);
+		
 
 
 
