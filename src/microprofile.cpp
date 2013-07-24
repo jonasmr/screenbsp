@@ -88,7 +88,7 @@ uint32_t MicroProfileGpuInsertTimeStamp()
 {
 	uint32_t nIndex = (g_GlTimerPos+1)%NUM_QUERIES;
 	CheckGLError();
-	#if 0
+	#if 1
 	glQueryCounter(g_GlTimers[nIndex], GL_TIMESTAMP);
 	#endif
 	CheckGLError();
@@ -96,7 +96,7 @@ uint32_t MicroProfileGpuInsertTimeStamp()
 }
 uint64_t MicroProfileGpuGetTimeStamp(uint32_t nKey)
 {
-	#if 0
+	#if 1
 	uint64_t result;
 	glGetQueryObjectui64v(g_GlTimers[nKey], GL_QUERY_RESULT, &result);
 	CheckGLError();
