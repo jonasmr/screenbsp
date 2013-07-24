@@ -14,6 +14,7 @@
 #include "mesh.h"
 #include "shader.h"
 #include "physics.h"
+#include "microprofile.h"
 
 extern uint32_t g_Width;
 extern uint32_t g_Height;
@@ -526,6 +527,7 @@ int ProgramMain()
 	{
 		g_nUseDebugCameraPos = (g_nUseDebugCameraPos+1)%3;
 	}
+	MICROPROFILE_SCOPEGPUI("GPU", "Full Frame", 0x88dd44);
 	UpdateEditorState();
 	{
 		UpdateCamera();
@@ -550,8 +552,13 @@ int ProgramMain()
 	//glLoadMatrixf(&g_WorldState.Camera.mview.x.x);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	CheckGLError();
-	WorldRender();
-	DebugRender();
+	{
+		MICROPROFILE_SCOPEGPUI("GPU", "Render World", 0x88dd44);
+		WorldRender();
+	}
+	{
+		DebugRender();
+	}
 
 
 	glPopMatrix();
