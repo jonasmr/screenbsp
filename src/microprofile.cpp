@@ -3,12 +3,15 @@
 #include "glinc.h"
 #include "text.h"
 
-
-
+#if MICROPROFILE_ENABLED
 void MicroProfileDrawText(uint32_t nX, uint32_t nY, uint32_t nColor, const char* pText)
 {
+	MICROPROFILE_SCOPEI("MicroProfile", "TextDraw", 0xff88ee);
 	TextBegin();
-	TextPut(nX, nY, pText, -1);
+	{
+		MICROPROFILE_SCOPEI("MicroProfile", "TextPut", 0xff88ee);
+		TextPut(nX, nY, pText, -1);
+	}
 	TextEnd();
 }
 void MicroProfileDrawBox(uint32_t nX, uint32_t nY, uint32_t nWidth, uint32_t nHeight, uint32_t nColor)
@@ -89,15 +92,16 @@ uint32_t MicroProfileGpuInsertTimeStamp()
 {
 	uint32_t nIndex = (g_GlTimerPos+1)%NUM_QUERIES;
 	CheckGLError();
-	#if 0
+	#ifndef __APPLE__
 	glQueryCounter(g_GlTimers[nIndex], GL_TIMESTAMP);
 	#endif
+	g_GlTimerPos = nIndex;
 	CheckGLError();
 	return nIndex;
 }
 uint64_t MicroProfileGpuGetTimeStamp(uint32_t nKey)
 {
-	#if 0
+	#ifndef __APPLE__
 	uint64_t result;
 	glGetQueryObjectui64v(g_GlTimers[nKey], GL_QUERY_RESULT, &result);
 	CheckGLError();
@@ -107,5 +111,8 @@ uint64_t MicroProfileGpuGetTimeStamp(uint32_t nKey)
 	#endif
 }
 
-
-
+uint64_t MicroProfileTicksPerSecondGpu()
+{
+	return 1000000000ll;
+}
+#endif

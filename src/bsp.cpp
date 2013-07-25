@@ -975,7 +975,7 @@ MICROPROFILE_SCOPEIC("BSP", "Cull");
 		vRight = mgetxaxis(mboxinv);
 		vUp = mgetyaxis(mboxinv);
 
-		v3 vCenterQuad = vCenterWorld - vToCenter * AABB.z * 1.1;
+		v3 vCenterQuad = vCenterWorld - vToCenter * AABB.z * 1.1f;
 		v3 v0 = vCenterQuad + vRight * AABB.x + vUp * AABB.y;
 		v3 v1 = vCenterQuad + vRight * -AABB.x + vUp * AABB.y;
 		v3 v2 = vCenterQuad + vRight * -AABB.x + vUp * -AABB.y;
