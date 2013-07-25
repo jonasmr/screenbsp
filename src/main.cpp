@@ -1,5 +1,3 @@
-
-
 #include <stdio.h>
 #include <stdarg.h>
 #include <SDL.h>
@@ -18,26 +16,45 @@
 #include "microprofile.h"
 #include "physics.h"
 
-//lala
 #ifdef _WIN32
 #include <windows.h>
 void usleep(__int64 usec) 
 { 
-	HANDLE timer; 
-	LARGE_INTEGER ft; 
 
-	ft.QuadPart = -(10*usec); // Convert to 100 nanosecond interval, negative value indicates relative time
 
-	timer = CreateWaitableTimer(NULL, TRUE, NULL); 
-	SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0); 
-	WaitForSingleObject(timer, INFINITE); 
-	CloseHandle(timer); 
+	if(usec > 20000)
+	{
+		Sleep(usec/1000);
+	}
+	else if(usec >= 1000)
+	{
+		timeBeginPeriod(1);
+		Sleep(usec/1000);
+		timeEndPeriod(1);
+	}
+	else
+	{
+		__int64 time1 = 0, time2 = 0, freq = 0;
+		QueryPerformanceCounter((LARGE_INTEGER *) &time1);
+		QueryPerformanceFrequency((LARGE_INTEGER *)&freq);
+
+		do {
+			QueryPerformanceCounter((LARGE_INTEGER *) &time2);
+		} while((time2-time1)*1000000ll/freq < usec);
+	}
 }
 #endif
 
 SDL_Surface* g_Surface;
-uint32_t g_BaseWidth =  800;
-uint32_t g_BaseHeight =  600;
+#ifdef _WIN32
+#define START_WIDTH 1600
+#define START_HEIGHT 1080
+#else
+#define START_WIDTH 800
+#define START_HEIGHT 600
+#endif
+uint32_t g_BaseWidth = START_WIDTH;
+uint32_t g_BaseHeight = START_HEIGHT;
 uint32_t g_Width = g_BaseWidth;
 uint32_t g_Height =  g_BaseHeight;
 uint32_t g_nQuit = 0;
@@ -167,6 +184,9 @@ void CheckGLError()
 	}
 }
 
+uint32_t g_MicroProfileMouseX = 0;
+uint32_t g_MicroProfileMouseY = 0;
+int g_MicroProfileMouseDelta = 0;
 
 void HandleEvent(SDL_Event* pEvt)
 {
@@ -184,30 +204,31 @@ void HandleEvent(SDL_Event* pEvt)
 	case SDL_MOUSEMOTION:
 		g_MouseState.position[0] = pEvt->motion.x;
 		g_MouseState.position[1] = g_Height-pEvt->motion.y; // flip to match opengl
-		MicroProfileMouseMove(g_MouseState.position[0], pEvt->motion.y);
-		{
-			static int nPosX = -1;
-			static int nPosY = -1;
-			if(g_KeyboardState.keys[SDLK_LCTRL] & BUTTON_DOWN)
-			{
-				if(nPosX>=0 && nPosY>=0)
-				{
-					MicroProfileMoveGraph(0,pEvt->motion.x-nPosX, pEvt->motion.y-nPosY);
-				}
-				nPosX = pEvt->motion.x;
-				nPosY = pEvt->motion.y;
-			}
-			else
-			{
-				nPosX = nPosY = -1;
-			}
-		}
+		g_MicroProfileMouseX = g_MouseState.position[0];
+		g_MicroProfileMouseY = pEvt->motion.y;
+		//MicroProfileMouseMove(g_MouseState.position[0], pEvt->motion.y);
+		//{
+		//	static int nPosX = -1;
+		//	static int nPosY = -1;
+		//	if(g_KeyboardState.keys[SDLK_LCTRL] & BUTTON_DOWN)
+		//	{
+		//		if(nPosX>=0 && nPosY>=0)
+		//		{
+		//			MicroProfileMoveGraph(0,pEvt->motion.x-nPosX, pEvt->motion.y-nPosY);
+		//		}
+		//		nPosX = pEvt->motion.x;
+		//		nPosY = pEvt->motion.y;
+		//	}
+		//	else
+		//	{
+		//		nPosX = nPosY = -1;
+		//	}
+		//}
 		break;
 	case SDL_MOUSEBUTTONDOWN:
 	case SDL_MOUSEBUTTONUP:
 		if(pEvt->type == SDL_MOUSEBUTTONUP)
 		{
-			MicroProfileMouseClick(pEvt->button.button == 1, pEvt->button.button == 3);
 		}
 		if(pEvt->button.button < MOUSE_BUTTON_MAX)
 		{
@@ -223,11 +244,11 @@ void HandleEvent(SDL_Event* pEvt)
 		}
 		if(pEvt->button.button == SDL_BUTTON_WHEELUP)
 		{
-			MicroProfileMoveGraph(-1,0,0);
+			g_MicroProfileMouseDelta--;
 		}
 		else if(pEvt->button.button == SDL_BUTTON_WHEELDOWN)
 		{
-			MicroProfileMoveGraph(1,0,0);
+			g_MicroProfileMouseDelta++;
 		}
 	// 	}
 	// 	break;
@@ -285,60 +306,12 @@ void HandleEvent(SDL_Event* pEvt)
 int ProgramMain();
 void ProgramInit();
 
-
-std::atomic<int> foo;
-
-
-
-
-
-int cons__(std::atomic<int>& at, int* p0, int* p1)
-{
-	*p0 = 0;
-	int v = at.load(std::memory_order_consume);
-	int l = *p1;
-	return v + l;
-}
-
-int acq__(std::atomic<int>& at, int* p0, int* p1)
-{
-	*p0 = 0;
-	//int v = at.load(std::memory_order_acquire);
-	int v = at.load(std::memory_order_acq_rel);
-
-	//memory_order_acq_rel
-	int l = p1[v];
-	return v + l;
-}
-
-
-void sto___(std::atomic<int>& at, int r, int* p0, int* p1)
-{
-	*p0 = 0;
-	//at.store(r, std::memory_order_release);
-	at.store(r, std::memory_order_acq_rel);
-	//.memory_order_acq_rel
-	*p1 = 0;
-}
-
-
 void MicroProfileQueryInitGL();
 
-
-
-#ifdef _WIN32
-int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw)
-#else
 extern "C" 
-int SDL_main(int argc, char** argv)
-#endif
+int SDL_main(int argc, char* argv[])
 {
-	int p0 = 0, p1 = 0, p2 = 0, p3 = 0;
-	uprintf("foo %p\n", &foo);
-	sto___(foo, 1, &p0, &p1);
-	int x = acq__(foo,  &p0, &p1) + cons__(foo,  &p0, &p1);
-	uprintf("foo %d\n", x);
-	MicroProfileInit();
+
 	MicroProfileOnThreadCreate("Main");
 
 	if(SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER) < 0) {
@@ -418,8 +391,14 @@ int SDL_main(int argc, char** argv)
 		{
 			srand(0);
 			MICROPROFILE_SCOPEI("MAIN", "DebugRender", 0x00eeee);
-			DebugDrawFlush();
-			TextFlush();
+			{
+				MICROPROFILE_SCOPEGPUI("GPU", "Render Debug", 0x88dd44);
+				DebugDrawFlush();
+			}
+			{
+				MICROPROFILE_SCOPEGPUI("GPU", "Render Text", 0x88dd44);
+				TextFlush();
+			}
 			MICROPROFILE_SCOPEI("MAIN", "DUMMY", randcolor());
 
 			for(int i = 0; i < 5; ++i)
@@ -442,11 +421,19 @@ int SDL_main(int argc, char** argv)
 
 		}
 
+
+		//MicroProfileMouseClick();pEvt->button.button == 1, pEvt->button.button == 3);
+		MicroProfileMouseButton(g_MouseState.button[1] & BUTTON_DOWN ? 1 : 0, g_MouseState.button[3] & BUTTON_DOWN ? 1 : 0);
+		MicroProfileMousePosition(g_MicroProfileMouseX, g_MicroProfileMouseY, g_MicroProfileMouseDelta);
+		g_MicroProfileMouseDelta = 0;
+
 		static uint64_t nMain = 0;
 		MicroProfileLeave(MainTok, nMain);
 		MicroProfileFlip();
 		nMain = MicroProfileEnter(MainTok);
 		{
+			MICROPROFILE_SCOPEGPUI("GPU", "MicroProfileDraw", 0x88dd44);
+
 			CheckGLError();
 			glMatrixMode(GL_PROJECTION);
 			glLoadIdentity();
@@ -458,8 +445,9 @@ int SDL_main(int argc, char** argv)
 			glDisable(GL_DEPTH_TEST);
 			glDisable(GL_CULL_FACE);
 			CheckGLError();
+			MicroProfileDraw(g_Width, g_Height);
 		}
-		MicroProfileDraw(g_Width, g_Height);
+		
 
 
 
