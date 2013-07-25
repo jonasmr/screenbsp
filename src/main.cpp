@@ -46,9 +46,9 @@ void usleep(__int64 usec)
 #endif
 
 SDL_Surface* g_Surface;
-#ifdef _WIN32
-#define START_WIDTH 1600
-#define START_HEIGHT 1080
+#ifdef _WIN32123
+#define START_WIDTH 1280
+#define START_HEIGHT 1024
 #else
 #define START_WIDTH 800
 #define START_HEIGHT 600
@@ -74,6 +74,49 @@ MICROPROFILE_DEFINE(ThreadSafeInner2,"ThreadSafe", "Inner2", randcolor());
 MICROPROFILE_DEFINE(ThreadSafeInner1,"ThreadSafe", "Inner1", randcolor());
 MICROPROFILE_DEFINE(ThreadSafeInner0,"ThreadSafe", "Inner0", randcolor());
 MICROPROFILE_DEFINE(ThreadSafeMain,"ThreadSafe", "Main", randcolor());
+
+MICROPROFILE_DEFINE(MAIN, "MAIN", "Main", 0xff0000);
+
+
+#if defined(__APPLE__)
+#include <mach/mach.h>
+#include <mach/mach_time.h>
+#include <unistd.h>
+#include <libkern/OSAtomic.h>
+#define TICK() mach_absolute_time()
+inline int64_t TicksPerSecond()
+{
+	static int64_t nTicksPerSecond = 0;	
+	if(nTicksPerSecond == 0) 
+	{
+		mach_timebase_info_data_t sTimebaseInfo;	
+		mach_timebase_info(&sTimebaseInfo);
+		nTicksPerSecond = 1000000000ll * sTimebaseInfo.denom / sTimebaseInfo.numer;
+	}
+	return nTicksPerSecond;
+}
+#elif defined(_WIN32)
+#include <windows.h>
+inline int64_t TicksPerSecond()
+{
+	static int64_t nTicksPerSecond = 0;	
+	if(nTicksPerSecond == 0) 
+	{
+		QueryPerformanceFrequency((LARGE_INTEGER*)&nTicksPerSecond);
+	}
+	return nTicksPerSecond;
+}
+inline int64_t GetTick()
+{
+	int64_t ticks;
+	QueryPerformanceCounter((LARGE_INTEGER*)&ticks);
+	return ticks;
+}
+
+#define TICK() GetTick()
+#endif
+
+
 
 //fake work
 void WorkerThread(int threadId)
@@ -341,7 +384,9 @@ int SDL_main(int argc, char* argv[])
 	}
 
 
+#if MICROPROFILE_ENABLED
 	MicroProfileQueryInitGL();
+#endif
 
 
 	//Microprofile test
@@ -366,13 +411,15 @@ int SDL_main(int argc, char* argv[])
 	ProgramInit();
 	
 
-	MicroProfileToken MainTok = MicroProfileGetToken("MAIN", "Main", 0xff0000);
+	
 
 	
 	while(!g_nQuit)
 	{
+		int64_t nStart = TICK();
+		MICROPROFILE_SCOPE(MAIN);
 		CheckGLError();
-		PhysicsStep();
+		//PhysicsStep();
 		InputClear();
 		SDL_Event Evt;
 		while(SDL_PollEvent(&Evt))
@@ -427,10 +474,7 @@ int SDL_main(int argc, char* argv[])
 		MicroProfileMousePosition(g_MicroProfileMouseX, g_MicroProfileMouseY, g_MicroProfileMouseDelta);
 		g_MicroProfileMouseDelta = 0;
 
-		static uint64_t nMain = 0;
-		MicroProfileLeave(MainTok, nMain);
 		MicroProfileFlip();
-		nMain = MicroProfileEnter(MainTok);
 		{
 			MICROPROFILE_SCOPEGPUI("GPU", "MicroProfileDraw", 0x88dd44);
 
@@ -455,45 +499,32 @@ int SDL_main(int argc, char* argv[])
 		{
 			MicroProfileToggleDisplayMode();
 		}
-		if(g_KeyboardState.keys['x']&BUTTON_RELEASED)
-		{
-			MicroProfileToggleTimers();
-		}
-		if(g_KeyboardState.keys['c']&BUTTON_RELEASED)
-		{
-			MicroProfileToggleAverageTimers();
-		}
-		if(g_KeyboardState.keys['v']&BUTTON_RELEASED)
-		{
-			MicroProfileToggleMaxTimers();
-		}
-		if(g_KeyboardState.keys['b']&BUTTON_RELEASED)
-		{
-			MicroProfileToggleCallCount();
-		}
-		if(g_KeyboardState.keys[']']&BUTTON_RELEASED && 0 == ((g_KeyboardState.keys[SDLK_RSHIFT]|g_KeyboardState.keys[SDLK_LSHIFT]) & BUTTON_DOWN))
-		{
-			MicroProfileNextGroup();
-		}
-		if(g_KeyboardState.keys['[']&BUTTON_RELEASED && 0 == ((g_KeyboardState.keys[SDLK_RSHIFT]|g_KeyboardState.keys[SDLK_LSHIFT]) & BUTTON_DOWN))
-		{
-			MicroProfilePrevGroup();
-		}
-		if(g_KeyboardState.keys[']']&BUTTON_RELEASED && 0 != ((g_KeyboardState.keys[SDLK_RSHIFT]|g_KeyboardState.keys[SDLK_LSHIFT]) & BUTTON_DOWN))
-		{
-			MicroProfileNextAggregatePreset();
-		}
-		if(g_KeyboardState.keys['[']&BUTTON_RELEASED && 0 != ((g_KeyboardState.keys[SDLK_RSHIFT]|g_KeyboardState.keys[SDLK_LSHIFT]) & BUTTON_DOWN))
-		{
-			MicroProfilePrevAggregatePreset();
-		}
 		if(g_KeyboardState.keys[SDLK_RSHIFT] & BUTTON_RELEASED)
 		{
-			MicroProfileToggleFlipDetailed();
+			MicroProfileTogglePause();
 		}
+
+
+
+		int64_t nEnd= TICK();
+		static int64_t nTotal = 0;
+		static int64_t nCount = 0;
+		nTotal += nEnd-nStart;
+		nCount++;
+
+		int64_t nUsec = 1000000 * (nEnd-nStart) / TicksPerSecond();
+		int64_t nUsecAvg = 1000000 * (nTotal/nCount) / TicksPerSecond();
+		//if(0 == nCount %128)
+		{
+			uplotfnxt("ms %7.4fms ... AVG %7.4f :: %d\n", nUsec / 1000.f, nUsecAvg / 1000.f, nCount);
+		}
+
 
 		MICROPROFILE_SCOPEI("MAIN", "Flip", 0xffee00);
 		SDL_GL_SwapBuffers();
+
+
+
 	}
 
 
