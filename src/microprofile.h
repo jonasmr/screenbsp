@@ -4,14 +4,7 @@
 //  	border
 //		unify / cleanup
 //		faster
-// make mouse callback cleaner
-// one move
-// one click .. everything should be derived from these
 // presets
-// target framerate
-// windows
-
-///gpugpugpu
 
 #include <stdint.h>
 #include <string.h>
@@ -189,9 +182,10 @@ struct MicroProfileScopeHandler
 #define MICROPROFILE_MAX_GROUPS 48
 #define MICROPROFILE_MAX_GRAPHS 5
 #define MICROPROFILE_GRAPH_HISTORY 128
-#define MICROPROFILE_LOG_BUFFER_SIZE (((2048)<<10)/sizeof(MicroProfileLogEntry))
-#define MICROPROFILE_LOG_MAX_THREADS 32
+#define MICROPROFILE_BUFFER_SIZE (((2048)<<10)/sizeof(MicroProfileLogEntry))
+#define MICROPROFILE_MAX_THREADS 32
 #define MICROPROFILE_STACK_MAX 64
+#define MICROPROFILE_MAX_PRESETS 5
 
 
 enum MicroProfileDrawMask
@@ -263,7 +257,7 @@ struct MicroProfileLogEntry
 struct MicroProfileThreadLog
 {
 	MicroProfileThreadLog*  pNext;
-	MicroProfileLogEntry	Log[MICROPROFILE_LOG_BUFFER_SIZE];
+	MicroProfileLogEntry	Log[MICROPROFILE_BUFFER_SIZE];
 
 	std::atomic<uint32_t>	nPut;
 	std::atomic<uint32_t>	nGet;
@@ -338,9 +332,9 @@ struct
 	uint32_t 				nMouseRight;
 	uint32_t 				nActiveMenu;
 
-	uint32_t				nThreadActive[MICROPROFILE_LOG_MAX_THREADS];
-	MicroProfileThreadLog* 	Pool[MICROPROFILE_LOG_MAX_THREADS];
-	MicroProfileThreadLog* 	DisplayPool[MICROPROFILE_LOG_MAX_THREADS];
+	uint32_t				nThreadActive[MICROPROFILE_MAX_THREADS];
+	MicroProfileThreadLog* 	Pool[MICROPROFILE_MAX_THREADS];
+	MicroProfileThreadLog* 	DisplayPool[MICROPROFILE_MAX_THREADS];
 	uint32_t				nNumLogs;
 	uint32_t 				nNumDisplayLogs;
 	uint32_t 				nMemUsage;
@@ -493,7 +487,7 @@ inline void MicroProfileLogPut(MicroProfileToken nToken_, uint64_t nTick, MicroP
 	{
 		MP_ASSERT(pLog != 0); //this assert is hit if MicroProfileOnCreateThread is not called
 		uint32_t nPos = pLog->nPut.load(std::memory_order_relaxed);
-		uint32_t nNextPos = (nPos+1) % MICROPROFILE_LOG_BUFFER_SIZE;
+		uint32_t nNextPos = (nPos+1) % MICROPROFILE_BUFFER_SIZE;
 		if(nNextPos == pLog->nGet.load(std::memory_order_relaxed))
 		{
 			S.nOverflow = 100;
@@ -571,9 +565,9 @@ void MicroProfileFlip()
 	S.nFrameStartGpu[MICROPROFILE_GPU_FRAME_DELAY] = nQueryIndex;
 
 
-	uint32_t nPutStart[MICROPROFILE_LOG_MAX_THREADS];
-	uint32_t nGetStart[MICROPROFILE_LOG_MAX_THREADS];
-	for(uint32_t i = 0; i < MICROPROFILE_LOG_MAX_THREADS; ++i)
+	uint32_t nPutStart[MICROPROFILE_MAX_THREADS];
+	uint32_t nGetStart[MICROPROFILE_MAX_THREADS];
+	for(uint32_t i = 0; i < MICROPROFILE_MAX_THREADS; ++i)
 	{
 		MicroProfileThreadLog* pLog = S.Pool[i];
 		if(!pLog)
@@ -607,7 +601,7 @@ void MicroProfileFlip()
 		}
 		{
 			MICROPROFILE_SCOPEI("MicroProfile", "ThreadLoop", 0x3355ee);
-			for(uint32_t i = 0; i < MICROPROFILE_LOG_MAX_THREADS; ++i)
+			for(uint32_t i = 0; i < MICROPROFILE_MAX_THREADS; ++i)
 			{
 				uint32_t nPut = nPutStart[i];
 				uint32_t nGet = nGetStart[i];
@@ -623,8 +617,8 @@ void MicroProfileFlip()
 				}
 				else if(nPut != nGet)
 				{
-					MP_ASSERT(nGet != MICROPROFILE_LOG_BUFFER_SIZE);
-					uint32_t nCountEnd = MICROPROFILE_LOG_BUFFER_SIZE - nGet;
+					MP_ASSERT(nGet != MICROPROFILE_BUFFER_SIZE);
+					uint32_t nCountEnd = MICROPROFILE_BUFFER_SIZE - nGet;
 					nRange[0][0] = nGet;
 					nRange[0][1] = nGet + nCountEnd;
 					nRange[1][0] = 0;
@@ -731,7 +725,7 @@ void MicroProfileFlip()
 		if(S.nFlipLog)
 		{
 			S.pDisplayMouseOver = 0;
-			for(uint32_t i = 0; i < MICROPROFILE_LOG_MAX_THREADS; ++i)
+			for(uint32_t i = 0; i < MICROPROFILE_MAX_THREADS; ++i)
 			{
 				uint32_t nPut = nPutStart[i];
 				uint32_t nGet = nGetStart[i];
@@ -752,7 +746,7 @@ void MicroProfileFlip()
 				else if(nPut != nGet)
 				{
 					nRanges[0][0] = nGet;
-					nRanges[0][1] = MICROPROFILE_LOG_BUFFER_SIZE;
+					nRanges[0][1] = MICROPROFILE_BUFFER_SIZE;
 					nRanges[1][0] = 0;
 					nRanges[1][1] = nPut;
 				}
@@ -873,7 +867,7 @@ void MicroProfileFlip()
 			S.DisplayPoolFrameEndGpu = nFrameEndGpu;
 		}
 	}
-	for(uint32_t i = 0; i < MICROPROFILE_LOG_MAX_THREADS; ++i)
+	for(uint32_t i = 0; i < MICROPROFILE_MAX_THREADS; ++i)
 	{
 		MicroProfileThreadLog* pLog = S.Pool[i];
 		if(pLog)
@@ -1157,7 +1151,7 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 	uint32_t nHoverColor = (nHoverCounter<<24)|(nHoverCounter<<16)|(nHoverCounter<<8)|nHoverCounter;
 
 	uint32_t nLinesDrawn[MICROPROFILE_STACK_MAX]={0};
-	for(uint32_t j = 0; j < MICROPROFILE_LOG_MAX_THREADS; ++j)
+	for(uint32_t j = 0; j < MICROPROFILE_MAX_THREADS; ++j)
 	{
 		MicroProfileThreadLog* pLog = S.DisplayPool[j];
 		if(!pLog)
@@ -1589,7 +1583,7 @@ bool MicroProfileDrawMenu(uint32_t nWidth, uint32_t nHeight)
 				bSelected = S.nMenuAllThreads != 0;
 				return "All Threads";
 			}
-			else if(index-1 < MICROPROFILE_LOG_MAX_THREADS)
+			else if(index-1 < MICROPROFILE_MAX_THREADS)
 			{
 				if(S.Pool[index-1])
 				{
@@ -1901,6 +1895,61 @@ void MicroProfileMoveGraph(int nZoom, int nPanX, int nPanY)
 	if(S.nOffsetY<0)
 		S.nOffsetY = 0;
 }
+
+
+#include <stdio.h>
+
+
+struct MicroProfilePresetHeader
+{
+	//groups, threads, aggregate, reference frame, graphs timers
+	uint32_t nGroups[MICROPROFILE_MAX_GROUPS];
+	uint32_t nThreads[MICROPROFILE_MAX_THREADS];
+	uint32_t nGraphs[MICROPROFILE_MAX_GRAPHS];
+	uint32_t nAggregateFlip;
+	float fReference;
+	uint32_t nBars;
+
+};
+
+const char* MicroProfilePresetFilename(int nIndex)
+{
+	static char filename[64];
+	snprintf(filename, sizeof(filename)-1, ".microprofilepreset.%d", nIndex);
+	return filename;
+}
+
+void MicroProfileStorePreset(int nPreset)
+{
+	FILE* F = fopen(MicroProfilePresetFilename(nPreset), "w");
+	if(!F) return;
+
+	MicroProfilePresetHeader Header;
+	memset(&Header, 0, sizeof(Header));
+	Header. nAggregateFlip = S.nAggregateFlip;
+	Header.nBars = S.nBars;
+	Header.fReference = 0;
+
+
+	fwrite(&Header, sizeof(Header), 1, F);
+
+
+
+
+
+
+	fclose(F);
+
+}
+
+
+
+void MicroProfileLoadPreset(int nPreset)
+{
+
+}
+
+
 
 
 #endif
