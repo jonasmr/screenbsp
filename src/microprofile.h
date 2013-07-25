@@ -4,14 +4,10 @@
 //  	border
 //		unify / cleanup
 //		faster
-// presets
 // exclusive time
-// disabling of microprofiler.
 
 #define MICROPROFILE_ENABLED 1
-//#pragma optimize("", off)
 #if 0 == MICROPROFILE_ENABLED
-
 #define MICROPROFILE_DECLARE(var)
 #define MICROPROFILE_DEFINE(var, group, name, color)
 #define MICROPROFILE_DECLARE_GPU(var)
@@ -21,6 +17,12 @@
 #define MICROPROFILE_SCOPEGPU(var) do{}while(0)
 #define MICROPROFILE_SCOPEGPUI(group, name, color) do{}while(0)
 #define MicroProfileOnThreadCreate(foo) do{}while(0)
+#define MicroProfileMouseButton(foo, bar) do{}while(0)
+#define MicroProfileMousePosition(foo, bar) do{}while(0)
+#define MicroProfileFlip() do{}while(0)
+#define MicroProfileDraw(foo, bar) do{}while(0)
+#define MicroProfileToggleDisplayMode() do{}while(0)
+#define MicroProfileTogglePause() do{}while(0)
 
 #else
 
@@ -33,26 +35,6 @@
 #include <unistd.h>
 #include <libkern/OSAtomic.h>
 #define MP_TICK() mach_absolute_time()
-//inline float MicroProfileTickToMs(int64_t nTicks)
-//{
-//	static mach_timebase_info_data_t sTimebaseInfo;	
-//	if(sTimebaseInfo.denom == 0) 
-//	{
-//        (void) mach_timebase_info(&sTimebaseInfo);
-//    }
-//    return 0.000001f * (nTicks * sTimebaseInfo.numer / sTimebaseInfo.denom);
-//}
-//
-//
-//inline int64_t MicroProfileMsToTick(float fMs)
-//{
-//	static mach_timebase_info_data_t sTimebaseInfo;	
-//	if(sTimebaseInfo.denom == 0) 
-//	{
-//        (void) mach_timebase_info(&sTimebaseInfo);
-//    }
-//    return fMs * 1000000.f * sTimebaseInfo.denom / sTimebaseInfo.numer;
-//}
 inline int64_t MicroProfileTicksPerSecondCpu()
 {
 	static int64_t nTicksPerSecond = 0;	
@@ -87,25 +69,6 @@ inline int64_t MicroProfileGetTick()
 	return ticks;
 }
 
-//inline float MicroProfileTickToMs(int64_t nTicks)
-//{
-//	static int64_t nTicksPerSecond = 0;	
-//	if(nTicksPerSecond == 0) 
-//	{
-//		QueryPerformanceFrequency((LARGE_INTEGER*)&nTicksPerSecond);
-//	}
-//	return (nTicks * 1000.f / nTicksPerSecond);
-//}
-//inline int64_t MicroProfileMsToTick(float fMs)
-//{
-//	static int64_t nTicksPerSecond = 0;	
-//	if(nTicksPerSecond == 0) 
-//	{
-//		QueryPerformanceFrequency((LARGE_INTEGER*)&nTicksPerSecond);
-//	}
-//	return (int64_t)(fMs * 0.001f * nTicksPerSecond);
-//}
-
 #define MP_TICK() MicroProfileGetTick()
 #define MP_BREAK() __debugbreak()
 #define MP_THREAD_LOCAL __declspec(thread)
@@ -132,7 +95,6 @@ inline int64_t MicroProfileGetTick()
 #define MICROPROFILE_INVALID_TICK ((uint64_t)-1)
 #define MICROPROFILE_GPU_FRAME_DELAY 3 //must be > 0
 #define MICROPROFILE_PIX3_MODE 1
-//#define MICROPROFILE_PIX3_HEIGHT 7
 #define MICROPROFILE_PIX3_HEIGHT (MICROPROFILE_DETAILED_BAR_HEIGHT-4)
 
 #define MICROPROFILE_GROUP_MASK_ALL 0xffffffffffff
@@ -164,17 +126,9 @@ void MicroProfileDraw(uint32_t nWidth, uint32_t nHeight); //! call if drawing mi
 void MicroProfileToggleGraph(MicroProfileToken nToken);
 bool MicroProfileDrawGraph(uint32_t nScreenWidth, uint32_t nScreenHeight);
 void MicroProfileSetAggregateCount(uint32_t nCount); //!Set no. of frames to aggregate over. 0 for infinite
-void MicroProfileNextAggregatePreset(); //! Flip over some aggregate presets
-void MicroProfilePrevAggregatePreset(); //! Flip over some aggregate presets
-void MicroProfileNextGroup(); //! Toggle Group of bars displayed
-void MicroProfilePrevGroup(); //! Toggle Group of bars displayed
 void MicroProfileToggleDisplayMode(); //switch between off, bars, detailed
-void MicroProfileToggleTimers();//Toggle timer view
-void MicroProfileToggleAverageTimers(); //Toggle average view
-void MicroProfileToggleMaxTimers(); //Toggle max view
-void MicroProfileToggleCallCount(); // Toggle call count view
 void MicroProfileClearGraph();
-void MicroProfileToggleFlipDetailed();
+void MicroProfileTogglePause();
 void MicroProfileMousePosition(uint32_t nX, uint32_t nY, int nWheelDelta);
 void MicroProfileMouseButton(uint32_t nLeft, uint32_t nRight);
 void MicroProfileOnThreadCreate(const char* pThreadName); //should be called from newly created threads
@@ -351,7 +305,7 @@ struct
 	uint64_t nGroupMask;
 	uint32_t nDirty;
 	uint32_t nStoredGroup;
-	uint32_t nFlipLog;
+	uint32_t nRunning;
 	uint32_t nMaxGroupSize;
 	float fGraphBaseTime;
 	float fGraphBaseTimePos;
@@ -490,7 +444,7 @@ void MicroProfileInit()
 			S.Graph[i].nToken = MICROPROFILE_INVALID_TOKEN;
 		}
 		S.nBars = MP_DRAW_ALL;
-		S.nFlipLog = 1;
+		S.nRunning = 1;
 		S.fGraphBaseTime = 40.f;
 		S.nWidth = 100;
 		S.nHeight = 100;
@@ -695,7 +649,7 @@ void MicroProfileFlip()
 			}
 		}
 	}
-	if(S.nFlipLog)
+	if(S.nRunning)
 	{
 		{
 			MICROPROFILE_SCOPEI("MicroProfile", "Clear", 0x3355ee);
@@ -819,7 +773,7 @@ void MicroProfileFlip()
 
 	bool bFlipAggregate = false;
 	uint32_t nFlipFrequency = S.nAggregateFlip ? S.nAggregateFlip : 30;
-	if(S.nFlipLog && S.nAggregateFlip <= ++S.nAggregateFlipCount)
+	if(S.nRunning && S.nAggregateFlip <= ++S.nAggregateFlipCount)
 	{
 		memcpy(&S.Aggregate[0], &S.AggregateTimers[0], sizeof(S.Aggregate[0]) * S.nTotalTimers);
 		memcpy(&S.AggregateMax[0], &S.MaxTimers[0], sizeof(S.AggregateMax[0]) * S.nTotalTimers);
@@ -830,7 +784,7 @@ void MicroProfileFlip()
 			memset(&S.MaxTimers[0], 0, sizeof(S.MaxTimers[0]) * S.nTotalTimers);
 			S.nAggregateFlipCount = 0;
 		}
-		if(S.nFlipLog)
+		if(S.nRunning)
 		{
 			S.pDisplayMouseOver = 0;
 			for(uint32_t i = 0; i < MICROPROFILE_MAX_THREADS; ++i)
@@ -999,55 +953,6 @@ void MicroProfileFlip()
 
 
 
-
-void MicroProfileSetAggregateCount(uint32_t nCount)
-{
-	S.nAggregateFlip = nCount;
-}
-void MicroProfileNextAggregatePreset()
-{
-	uint32_t nNext = g_MicroProfileAggregatePresets[0];
-	uint32_t nCurrent = S.nAggregateFlip;
-	for(uint32_t nPreset : g_MicroProfileAggregatePresets)
-	{
-		if(nPreset > nCurrent)
-		{
-			nCurrent = nPreset;
-			break;
-		}
-	}
-	S.nAggregateFlip = nCurrent;
-	S.nDirty = 1;
-}
-void MicroProfilePrevAggregatePreset()
-{
-	S.nDirty = 1;
-	uint32_t nCurrent = S.nAggregateFlip;
-	uint32_t nBest = g_MicroProfileAggregatePresets[(sizeof(g_MicroProfileAggregatePresets)/sizeof(g_MicroProfileAggregatePresets[0]))-1];
-
-	for(uint32_t nPreset : g_MicroProfileAggregatePresets)
-	{
-		if(nPreset < nCurrent)
-		{
-			nBest = nPreset;
-		}
-	}
-	S.nAggregateFlip = nBest;
-}
-
-void MicroProfileNextGroup()
-{
-	if(MICROPROFILE_GROUP_MASK_ALL == S.nActiveGroup) return;
-	S.nActiveGroup = (S.nActiveGroup+1)%S.nGroupCount;
-	MicroProfileClearGraph();
-}
-void MicroProfilePrevGroup()
-{
-	if(MICROPROFILE_GROUP_MASK_ALL == S.nActiveGroup) return;
-	S.nActiveGroup = (S.nActiveGroup+S.nGroupCount-1)%S.nGroupCount;
-	MicroProfileClearGraph();
-}
-
 void MicroProfileToggleDisplayMode()
 {
 	switch(S.nDisplay)
@@ -1071,23 +976,6 @@ void MicroProfileToggleDisplayMode()
 		}
 		break;		
 	}
-}
-void MicroProfileToggleTimers()
-{
-	S.nBars ^= MP_DRAW_TIMERS;
-}
-void MicroProfileToggleAverageTimers()
-{
-	S.nBars ^= MP_DRAW_AVERAGE;
-}
-void MicroProfileToggleMaxTimers()
-{
-	S.nBars ^= MP_DRAW_MAX;
-}
-
-void MicroProfileToggleCallCount()
-{
-	S.nBars ^= MP_DRAW_CALL_COUNT;
 }
 
 
@@ -1689,7 +1577,7 @@ bool MicroProfileDrawMenu(uint32_t nWidth, uint32_t nHeight)
 	pMenuText[nNumMenuItems++] = "Reference";
 	pMenuText[nNumMenuItems++] = "Preset";
 	const int nPauseIndex = nNumMenuItems;
-	pMenuText[nNumMenuItems++] = S.nFlipLog ? "Pause" : "Unpause";
+	pMenuText[nNumMenuItems++] = S.nRunning ? "Pause" : "Unpause";
 	if(S.nOverflow)
 	{
 		pMenuText[nNumMenuItems++] = "!BUFFERSFULL!";
@@ -1913,7 +1801,7 @@ bool MicroProfileDrawMenu(uint32_t nWidth, uint32_t nHeight)
 			nSelectMenu = i;
 			if((S.nMouseLeft || S.nMouseRight) && i == nPauseIndex)
 			{
-				S.nFlipLog = !S.nFlipLog;
+				S.nRunning = !S.nRunning;
 			}
 		}
 		MicroProfileDrawText(nX, nY, -1, pMenuText[i]);
@@ -2079,9 +1967,9 @@ void MicroProfileClearGraph()
 		}
 	}
 }
-void MicroProfileToggleFlipDetailed()
+void MicroProfileTogglePause()
 {
-	S.nFlipLog = !S.nFlipLog;
+	S.nRunning = !S.nRunning;
 }
 
 void MicroProfileToggleGraph(MicroProfileToken nToken)
