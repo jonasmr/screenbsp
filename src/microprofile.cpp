@@ -53,6 +53,10 @@ void MicroProfileBeginDraw(uint32_t nWidth, uint32_t nHeight)
 
 void MicroProfileEndDraw()
 {
+	if(0 == g_nUseFastDraw)
+		return;
+	if(0 == nVertexPos)
+		return;
 	glBindBuffer(GL_ARRAY_BUFFER, g_VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(nDrawBuffer), &nDrawBuffer[0], GL_STREAM_DRAW);
 	int nStride = sizeof(MicroProfileVertex);
@@ -63,7 +67,7 @@ void MicroProfileEndDraw()
 	glEnableClientState(GL_COLOR_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
-	glDrawArrays(GL_QUADS, 0, nVertexPos/ 4);
+	glDrawArrays(GL_QUADS, 0, nVertexPos);
 
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_COLOR_ARRAY);
@@ -88,6 +92,7 @@ void MicroProfileDrawBox(uint32_t nX, uint32_t nY, uint32_t nWidth, uint32_t nHe
 {
 	if(g_nUseFastDraw)
 	{
+		nColor |= 0xff000000;
 		MicroProfileVertex* pVertex = PushVertices(4);
 		pVertex[0].nX = nX;
 		pVertex[0].nY = nY;
@@ -149,8 +154,8 @@ void MicroProfileDrawBoxFade(uint32_t nX0, uint32_t nY0, uint32_t nX1, uint32_t 
 
 	if(g_nUseFastDraw)
 	{
-		uint32_t nColor0 = (r0<<24)|(g0<<16)|(b0<<8)|0xff;
-		uint32_t nColor1 = (r1<<24)|(g1<<16)|(b1<<8)|0xff;
+		uint32_t nColor0 = (r0<<16)|(g0<<8)|(b0<<0)|0xff000000;
+		uint32_t nColor1 = (r1<<16)|(g1<<8)|(b1<<0)|0xff000000;
 		MicroProfileVertex* pVertex = PushVertices(4);
 		pVertex[0].nX = nX0;
 		pVertex[0].nY = nY0;
