@@ -37,7 +37,11 @@ namespace
 	uint32_t g_nW;
 	uint32_t g_nH;
 
-
+	uint32_t g_VBO;
+}
+void MicroProfileDrawInit()
+{
+	glGenBuffers(1, &g_VBO);
 }
 
 void MicroProfileBeginDraw(uint32_t nWidth, uint32_t nHeight)
@@ -47,13 +51,27 @@ void MicroProfileBeginDraw(uint32_t nWidth, uint32_t nHeight)
 	nVertexPos = 0;
 }
 
-
-
-
 void MicroProfileEndDraw()
 {
+	glBindBuffer(GL_ARRAY_BUFFER, g_VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(nDrawBuffer), &nDrawBuffer[0], GL_STREAM_DRAW);
+	int nStride = sizeof(MicroProfileVertex);
+	glVertexPointer(2, GL_SHORT, nStride, 0);
+	glColorPointer(4, GL_UNSIGNED_BYTE, nStride, (void*)(offsetof(MicroProfileVertex, nColor)));
+	glTexCoordPointer(4, GL_FLOAT, nStride, (void*)(offsetof(MicroProfileVertex, fU)));
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_COLOR_ARRAY);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+	glDrawArrays(GL_QUADS, 0, nVertexPos/ 4);
+
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glDisableClientState(GL_COLOR_ARRAY);
+	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 }
+
 
 
 void MicroProfileDrawText(uint32_t nX, uint32_t nY, uint32_t nColor, const char* pText)
