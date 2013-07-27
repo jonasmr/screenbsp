@@ -350,6 +350,9 @@ int ProgramMain();
 void ProgramInit();
 
 void MicroProfileQueryInitGL();
+void MicroProfileDrawInit();
+void MicroProfileBeginDraw(uint32_t nWidth, uint32_t nHeight);
+void MicroProfileEndDraw();
 
 extern "C" 
 int SDL_main(int argc, char* argv[])
@@ -386,6 +389,7 @@ int SDL_main(int argc, char* argv[])
 
 #if MICROPROFILE_ENABLED
 	MicroProfileQueryInitGL();
+	MicroProfileDrawInit();
 #endif
 
 
@@ -489,7 +493,10 @@ int SDL_main(int argc, char* argv[])
 			glDisable(GL_DEPTH_TEST);
 			glDisable(GL_CULL_FACE);
 			CheckGLError();
+
+			MicroProfileBeginDraw(g_Width, g_Height);
 			MicroProfileDraw(g_Width, g_Height);
+			MicroProfileEndDraw();
 		}
 		
 

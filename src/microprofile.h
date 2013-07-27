@@ -47,8 +47,6 @@ inline int64_t MicroProfileTicksPerSecondCpu()
 	return nTicksPerSecond;
 }
 
-
-
 #define MP_BREAK() __builtin_trap()
 #define MP_THREAD_LOCAL __thread
 #elif defined(_WIN32)
@@ -412,8 +410,10 @@ inline float MicroProfileTickToMsMultiplier(int64_t nTicksPerSecond)
 	return 1000.f / nTicksPerSecond;
 }
 
-
-inline uint16_t MicroProfileGetGroupIndex(MicroProfileToken t){ return S.TimerInfo[MicroProfileGetTimerIndex(t)].nGroupIndex;}
+inline uint16_t MicroProfileGetGroupIndex(MicroProfileToken t)
+{
+	return S.TimerInfo[MicroProfileGetTimerIndex(t)].nGroupIndex;
+}
 
 
 #include "debug.h"
@@ -2162,7 +2162,7 @@ void MicroProfileLoadPreset(const char* pSuffix)
 			{
 				if(S.GroupInfo[j].pName && 0 == strcmp(pGroupName, S.GroupInfo[j].pName))
 				{
-					S.nMenuActiveGroup |= (1 << j);
+					S.nMenuActiveGroup |= (1ll << j);
 				}
 			}
 		}
