@@ -2,10 +2,11 @@
 #include "microprofile.h"
 #include "glinc.h"
 #include "text.h"
+#include "shader.h"
 
 #if MICROPROFILE_ENABLED
 
-uint32_t g_nUseFastDraw = 0;
+uint32_t g_nUseFastDraw = 1;
 
 struct MicroProfileVertex
 {
@@ -156,23 +157,23 @@ void MicroProfileDrawBox(uint32_t nX, uint32_t nY, uint32_t nWidth, uint32_t nHe
 		pVertex[0].nX = nX;
 		pVertex[0].nY = nY;
 		pVertex[0].nColor = nColor;
-		pVertex[0].fU = 0.f;
-		pVertex[0].fV = 0.f;
+		pVertex[0].fU = 2.f;
+		pVertex[0].fV = 2.f;
 		pVertex[1].nX = nX  + nWidth;
 		pVertex[1].nY = nY;
 		pVertex[1].nColor = nColor;
-		pVertex[1].fU = 0.f;
-		pVertex[1].fV = 0.f;
+		pVertex[1].fU = 2.f;
+		pVertex[1].fV = 2.f;
 		pVertex[2].nX = nX + nWidth;
 		pVertex[2].nY = nY + nHeight;
 		pVertex[2].nColor = nColor;
-		pVertex[2].fU = 0.f;
-		pVertex[2].fV = 0.f;
+		pVertex[2].fU = 2.f;
+		pVertex[2].fV = 2.f;
 		pVertex[3].nX = nX;
 		pVertex[3].nY = nY + nHeight;
 		pVertex[3].nColor = nColor;
-		pVertex[3].fU = 0.f;
-		pVertex[3].fV = 0.f;
+		pVertex[3].fU = 2.f;
+		pVertex[3].fV = 2.f;
 	}
 	else
 	{
@@ -219,23 +220,23 @@ void MicroProfileDrawBoxFade(uint32_t nX0, uint32_t nY0, uint32_t nX1, uint32_t 
 		pVertex[0].nX = nX0;
 		pVertex[0].nY = nY0;
 		pVertex[0].nColor = nColor0;
-		pVertex[0].fU = 0.f;
-		pVertex[0].fV = 0.f;
+		pVertex[0].fU = 2.f;
+		pVertex[0].fV = 2.f;
 		pVertex[1].nX = nX1;
 		pVertex[1].nY = nY0;
 		pVertex[1].nColor = nColor0;
-		pVertex[1].fU = 0.f;
-		pVertex[1].fV = 0.f;
+		pVertex[1].fU = 2.f;
+		pVertex[1].fV = 2.f;
 		pVertex[2].nX = nX1;
 		pVertex[2].nY = nY1;
 		pVertex[2].nColor = nColor1;
-		pVertex[2].fU = 0.f;
-		pVertex[2].fV = 0.f;
+		pVertex[2].fU = 2.f;
+		pVertex[2].fV = 2.f;
 		pVertex[3].nX = nX0;
 		pVertex[3].nY = nY1;
 		pVertex[3].nColor = nColor1;
-		pVertex[3].fU = 0.f;
-		pVertex[3].fV = 0.f;
+		pVertex[3].fU = 2.f;
+		pVertex[3].fV = 2.f;
 	}
 	else
 	{

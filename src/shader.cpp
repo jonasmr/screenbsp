@@ -72,13 +72,16 @@ GLuint CreateProgram(int nType, const char* pFile)
 	glShaderSource(handle, 1, (const char**)&pBuffer, 0);
 	CheckGLError();
 
-	DumpGlLog(handle);
+	
 
 	glCompileShader(handle);
 	CheckGLError();
 
+	DumpGlLog(handle);
+
 
 	CheckGLError();
+	//static void DumpGlLog(GLuint handle)
 
 	free(pBuffer);
 	ZASSERT(handle);	
@@ -108,11 +111,15 @@ void ShaderUse(EShaderVS vs, EShaderPS ps)
 	{
 		GLuint prg = glCreateProgramObjectARB();
 		CheckGLError();
+		glCompileShader(g_ShaderState.PS[ps]);
+		CheckGLError();
+		glCompileShader(g_ShaderState.VS[vs]);
+
 		glAttachObjectARB(prg, g_ShaderState.PS[ps]);
 		glAttachObjectARB(prg, g_ShaderState.VS[vs]);
-		CheckGLError();
 		glLinkProgramARB(prg);
 		g_ShaderState.LinkedPrograms[nIndex] = prg;
+		CheckGLError();
 		DumpGlLog(prg);
 		DumpGlLog(g_ShaderState.PS[ps]);
 		DumpGlLog(g_ShaderState.VS[vs]);
