@@ -130,6 +130,10 @@ void MicroProfileTogglePause();
 void MicroProfileMousePosition(uint32_t nX, uint32_t nY, int nWheelDelta);
 void MicroProfileMouseButton(uint32_t nLeft, uint32_t nRight);
 void MicroProfileOnThreadCreate(const char* pThreadName); //should be called from newly created threads
+void MicroProfileDrawLineVertical(int nX, int nTop, int nBottom, uint32_t nColor);
+void MicroProfileDrawLineHorizontal(int nLeft, int nRight, int nY, uint32_t nColor);
+
+
 
 //UNDEFINED: MUST BE IMPLEMENTED ELSEWHERE
 void MicroProfileDrawText(int nX, int nY, uint32_t nColor, const char* pText);
@@ -1223,12 +1227,13 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 							pMouseOverNext = pEntry;
 						}
 						nLinesDrawn[nStackPos] = nLineX;
-						float fLine[] = {
-							fXAvg, fYStart + 0.5f,
-							fXAvg, fYEnd + 0.5f
+						// float fLine[] = {
+						// 	fXAvg, fYStart + 0.5f,
+						// 	fXAvg, fYEnd + 0.5f
 
-						};
-						MicroProfileDrawLine2D(2, &fLine[0], nColor);
+						// };
+						// //MicroProfileDrawLine2D(2, &fLine[0], nColor);
+						MicroProfileDrawLineVertical(nLineX, fYStart + 0.5f, fYEnd + 0.5f, nColor);
 					}
 				}
 			}
@@ -1390,7 +1395,19 @@ bool MicroProfileDrawGraph(uint32_t nScreenWidth, uint32_t nScreenHeight)
 			fXAvg, (float)nY + MICROPROFILE_GRAPH_HEIGHT,
 
 		};
-		MicroProfileDrawLine2D(2, &fLine[0], (uint32_t)-1);
+		MicroProfileDrawLineVertical(fXAvg, nY, nY + MICROPROFILE_GRAPH_HEIGHT, (uint32_t)-1);
+		//MicroProfileDrawLine2D(2, &fLine[0], (uint32_t)-1);
+
+
+
+								// float fLine[] = {
+						// 	fXAvg, fYStart + 0.5f,
+						// 	fXAvg, fYEnd + 0.5f
+
+						// };
+						// // //MicroProfileDrawLine2D(2, &fLine[0], nColor);
+						// MicroProfileDrawLineVertical(nLineX, fYStart + 0.5f, fYEnd + 0.5f, nColor);
+
 	}
 
 
@@ -1434,9 +1451,27 @@ bool MicroProfileDrawGraph(uint32_t nScreenWidth, uint32_t nScreenHeight)
 			(float)nX, fY3,
 			(float)nX + MICROPROFILE_GRAPH_WIDTH, fY3,
 		};
-		MicroProfileDrawLine2D(2, &fLine[0], 0xdd4444);
-		MicroProfileDrawLine2D(2, &fLine[4], g_nMicroProfileBackColors[0]);
-		MicroProfileDrawLine2D(2, &fLine[8], g_nMicroProfileBackColors[0]);
+		MicroProfileDrawLineHorizontal(nX, nX + MICROPROFILE_GRAPH_WIDTH, fY1, 0xdd4444);
+		MicroProfileDrawLineHorizontal(nX, nX + MICROPROFILE_GRAPH_WIDTH, fY2, g_nMicroProfileBackColors[0]);
+		MicroProfileDrawLineHorizontal(nX, nX + MICROPROFILE_GRAPH_WIDTH, fY3, g_nMicroProfileBackColors[0]);
+
+
+		// MicroProfileDrawLine2D(2, &fLine[0], 0xdd4444);
+		// MicroProfileDrawLine2D(2, &fLine[4], g_nMicroProfileBackColors[0]);
+		// MicroProfileDrawLine2D(2, &fLine[8], g_nMicroProfileBackColors[0]);
+
+
+						// float fLine[] = {
+						// 	fXAvg, fYStart + 0.5f,
+						// 	fXAvg, fYEnd + 0.5f
+
+						// };
+						// //MicroProfileDrawLine2D(2, &fLine[0], nColor);
+						// MicroProfileDrawLineVertical(nLineX, fYStart + 0.5f, fYEnd + 0.5f, nColor);
+
+
+
+
 		char buf[32];
 		snprintf(buf, sizeof(buf)-1, "%5.2fms", S.fReferenceTime);
 		MicroProfileDrawText(nX+1, fY1 - (2+MICROPROFILE_TEXT_HEIGHT), (uint32_t)-1, buf);
@@ -2207,6 +2242,17 @@ void MicroProfileLoadPreset(const char* pSuffix)
 		}
 	}
 }
+
+void MicroProfileDrawLineVertical(int nX, int nTop, int nBottom, uint32_t nColor)
+{
+	MicroProfileDrawBox(nX, nTop, 1, nBottom - nTop, nColor);
+}
+
+void MicroProfileDrawLineHorizontal(int nLeft, int nRight, int nY, uint32_t nColor)
+{
+	MicroProfileDrawBox(nLeft, nY, nRight - nLeft, 1, nColor);
+}
+
 
 
 

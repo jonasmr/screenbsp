@@ -72,9 +72,6 @@ void MicroProfileEndDraw()
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, g_FontTexture);
 
-
-
-
 	glBindBuffer(GL_ARRAY_BUFFER, g_VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(nDrawBuffer), &nDrawBuffer[0], GL_STREAM_DRAW);
 	int nStride = sizeof(MicroProfileVertex);
@@ -167,7 +164,7 @@ void MicroProfileDrawBox(int nX, int nY, int nWidth, int nHeight, uint32_t nColo
 {
 	if(g_nUseFastDraw)
 	{
-		nColor |= 0xff000000;
+		nColor = 0xff000000|((nColor&0xff)<<16)|(nColor&0xff00)|((nColor>>16)&0xff);
 		MicroProfileVertex* pVertex = PushVertices(4);
 		pVertex[0].nX = nX;
 		pVertex[0].nY = nY;
@@ -211,9 +208,6 @@ void MicroProfileDrawBoxFade(int nX0, int nY0, int nX1, int nY1, uint32_t nColor
 	uint32_t b = 0xff & nColor;
 	uint32_t nMax = MicroProfileMax(MicroProfileMax(MicroProfileMax(r, g), b), 30u);
 	uint32_t nMin = MicroProfileMin(MicroProfileMin(MicroProfileMin(r, g), b), 180u);
-	// uint32_t r0 = 0xff & (r | nMax);
-	// uint32_t g0 = 0xff & (g | nMax);
-	// uint32_t b0 = 0xff & (b | nMax);
 
 	uint32_t r0 = 0xff & ((r + nMax)/2);
 	uint32_t g0 = 0xff & ((g + nMax)/2);
@@ -222,10 +216,6 @@ void MicroProfileDrawBoxFade(int nX0, int nY0, int nX1, int nY1, uint32_t nColor
 	uint32_t r1 = 0xff & ((r+nMin)/2);// >> 0);
 	uint32_t g1 = 0xff & ((g+nMin)/2);// >> 0);
 	uint32_t b1 = 0xff & ((b+nMin)/2);// >> 0);
-
-	// uint32_t r1 = 0xff & ((r+r)/2);// >> 0);
-	// uint32_t g1 = 0xff & ((g+g)/2);// >> 0);
-	// uint32_t b1 = 0xff & ((b+b)/2);// >> 0);
 
 	if(g_nUseFastDraw)
 	{
