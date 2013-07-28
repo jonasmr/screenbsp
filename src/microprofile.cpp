@@ -89,7 +89,6 @@ void MicroProfileEndDraw()
 	MP_ASSERT(-1 != loc);
 	ShaderSetUniform(loc, 0);
 
-	glEnable(GL_TEXTURE_2D);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, g_FontTexture);
 

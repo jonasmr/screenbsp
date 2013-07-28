@@ -1,8 +1,62 @@
 #pragma once
-// TODO: 
-// internal drawing
-//  	border
-// exclusive time
+//
+// Howto:
+// Call these functions from your code:
+//  MicroProfileOnThreadCreate
+//  MicroProfileMouseButton
+//  MicroProfileMousePosition 
+//  MicroProfileFlip  				<--Call this once per frame
+//  MicroProfileDraw  				<--Call this once per frame
+//  MicroProfileToggleDisplayMode 	<-- Bind to a key to toggle profiling
+//  MicroProfileTogglePause			<-- Bind to a key to toggle pause
+//
+// Use these macros in your code in blocks you want to time:
+//
+// 	MICROPROFILE_DECLARE
+// 	MICROPROFILE_DEFINE
+// 	MICROPROFILE_DECLARE_GPU
+// 	MICROPROFILE_DEFINE_GPU
+// 	MICROPROFILE_SCOPE
+// 	MICROPROFILE_SCOPEI
+// 	MICROPROFILE_SCOPEGPU
+// 	MICROPROFILE_SCOPEGPUI
+//
+//	Usage:
+//
+//	{
+//		MICROPROFILE_SCOPEI("GroupName", "TimerName", nColorRgb):
+// 		..Code to be timed..
+//  }
+//
+//	MICROPROFILE_DECLARE / MICROPROFILE_DEFINE allows defining groups in a shared place, to ensure sorting of the timers
+//
+//  (in global scope)
+//  MICROPROFILE_DEFINE(g_ProfileFisk, "Fisk", "Skalle", nSomeColorRgb);
+//
+//  (in some other file)
+//  MICROPROFILE_DECLARE(g_ProfileFisk);
+//
+//  void foo(){
+//  	MICROPROFILE_SCOPE(g_ProfileFisk);
+//  }
+//
+//  Once code is instrumented the gui is activeted by calling MicroProfileToggleDisplayMode or by clicking in the upper left corner of
+//  the screen
+//
+// The following functions must be implemented before the profiler is usable
+//  debug render:
+// 		void MicroProfileDrawText(int nX, int nY, uint32_t nColor, const char* pText);
+// 		void MicroProfileDrawBox(int nX, int nY, int nX1, int nY1, uint32_t nColor, MicroProfileBoxType = MicroProfileBoxTypeFlat);
+// 		void MicroProfileDrawLine2D(uint32_t nVertices, float* pVertices, uint32_t nColor);
+//  Gpu time stamps
+// 		uint32_t MicroProfileGpuInsertTimeStamp();
+// 		uint64_t MicroProfileGpuGetTimeStamp(uint32_t nKey);
+// 		uint64_t MicroProfileTicksPerSecondGpu();
+//
+//
+//
+// TODO: Exclusive timers
+
 
 #define MICROPROFILE_ENABLED 1
 #if 0 == MICROPROFILE_ENABLED
@@ -305,7 +359,6 @@ struct
 	uint32_t nOverflow;
 
 	uint64_t nGroupMask;
-	uint32_t nDirty;
 	uint32_t nStoredGroup;
 	uint32_t nRunning;
 	uint32_t nMaxGroupSize;
@@ -420,10 +473,6 @@ inline uint16_t MicroProfileGetGroupIndex(MicroProfileToken t)
 }
 
 
-#include "debug.h"
-
-
-
 void MicroProfileInit()
 {
 	std::lock_guard<std::recursive_mutex> Lock(MicroProfileMutex());
@@ -431,7 +480,6 @@ void MicroProfileInit()
 	if(bOnce)
 	{
 		S.nMemUsage += sizeof(S);
-		uprintf("***** MEM USAGE %dkb\n", S.nMemUsage >> 10);
 		bOnce = false;
 		memset(&S, 0, sizeof(S));
 		S.nGroupCount = 0;
@@ -471,7 +519,6 @@ MicroProfileThreadLog* MicroProfileCreateThreadLog(const char* pName)
 {
 	MicroProfileThreadLog* pLog = new MicroProfileThreadLog;
 	S.nMemUsage += sizeof(MicroProfileThreadLog);
-	uprintf("***** MEM USAGE %dkb\n", S.nMemUsage >> 10);
 	memset(pLog, 0, sizeof(*pLog));
 	int len = strlen(pName);
 	int maxlen = sizeof(pLog->ThreadName)-1;
@@ -515,8 +562,7 @@ MicroProfileToken MicroProfileGetToken(const char* pGroup, const char* pName, ui
 		S.GroupInfo[S.nGroupCount].Type = Type;
 		nGroupIndex = S.nGroupCount++;
 		S.nGroupMask = (S.nGroupMask<<1)|1;
-		uprintf("***** CREATED group %s index %d mask %08x\n", pGroup, nGroupIndex, 1ll << nGroupIndex);
-		ZASSERT(nGroupIndex < 48 );//limit is 48 groups
+		MP_ASSERT(nGroupIndex < 48 );//limit is 48 groups
 	}
 	uint16_t nTimerIndex = S.nTotalTimers++;
 	uint64_t nGroupMask = 1ll << nGroupIndex;
@@ -528,9 +574,6 @@ MicroProfileToken MicroProfileGetToken(const char* pGroup, const char* pName, ui
 	S.TimerInfo[nTimerIndex].pName = pName;
 	S.TimerInfo[nTimerIndex].nColor = nColor;
 	S.TimerInfo[nTimerIndex].nGroupIndex = nGroupIndex;
-	S.nDirty = 1;
-
-	uprintf("***** CREATED TIMER %08llx .. idx %d grp %d grp %s name %s\n", nToken, nTimerIndex, nGroupIndex, S.GroupInfo[nGroupIndex].pName, pName);
 	return nToken;
 }
 
@@ -885,7 +928,6 @@ void MicroProfileFlip()
 				{
 					S.DisplayPool[i] = new MicroProfileThreadLog;
 					S.nMemUsage += sizeof(MicroProfileThreadLog);
-					uprintf("***** MEM USAGE %dkb\n", S.nMemUsage >> 10);
 					pDest = S.DisplayPool[i];
 				}
 				uint32_t nStackDepth = 0;
@@ -1514,7 +1556,7 @@ void MicroProfileDrawBarView(uint32_t nScreenWidth, uint32_t nScreenHeight)
 	
 	uint32_t nNumTimers = 0;
 	uint32_t nNumGroups = 0;
-	for(uint32 j = 0; j < MICROPROFILE_MAX_GROUPS; ++j)
+	for(uint32_t j = 0; j < MICROPROFILE_MAX_GROUPS; ++j)
 	{
 		if(S.nActiveGroup & (1ll << j))
 		{
@@ -1534,7 +1576,7 @@ void MicroProfileDrawBarView(uint32_t nScreenWidth, uint32_t nScreenHeight)
 		MicroProfileDrawBox(nX, nY0, nScreenWidth, nY0 + (nHeight+1)+1, g_nMicroProfileBackColors[nColorIndex++ & 1]);
 	}
 	uint32_t nLegendOffset = 1;
-	for(uint32 j = 0; j < MICROPROFILE_MAX_GROUPS; ++j)
+	for(uint32_t j = 0; j < MICROPROFILE_MAX_GROUPS; ++j)
 	{
 		if(S.nActiveGroup & (1ll << j))
 		{
@@ -2224,10 +2266,6 @@ void MicroProfileDrawLineHorizontal(int nLeft, int nRight, int nY, uint32_t nCol
 {
 	MicroProfileDrawBox(nLeft, nY, nRight, nY + 1, nColor);
 }
-
-
-
-
 
 #endif
 #endif
