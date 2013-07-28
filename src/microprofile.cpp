@@ -9,14 +9,14 @@ uint32_t g_nUseFastDraw = 0;
 
 struct MicroProfileVertex
 {
-	int16_t nX;
-	int16_t nY;
+	float nX;
+	float nY;
 	uint32_t nColor;
 	float fU;
 	float fV;
 };
 
-#define MICROPROFILE_MAX_VERTICES (8<<10)
+#define MICROPROFILE_MAX_VERTICES (64<<10)
 
 namespace
 {
@@ -57,10 +57,13 @@ void MicroProfileEndDraw()
 		return;
 	if(0 == nVertexPos)
 		return;
+
+	ShaderUse(VS_MICROPROFILE, PS_MICROPROFILE);
+
 	glBindBuffer(GL_ARRAY_BUFFER, g_VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(nDrawBuffer), &nDrawBuffer[0], GL_STREAM_DRAW);
 	int nStride = sizeof(MicroProfileVertex);
-	glVertexPointer(2, GL_SHORT, nStride, 0);
+	glVertexPointer(2, GL_FLOAT, nStride, 0);
 	glColorPointer(4, GL_UNSIGNED_BYTE, nStride, (void*)(offsetof(MicroProfileVertex, nColor)));
 	glTexCoordPointer(4, GL_FLOAT, nStride, (void*)(offsetof(MicroProfileVertex, fU)));
 	glEnableClientState(GL_VERTEX_ARRAY);
@@ -74,6 +77,8 @@ void MicroProfileEndDraw()
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+	ShaderDisable();
+
 }
 
 
@@ -81,12 +86,66 @@ void MicroProfileEndDraw()
 void MicroProfileDrawText(uint32_t nX, uint32_t nY, uint32_t nColor, const char* pText)
 {
 	MICROPROFILE_SCOPEI("MicroProfile", "TextDraw", 0xff88ee);
-	TextBegin();
+	if(g_nUseFastDraw)
 	{
-		MICROPROFILE_SCOPEI("MicroProfile", "TextPut", 0xff88ee);
-		TextPut(nX, nY, pText, -1);
+		const float fEndV = 9.f / 16.f;
+		const float fOffsetU = 5.f / 1024.f;
+		int nLen = strlen(pText);
+		float fX = nX;
+		float fY = nY;
+		float fY2 = fY + (TEXT_CHAR_HEIGHT+1);
+
+		MicroProfileVertex* pVertex = PushVertices(4 * nLen);
+		const char* pStr = pText;
+		nColor = -1;
+
+		for(uint32_t j = 0; j < nLen; ++j)
+		{
+			int16_t nOffset = g_FontDescription.nCharOffsets[*pStr++];
+			float fOffset = nOffset / 1024.f;
+			pVertex[0].nX = fX;
+			pVertex[0].nY = fY;
+			pVertex[0].nColor = nColor;
+			pVertex[0].fU = fOffset;
+			pVertex[0].fV = 0.f;
+			
+			pVertex[1].nX = fX+TEXT_CHAR_WIDTH;
+			pVertex[1].nY = fY;
+			pVertex[1].nColor = nColor;
+			pVertex[1].fU = fOffset+fOffsetU;
+			pVertex[1].fV = 0.f;
+
+			pVertex[2].nX = fX+TEXT_CHAR_WIDTH;
+			pVertex[2].nY = fY2;
+			pVertex[2].nColor = nColor;
+			pVertex[2].fU = fOffset+fOffsetU;
+			pVertex[2].fV = 1.f;
+
+
+			pVertex[3].nX = fX;
+			pVertex[3].nY = fY2;
+			pVertex[3].nColor = nColor;
+			pVertex[3].fU = fOffset;
+			pVertex[3].fV = 1.f;
+
+			fX += TEXT_CHAR_WIDTH+1;
+			pVertex += 4;
+		}
+
+
+
+
+
 	}
-	TextEnd();
+	else
+	{
+		TextBegin();
+		{
+			MICROPROFILE_SCOPEI("MicroProfile", "TextPut", 0xff88ee);
+			TextPut(nX, nY, pText, -1);
+		}
+		TextEnd();
+	}
 }
 void MicroProfileDrawBox(uint32_t nX, uint32_t nY, uint32_t nWidth, uint32_t nHeight, uint32_t nColor)
 {
@@ -154,8 +213,8 @@ void MicroProfileDrawBoxFade(uint32_t nX0, uint32_t nY0, uint32_t nX1, uint32_t 
 
 	if(g_nUseFastDraw)
 	{
-		uint32_t nColor0 = (r0<<16)|(g0<<8)|(b0<<0)|0xff000000;
-		uint32_t nColor1 = (r1<<16)|(g1<<8)|(b1<<0)|0xff000000;
+		uint32_t nColor0 = (r0<<0)|(g0<<8)|(b0<<16)|0xff000000;
+		uint32_t nColor1 = (r1<<0)|(g1<<8)|(b1<<16)|0xff000000;
 		MicroProfileVertex* pVertex = PushVertices(4);
 		pVertex[0].nX = nX0;
 		pVertex[0].nY = nY0;

@@ -1,0 +1,12 @@
+
+uniform sampler2D tex; 
+
+varying vec3 TC;
+
+void main(void)  
+{  
+	vec4 color = texture(tex, TC.xy);
+	color = TC.Z > 0 ? color : vec4(1,1,1,1);
+	gl_FragColor.xyz = color.xyz * gl_Color.xyz;
+	gl_FragColor.w = color.w * gl_Color.w;
+}
