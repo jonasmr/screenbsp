@@ -77,8 +77,6 @@ void MicroProfileBeginDraw(uint32_t nWidth, uint32_t nHeight)
 extern GLuint g_FontTexture;
 void MicroProfileEndDraw()
 {
-	if(0 == g_nUseFastDraw)
-		return;
 	if(0 == nVertexPos)
 		return;
 	MICROPROFILE_SCOPEI("MicroProfile", "DrawFlush", 0x003456);
@@ -134,100 +132,74 @@ void MicroProfileEndDraw()
 void MicroProfileDrawText(int nX, int nY, uint32_t nColor, const char* pText)
 {
 	MICROPROFILE_SCOPEI("MicroProfile", "TextDraw", 0xff88ee);
-	if(g_nUseFastDraw)
+	const float fEndV = 9.f / 16.f;
+	const float fOffsetU = 5.f / 1024.f;
+	int nLen = strlen(pText);
+	float fX = nX;
+	float fY = nY;
+	float fY2 = fY + (TEXT_CHAR_HEIGHT+1);
+
+	MicroProfileVertex* pVertex = PushVertices(GL_QUADS, 4 * nLen);
+	const char* pStr = pText;
+	nColor = -1;
+
+	for(uint32_t j = 0; j < nLen; ++j)
 	{
-		const float fEndV = 9.f / 16.f;
-		const float fOffsetU = 5.f / 1024.f;
-		int nLen = strlen(pText);
-		float fX = nX;
-		float fY = nY;
-		float fY2 = fY + (TEXT_CHAR_HEIGHT+1);
+		int16_t nOffset = g_FontDescription.nCharOffsets[*pStr++];
+		float fOffset = nOffset / 1024.f;
+		pVertex[0].nX = fX;
+		pVertex[0].nY = fY;
+		pVertex[0].nColor = nColor;
+		pVertex[0].fU = fOffset;
+		pVertex[0].fV = 0.f;
+		
+		pVertex[1].nX = fX+TEXT_CHAR_WIDTH;
+		pVertex[1].nY = fY;
+		pVertex[1].nColor = nColor;
+		pVertex[1].fU = fOffset+fOffsetU;
+		pVertex[1].fV = 0.f;
 
-		MicroProfileVertex* pVertex = PushVertices(GL_QUADS, 4 * nLen);
-		const char* pStr = pText;
-		nColor = -1;
-
-		for(uint32_t j = 0; j < nLen; ++j)
-		{
-			int16_t nOffset = g_FontDescription.nCharOffsets[*pStr++];
-			float fOffset = nOffset / 1024.f;
-			pVertex[0].nX = fX;
-			pVertex[0].nY = fY;
-			pVertex[0].nColor = nColor;
-			pVertex[0].fU = fOffset;
-			pVertex[0].fV = 0.f;
-			
-			pVertex[1].nX = fX+TEXT_CHAR_WIDTH;
-			pVertex[1].nY = fY;
-			pVertex[1].nColor = nColor;
-			pVertex[1].fU = fOffset+fOffsetU;
-			pVertex[1].fV = 0.f;
-
-			pVertex[2].nX = fX+TEXT_CHAR_WIDTH;
-			pVertex[2].nY = fY2;
-			pVertex[2].nColor = nColor;
-			pVertex[2].fU = fOffset+fOffsetU;
-			pVertex[2].fV = 1.f;
+		pVertex[2].nX = fX+TEXT_CHAR_WIDTH;
+		pVertex[2].nY = fY2;
+		pVertex[2].nColor = nColor;
+		pVertex[2].fU = fOffset+fOffsetU;
+		pVertex[2].fV = 1.f;
 
 
-			pVertex[3].nX = fX;
-			pVertex[3].nY = fY2;
-			pVertex[3].nColor = nColor;
-			pVertex[3].fU = fOffset;
-			pVertex[3].fV = 1.f;
+		pVertex[3].nX = fX;
+		pVertex[3].nY = fY2;
+		pVertex[3].nColor = nColor;
+		pVertex[3].fU = fOffset;
+		pVertex[3].fV = 1.f;
 
-			fX += TEXT_CHAR_WIDTH+1;
-			pVertex += 4;
-		}
-	}
-	else
-	{
-		TextBegin();
-		{
-			MICROPROFILE_SCOPEI("MicroProfile", "TextPut", 0xff88ee);
-			TextPut(nX, nY, pText, -1);
-		}
-		TextEnd();
+		fX += TEXT_CHAR_WIDTH+1;
+		pVertex += 4;
 	}
 }
 void MicroProfileDrawBox(int nX, int nY, int nWidth, int nHeight, uint32_t nColor)
 {
-	if(g_nUseFastDraw)
-	{
-		nColor = 0xff000000|((nColor&0xff)<<16)|(nColor&0xff00)|((nColor>>16)&0xff);
-		MicroProfileVertex* pVertex = PushVertices(GL_QUADS, 4);
-		pVertex[0].nX = nX;
-		pVertex[0].nY = nY;
-		pVertex[0].nColor = nColor;
-		pVertex[0].fU = 2.f;
-		pVertex[0].fV = 2.f;
-		pVertex[1].nX = nX  + nWidth;
-		pVertex[1].nY = nY;
-		pVertex[1].nColor = nColor;
-		pVertex[1].fU = 2.f;
-		pVertex[1].fV = 2.f;
-		pVertex[2].nX = nX + nWidth;
-		pVertex[2].nY = nY + nHeight;
-		pVertex[2].nColor = nColor;
-		pVertex[2].fU = 2.f;
-		pVertex[2].fV = 2.f;
-		pVertex[3].nX = nX;
-		pVertex[3].nY = nY + nHeight;
-		pVertex[3].nColor = nColor;
-		pVertex[3].fU = 2.f;
-		pVertex[3].fV = 2.f;
-	}
-	else
-	{
-		glBegin(GL_QUADS);
-		glColor4ub(0xff&(nColor>>16), 0xff&(nColor>>8), 0xff&nColor, 0xff);
-		glVertex2i(nX, nY);
-		glVertex2i(nX + nWidth, nY);
-		glVertex2i(nX + nWidth, nY + nHeight);
-		glVertex2i(nX, nY + nHeight);
-		glEnd();
-	}
-
+	nColor = 0xff000000|((nColor&0xff)<<16)|(nColor&0xff00)|((nColor>>16)&0xff);
+	MicroProfileVertex* pVertex = PushVertices(GL_QUADS, 4);
+	pVertex[0].nX = nX;
+	pVertex[0].nY = nY;
+	pVertex[0].nColor = nColor;
+	pVertex[0].fU = 2.f;
+	pVertex[0].fV = 2.f;
+	pVertex[1].nX = nX  + nWidth;
+	pVertex[1].nY = nY;
+	pVertex[1].nColor = nColor;
+	pVertex[1].fU = 2.f;
+	pVertex[1].fV = 2.f;
+	pVertex[2].nX = nX + nWidth;
+	pVertex[2].nY = nY + nHeight;
+	pVertex[2].nColor = nColor;
+	pVertex[2].fU = 2.f;
+	pVertex[2].fV = 2.f;
+	pVertex[3].nX = nX;
+	pVertex[3].nY = nY + nHeight;
+	pVertex[3].nColor = nColor;
+	pVertex[3].fU = 2.f;
+	pVertex[3].fV = 2.f;
 }
 
 void MicroProfileDrawBoxFade(int nX0, int nY0, int nX1, int nY1, uint32_t nColor)
@@ -246,44 +218,29 @@ void MicroProfileDrawBoxFade(int nX0, int nY0, int nX1, int nY1, uint32_t nColor
 	uint32_t r1 = 0xff & ((r+nMin)/2);
 	uint32_t g1 = 0xff & ((g+nMin)/2);
 	uint32_t b1 = 0xff & ((b+nMin)/2);
-
-	if(g_nUseFastDraw)
-	{
-		uint32_t nColor0 = (r0<<0)|(g0<<8)|(b0<<16)|0xff000000;
-		uint32_t nColor1 = (r1<<0)|(g1<<8)|(b1<<16)|0xff000000;
-		MicroProfileVertex* pVertex = PushVertices(GL_QUADS, 4);
-		pVertex[0].nX = nX0;
-		pVertex[0].nY = nY0;
-		pVertex[0].nColor = nColor0;
-		pVertex[0].fU = 2.f;
-		pVertex[0].fV = 2.f;
-		pVertex[1].nX = nX1;
-		pVertex[1].nY = nY0;
-		pVertex[1].nColor = nColor0;
-		pVertex[1].fU = 2.f;
-		pVertex[1].fV = 2.f;
-		pVertex[2].nX = nX1;
-		pVertex[2].nY = nY1;
-		pVertex[2].nColor = nColor1;
-		pVertex[2].fU = 2.f;
-		pVertex[2].fV = 2.f;
-		pVertex[3].nX = nX0;
-		pVertex[3].nY = nY1;
-		pVertex[3].nColor = nColor1;
-		pVertex[3].fU = 2.f;
-		pVertex[3].fV = 2.f;
-	}
-	else
-	{
-		glBegin(GL_QUADS);
-		glColor4ub(r0, g0, b0, 0xff);
-		glVertex2i(nX0, nY0);
-		glVertex2i(nX1, nY0);
-		glColor4ub(r1, g1, b1, 0xff);
-		glVertex2i(nX1, nY1);
-		glVertex2i(nX0, nY1);
-		glEnd();
-	}
+	uint32_t nColor0 = (r0<<0)|(g0<<8)|(b0<<16)|0xff000000;
+	uint32_t nColor1 = (r1<<0)|(g1<<8)|(b1<<16)|0xff000000;
+	MicroProfileVertex* pVertex = PushVertices(GL_QUADS, 4);
+	pVertex[0].nX = nX0;
+	pVertex[0].nY = nY0;
+	pVertex[0].nColor = nColor0;
+	pVertex[0].fU = 2.f;
+	pVertex[0].fV = 2.f;
+	pVertex[1].nX = nX1;
+	pVertex[1].nY = nY0;
+	pVertex[1].nColor = nColor0;
+	pVertex[1].fU = 2.f;
+	pVertex[1].fV = 2.f;
+	pVertex[2].nX = nX1;
+	pVertex[2].nY = nY1;
+	pVertex[2].nColor = nColor1;
+	pVertex[2].fU = 2.f;
+	pVertex[2].fV = 2.f;
+	pVertex[3].nX = nX0;
+	pVertex[3].nY = nY1;
+	pVertex[3].nColor = nColor1;
+	pVertex[3].fU = 2.f;
+	pVertex[3].fV = 2.f;
 }
 
 
@@ -291,36 +248,20 @@ void MicroProfileDrawLine2D(uint32_t nVertices, float* pVertices, uint32_t nColo
 {
 	if(!nVertices) return;
 
-	if(g_nUseFastDraw)
+	MicroProfileVertex* pVertex = PushVertices(GL_LINES, 2*(nVertices-1));
+	for(uint32 i = 0; i < nVertices-1; ++i)
 	{
-		MicroProfileVertex* pVertex = PushVertices(GL_LINES, 2*(nVertices-1));
-		for(uint32 i = 0; i < nVertices-1; ++i)
-		{
-			pVertex[0].nX = pVertices[i*2];
-			pVertex[0].nY = pVertices[i*2+1] ;
-			pVertex[0].nColor = nColor;
-			pVertex[0].fU = 2.f;
-			pVertex[0].fV = 2.f;
-			pVertex[1].nX = pVertices[(i+1)*2];
-			pVertex[1].nY = pVertices[(i+1)*2+1] ;
-			pVertex[1].nColor = nColor;
-			pVertex[1].fU = 2.f;
-			pVertex[1].fV = 2.f;
-			pVertex += 2;
-		}
-
-
-	}
-	else
-	{
-		glBegin(GL_LINES);
-		glColor4ub(0xff&(nColor>>16), 0xff&(nColor>>8), 0xff&nColor, 0xff);
-		for(uint32 i = 0; i < nVertices-1; ++i)
-		{
-			glVertex2f(pVertices[i*2], pVertices[(i*2)+1]);
-			glVertex2f(pVertices[(i+1)*2], pVertices[((i+1)*2)+1]);
-		}
-		glEnd();
+		pVertex[0].nX = pVertices[i*2];
+		pVertex[0].nY = pVertices[i*2+1] ;
+		pVertex[0].nColor = nColor;
+		pVertex[0].fU = 2.f;
+		pVertex[0].fV = 2.f;
+		pVertex[1].nX = pVertices[(i+1)*2];
+		pVertex[1].nY = pVertices[(i+1)*2+1] ;
+		pVertex[1].nColor = nColor;
+		pVertex[1].fU = 2.f;
+		pVertex[1].fV = 2.f;
+		pVertex += 2;
 	}
 }
 
