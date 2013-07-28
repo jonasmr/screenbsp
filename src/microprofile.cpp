@@ -51,7 +51,7 @@ void MicroProfileBeginDraw(uint32_t nWidth, uint32_t nHeight)
 	g_nH = nHeight;
 	nVertexPos = 0;
 }
-
+extern GLuint g_FontTexture;
 void MicroProfileEndDraw()
 {
 	if(0 == g_nUseFastDraw)
@@ -60,6 +60,9 @@ void MicroProfileEndDraw()
 		return;
 
 	ShaderUse(VS_MICROPROFILE, PS_MICROPROFILE);
+	uint32_t loc = ShaderGetLocation(PS_MICROPROFILE, "tex");
+	MP_ASSERT(-1 != loc);
+	ShaderSetUniform(loc, g_FontTexture);
 
 	glBindBuffer(GL_ARRAY_BUFFER, g_VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(nDrawBuffer), &nDrawBuffer[0], GL_STREAM_DRAW);
