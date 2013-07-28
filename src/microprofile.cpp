@@ -58,18 +58,33 @@ void MicroProfileEndDraw()
 		return;
 	if(0 == nVertexPos)
 		return;
+	MICROPROFILE_SCOPEI("MicroProfile", "DrawFlush", 0x003456);
+
+	glEnable(GL_ALPHA_TEST);
+	glAlphaFunc(GL_GREATER, 0.5f);
 
 	ShaderUse(VS_MICROPROFILE, PS_MICROPROFILE);
-	uint32_t loc = ShaderGetLocation(PS_MICROPROFILE, "tex");
+	int32_t loc = ShaderGetLocation(PS_MICROPROFILE, "tex");
 	MP_ASSERT(-1 != loc);
-	ShaderSetUniform(loc, g_FontTexture);
+	ShaderSetUniform(loc, 0);
+
+	glEnable(GL_TEXTURE_2D);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, g_FontTexture);
+
+
+
 
 	glBindBuffer(GL_ARRAY_BUFFER, g_VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(nDrawBuffer), &nDrawBuffer[0], GL_STREAM_DRAW);
 	int nStride = sizeof(MicroProfileVertex);
+	
 	glVertexPointer(2, GL_FLOAT, nStride, 0);
 	glColorPointer(4, GL_UNSIGNED_BYTE, nStride, (void*)(offsetof(MicroProfileVertex, nColor)));
-	glTexCoordPointer(4, GL_FLOAT, nStride, (void*)(offsetof(MicroProfileVertex, fU)));
+	glClientActiveTexture(GL_TEXTURE0);
+	glTexCoordPointer(2, GL_FLOAT, nStride, (void*)(offsetof(MicroProfileVertex, fU)));
+
+
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -83,6 +98,8 @@ void MicroProfileEndDraw()
 
 	ShaderDisable();
 
+	glDisable(GL_ALPHA_TEST);
+	nVertexPos = 0;
 }
 
 
@@ -261,7 +278,7 @@ void MicroProfileDrawLine2D(uint32_t nVertices, float* pVertices, uint32_t nColo
 	//exploit the fact that lines are vertical.. and draw as quads.
 	if(g_nUseFastDraw)
 	{
-		MicroProfileVertex* pVertex = PushVertices(4);
+	//	MicroProfileVertex* pVertex = PushVertices(4);
 
 	}
 	else
