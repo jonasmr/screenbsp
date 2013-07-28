@@ -20,6 +20,7 @@ enum EShaderPS
 void ShaderInit();
 void ShaderUse(EShaderVS vs, EShaderPS ps);
 void ShaderSetSize(v3 vSize);
-
+int ShaderGetLocation(EShaderPS Shader, const char* pVar);
+void ShaderSetUniform(int location, int value);
 #define ShaderDisable() ShaderUse(VS_SIZE,PS_SIZE)
 

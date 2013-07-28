@@ -9,6 +9,7 @@ struct
 	GLuint VS[VS_SIZE];
 	GLuint PS[PS_SIZE];
 	GLuint LinkedPrograms[VS_SIZE * PS_SIZE];
+	int nCurrentIndex;
 
 } g_ShaderState;
 
@@ -103,6 +104,7 @@ void ShaderUse(EShaderVS vs, EShaderPS ps)
 {
 	if(vs == VS_SIZE || ps == PS_SIZE)
 	{
+		g_ShaderState.nCurrentIndex = -1;
 		glUseProgramObjectARB(0);
 		return;
 	}
@@ -119,6 +121,7 @@ void ShaderUse(EShaderVS vs, EShaderPS ps)
 		glAttachObjectARB(prg, g_ShaderState.VS[vs]);
 		glLinkProgramARB(prg);
 		g_ShaderState.LinkedPrograms[nIndex] = prg;
+		
 		CheckGLError();
 		DumpGlLog(prg);
 		DumpGlLog(g_ShaderState.PS[ps]);
@@ -127,6 +130,7 @@ void ShaderUse(EShaderVS vs, EShaderPS ps)
 	//use
 	CheckGLError();
 	glUseProgramObjectARB(g_ShaderState.LinkedPrograms[nIndex]);
+	g_ShaderState.nCurrentIndex = nIndex;
 	CheckGLError();
 
 }
@@ -134,5 +138,17 @@ void ShaderSetSize(v3 vSize)
 {
 	GLuint loc = glGetUniformLocation(g_ShaderState.LinkedPrograms[0], "Size");
 	glUniform3fv(loc, 1, &vSize.x);
-
 }
+
+int ShaderGetLocation(EShaderPS Shader, const char* pVar)
+{
+	int r = glGetUniformLocation(g_ShaderState.LinkedPrograms[g_ShaderState.nCurrentIndex], pVar);
+	ZASSERT(r>=0);
+	return r;
+}
+void ShaderSetUniform(int location, int value)
+{
+	glUniform1i(location, value);
+	CheckGLError();
+}
+
