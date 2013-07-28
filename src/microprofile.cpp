@@ -141,7 +141,7 @@ void MicroProfileDrawText(int nX, int nY, uint32_t nColor, const char* pText)
 
 	MicroProfileVertex* pVertex = PushVertices(GL_QUADS, 4 * nLen);
 	const char* pStr = pText;
-	nColor = -1;
+	nColor = 0xff000000|((nColor&0xff)<<16)|(nColor&0xff00)|((nColor>>16)&0xff);
 
 	for(uint32_t j = 0; j < nLen; ++j)
 	{
@@ -176,71 +176,74 @@ void MicroProfileDrawText(int nX, int nY, uint32_t nColor, const char* pText)
 		pVertex += 4;
 	}
 }
-void MicroProfileDrawBox(int nX, int nY, int nWidth, int nHeight, uint32_t nColor)
+void MicroProfileDrawBox(int nX0, int nY0, int nX1, int nY1, uint32_t nColor, MicroProfileBoxType Type)
 {
-	nColor = 0xff000000|((nColor&0xff)<<16)|(nColor&0xff00)|((nColor>>16)&0xff);
-	MicroProfileVertex* pVertex = PushVertices(GL_QUADS, 4);
-	pVertex[0].nX = nX;
-	pVertex[0].nY = nY;
-	pVertex[0].nColor = nColor;
-	pVertex[0].fU = 2.f;
-	pVertex[0].fV = 2.f;
-	pVertex[1].nX = nX  + nWidth;
-	pVertex[1].nY = nY;
-	pVertex[1].nColor = nColor;
-	pVertex[1].fU = 2.f;
-	pVertex[1].fV = 2.f;
-	pVertex[2].nX = nX + nWidth;
-	pVertex[2].nY = nY + nHeight;
-	pVertex[2].nColor = nColor;
-	pVertex[2].fU = 2.f;
-	pVertex[2].fV = 2.f;
-	pVertex[3].nX = nX;
-	pVertex[3].nY = nY + nHeight;
-	pVertex[3].nColor = nColor;
-	pVertex[3].fU = 2.f;
-	pVertex[3].fV = 2.f;
-}
+	if(Type == MicroProfileBoxTypeFlat)
+	{
+		MP_ASSERT(nX0 <= nX1);
+		MP_ASSERT(nY0 <= nY1);
+		nColor = 0xff000000|((nColor&0xff)<<16)|(nColor&0xff00)|((nColor>>16)&0xff);
+		MicroProfileVertex* pVertex = PushVertices(GL_QUADS, 4);
+		pVertex[0].nX = nX0;
+		pVertex[0].nY = nY0;
+		pVertex[0].nColor = nColor;
+		pVertex[0].fU = 2.f;
+		pVertex[0].fV = 2.f;
+		pVertex[1].nX = nX1;
+		pVertex[1].nY = nY0;
+		pVertex[1].nColor = nColor;
+		pVertex[1].fU = 2.f;
+		pVertex[1].fV = 2.f;
+		pVertex[2].nX = nX1;
+		pVertex[2].nY = nY1;
+		pVertex[2].nColor = nColor;
+		pVertex[2].fU = 2.f;
+		pVertex[2].fV = 2.f;
+		pVertex[3].nX = nX0;
+		pVertex[3].nY = nY1;
+		pVertex[3].nColor = nColor;
+		pVertex[3].fU = 2.f;
+		pVertex[3].fV = 2.f;
+	}
+	else
+	{
+		uint32_t r = 0xff & (nColor>>16);
+		uint32_t g = 0xff & (nColor>>8);
+		uint32_t b = 0xff & nColor;
+		uint32_t nMax = MicroProfileMax(MicroProfileMax(MicroProfileMax(r, g), b), 30u);
+		uint32_t nMin = MicroProfileMin(MicroProfileMin(MicroProfileMin(r, g), b), 180u);
 
-void MicroProfileDrawBoxFade(int nX0, int nY0, int nX1, int nY1, uint32_t nColor)
-{
-	
-	uint32_t r = 0xff & (nColor>>16);
-	uint32_t g = 0xff & (nColor>>8);
-	uint32_t b = 0xff & nColor;
-	uint32_t nMax = MicroProfileMax(MicroProfileMax(MicroProfileMax(r, g), b), 30u);
-	uint32_t nMin = MicroProfileMin(MicroProfileMin(MicroProfileMin(r, g), b), 180u);
+		uint32_t r0 = 0xff & ((r + nMax)/2);
+		uint32_t g0 = 0xff & ((g + nMax)/2);
+		uint32_t b0 = 0xff & ((b + nMax)/2);
 
-	uint32_t r0 = 0xff & ((r + nMax)/2);
-	uint32_t g0 = 0xff & ((g + nMax)/2);
-	uint32_t b0 = 0xff & ((b + nMax)/2);
-
-	uint32_t r1 = 0xff & ((r+nMin)/2);
-	uint32_t g1 = 0xff & ((g+nMin)/2);
-	uint32_t b1 = 0xff & ((b+nMin)/2);
-	uint32_t nColor0 = (r0<<0)|(g0<<8)|(b0<<16)|0xff000000;
-	uint32_t nColor1 = (r1<<0)|(g1<<8)|(b1<<16)|0xff000000;
-	MicroProfileVertex* pVertex = PushVertices(GL_QUADS, 4);
-	pVertex[0].nX = nX0;
-	pVertex[0].nY = nY0;
-	pVertex[0].nColor = nColor0;
-	pVertex[0].fU = 2.f;
-	pVertex[0].fV = 2.f;
-	pVertex[1].nX = nX1;
-	pVertex[1].nY = nY0;
-	pVertex[1].nColor = nColor0;
-	pVertex[1].fU = 2.f;
-	pVertex[1].fV = 2.f;
-	pVertex[2].nX = nX1;
-	pVertex[2].nY = nY1;
-	pVertex[2].nColor = nColor1;
-	pVertex[2].fU = 2.f;
-	pVertex[2].fV = 2.f;
-	pVertex[3].nX = nX0;
-	pVertex[3].nY = nY1;
-	pVertex[3].nColor = nColor1;
-	pVertex[3].fU = 2.f;
-	pVertex[3].fV = 2.f;
+		uint32_t r1 = 0xff & ((r+nMin)/2);
+		uint32_t g1 = 0xff & ((g+nMin)/2);
+		uint32_t b1 = 0xff & ((b+nMin)/2);
+		uint32_t nColor0 = (r0<<0)|(g0<<8)|(b0<<16)|0xff000000;
+		uint32_t nColor1 = (r1<<0)|(g1<<8)|(b1<<16)|0xff000000;
+		MicroProfileVertex* pVertex = PushVertices(GL_QUADS, 4);
+		pVertex[0].nX = nX0;
+		pVertex[0].nY = nY0;
+		pVertex[0].nColor = nColor0;
+		pVertex[0].fU = 2.f;
+		pVertex[0].fV = 2.f;
+		pVertex[1].nX = nX1;
+		pVertex[1].nY = nY0;
+		pVertex[1].nColor = nColor0;
+		pVertex[1].fU = 3.f;
+		pVertex[1].fV = 2.f;
+		pVertex[2].nX = nX1;
+		pVertex[2].nY = nY1;
+		pVertex[2].nColor = nColor1;
+		pVertex[2].fU = 3.f;
+		pVertex[2].fV = 3.f;
+		pVertex[3].nX = nX0;
+		pVertex[3].nY = nY1;
+		pVertex[3].nColor = nColor1;
+		pVertex[3].fU = 2.f;
+		pVertex[3].fV = 3.f;
+	}
 }
 
 
@@ -249,6 +252,7 @@ void MicroProfileDrawLine2D(uint32_t nVertices, float* pVertices, uint32_t nColo
 	if(!nVertices) return;
 
 	MicroProfileVertex* pVertex = PushVertices(GL_LINES, 2*(nVertices-1));
+	nColor = 0xff000000|((nColor&0xff)<<16)|(nColor&0xff00)|((nColor>>16)&0xff);
 	for(uint32 i = 0; i < nVertices-1; ++i)
 	{
 		pVertex[0].nX = pVertices[i*2];
