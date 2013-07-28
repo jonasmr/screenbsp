@@ -132,9 +132,9 @@ void MicroProfileMouseButton(uint32_t nLeft, uint32_t nRight);
 void MicroProfileOnThreadCreate(const char* pThreadName); //should be called from newly created threads
 
 //UNDEFINED: MUST BE IMPLEMENTED ELSEWHERE
-void MicroProfileDrawText(uint32_t nX, uint32_t nY, uint32_t nColor, const char* pText);
-void MicroProfileDrawBox(uint32_t nX, uint32_t nY, uint32_t nWidth, uint32_t nHeight, uint32_t nColor);
-void MicroProfileDrawBoxFade(uint32_t nX, uint32_t nY, uint32_t nX1, uint32_t nY1, uint32_t nColor);
+void MicroProfileDrawText(int nX, int nY, uint32_t nColor, const char* pText);
+void MicroProfileDrawBox(int nX, int nY, int nWidth, int nHeight, uint32_t nColor);
+void MicroProfileDrawBoxFade(int nX, int nY, int nX1, int nY1, uint32_t nColor);
 void MicroProfileDrawLine2D(uint32_t nVertices, float* pVertices, uint32_t nColor);
 uint32_t MicroProfileGpuInsertTimeStamp();
 uint64_t MicroProfileGpuGetTimeStamp(uint32_t nKey);

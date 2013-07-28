@@ -104,7 +104,7 @@ void MicroProfileEndDraw()
 
 
 
-void MicroProfileDrawText(uint32_t nX, uint32_t nY, uint32_t nColor, const char* pText)
+void MicroProfileDrawText(int nX, int nY, uint32_t nColor, const char* pText)
 {
 	MICROPROFILE_SCOPEI("MicroProfile", "TextDraw", 0xff88ee);
 	if(g_nUseFastDraw)
@@ -152,11 +152,6 @@ void MicroProfileDrawText(uint32_t nX, uint32_t nY, uint32_t nColor, const char*
 			fX += TEXT_CHAR_WIDTH+1;
 			pVertex += 4;
 		}
-
-
-
-
-
 	}
 	else
 	{
@@ -168,7 +163,7 @@ void MicroProfileDrawText(uint32_t nX, uint32_t nY, uint32_t nColor, const char*
 		TextEnd();
 	}
 }
-void MicroProfileDrawBox(uint32_t nX, uint32_t nY, uint32_t nWidth, uint32_t nHeight, uint32_t nColor)
+void MicroProfileDrawBox(int nX, int nY, int nWidth, int nHeight, uint32_t nColor)
 {
 	if(g_nUseFastDraw)
 	{
@@ -208,7 +203,7 @@ void MicroProfileDrawBox(uint32_t nX, uint32_t nY, uint32_t nWidth, uint32_t nHe
 
 }
 
-void MicroProfileDrawBoxFade(uint32_t nX0, uint32_t nY0, uint32_t nX1, uint32_t nY1, uint32_t nColor)
+void MicroProfileDrawBoxFade(int nX0, int nY0, int nX1, int nY1, uint32_t nColor)
 {
 	
 	uint32_t r = 0xff & (nColor>>16);
