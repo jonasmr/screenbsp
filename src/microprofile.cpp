@@ -23,8 +23,18 @@ namespace
 {
 	uint32_t nVertexPos = 0;
 	MicroProfileVertex nDrawBuffer[MICROPROFILE_MAX_VERTICES];
+	enum
+	{
+		MAX_COMMANDS = 32,
+	};
+	struct 
+	{
+		uint32_t nCommand;
+		uint32_t nNumVertices;
+	} DrawCommands[MAX_COMMANDS];
+	int32_t nNumDrawCommands;
 	
-	MicroProfileVertex* PushVertices(int nCount)
+	MicroProfileVertex* PushVertices(uint32_t nCommand, int nCount)
 	{
 		if(nVertexPos + nCount > MICROPROFILE_MAX_VERTICES)
 		{
@@ -33,6 +43,18 @@ namespace
 
 		uint32_t nOut = nVertexPos;
 		nVertexPos += nCount;
+
+		if(nNumDrawCommands && DrawCommands[nNumDrawCommands-1].nCommand == nCommand)
+		{
+			DrawCommands[nNumDrawCommands-1].nNumVertices += nCount;
+		}
+		else
+		{
+			ZASSERT(nNumDrawCommands < MAX_COMMANDS);
+			DrawCommands[nNumDrawCommands].nCommand = nCommand;
+			DrawCommands[nNumDrawCommands].nNumVertices = nCount;
+			++nNumDrawCommands;
+		}
 		return &nDrawBuffer[nOut];
 	}
 	uint32_t g_nW;
@@ -50,6 +72,7 @@ void MicroProfileBeginDraw(uint32_t nWidth, uint32_t nHeight)
 	g_nW = nWidth;
 	g_nH = nHeight;
 	nVertexPos = 0;
+	nNumDrawCommands = 0;
 }
 extern GLuint g_FontTexture;
 void MicroProfileEndDraw()
@@ -86,7 +109,13 @@ void MicroProfileEndDraw()
 	glEnableClientState(GL_COLOR_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
-	glDrawArrays(GL_QUADS, 0, nVertexPos);
+	int nOffset = 0;
+	for(int i = 0; i < nNumDrawCommands; ++i)
+	{
+		int nCount = DrawCommands[i].nNumVertices;
+		glDrawArrays(DrawCommands[i].nCommand, nOffset, nCount);
+		nOffset += nCount;
+	}
 
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_COLOR_ARRAY);
@@ -97,6 +126,7 @@ void MicroProfileEndDraw()
 
 	glDisable(GL_ALPHA_TEST);
 	nVertexPos = 0;
+	nNumDrawCommands = 0;
 }
 
 
@@ -113,7 +143,7 @@ void MicroProfileDrawText(int nX, int nY, uint32_t nColor, const char* pText)
 		float fY = nY;
 		float fY2 = fY + (TEXT_CHAR_HEIGHT+1);
 
-		MicroProfileVertex* pVertex = PushVertices(4 * nLen);
+		MicroProfileVertex* pVertex = PushVertices(GL_QUADS, 4 * nLen);
 		const char* pStr = pText;
 		nColor = -1;
 
@@ -165,7 +195,7 @@ void MicroProfileDrawBox(int nX, int nY, int nWidth, int nHeight, uint32_t nColo
 	if(g_nUseFastDraw)
 	{
 		nColor = 0xff000000|((nColor&0xff)<<16)|(nColor&0xff00)|((nColor>>16)&0xff);
-		MicroProfileVertex* pVertex = PushVertices(4);
+		MicroProfileVertex* pVertex = PushVertices(GL_QUADS, 4);
 		pVertex[0].nX = nX;
 		pVertex[0].nY = nY;
 		pVertex[0].nColor = nColor;
@@ -213,15 +243,15 @@ void MicroProfileDrawBoxFade(int nX0, int nY0, int nX1, int nY1, uint32_t nColor
 	uint32_t g0 = 0xff & ((g + nMax)/2);
 	uint32_t b0 = 0xff & ((b + nMax)/2);
 
-	uint32_t r1 = 0xff & ((r+nMin)/2);// >> 0);
-	uint32_t g1 = 0xff & ((g+nMin)/2);// >> 0);
-	uint32_t b1 = 0xff & ((b+nMin)/2);// >> 0);
+	uint32_t r1 = 0xff & ((r+nMin)/2);
+	uint32_t g1 = 0xff & ((g+nMin)/2);
+	uint32_t b1 = 0xff & ((b+nMin)/2);
 
 	if(g_nUseFastDraw)
 	{
 		uint32_t nColor0 = (r0<<0)|(g0<<8)|(b0<<16)|0xff000000;
 		uint32_t nColor1 = (r1<<0)|(g1<<8)|(b1<<16)|0xff000000;
-		MicroProfileVertex* pVertex = PushVertices(4);
+		MicroProfileVertex* pVertex = PushVertices(GL_QUADS, 4);
 		pVertex[0].nX = nX0;
 		pVertex[0].nY = nY0;
 		pVertex[0].nColor = nColor0;
@@ -260,10 +290,25 @@ void MicroProfileDrawBoxFade(int nX0, int nY0, int nX1, int nY1, uint32_t nColor
 void MicroProfileDrawLine2D(uint32_t nVertices, float* pVertices, uint32_t nColor)
 {
 	if(!nVertices) return;
-	//exploit the fact that lines are vertical.. and draw as quads.
+
 	if(g_nUseFastDraw)
 	{
-	//	MicroProfileVertex* pVertex = PushVertices(4);
+		MicroProfileVertex* pVertex = PushVertices(GL_LINES, 2*(nVertices-1));
+		for(uint32 i = 0; i < nVertices-1; ++i)
+		{
+			pVertex[0].nX = pVertices[i*2];
+			pVertex[0].nY = pVertices[i*2+1] ;
+			pVertex[0].nColor = nColor;
+			pVertex[0].fU = 2.f;
+			pVertex[0].fV = 2.f;
+			pVertex[1].nX = pVertices[(i+1)*2];
+			pVertex[1].nY = pVertices[(i+1)*2+1] ;
+			pVertex[1].nColor = nColor;
+			pVertex[1].fU = 2.f;
+			pVertex[1].fV = 2.f;
+			pVertex += 2;
+		}
+
 
 	}
 	else
