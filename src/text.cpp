@@ -16,7 +16,10 @@ extern uint32_t g_Width;
 extern uint32_t g_Height;
 
 
-ZPUSH_OPTIMIZE_OFF
+//ZPUSH_OPTIMIZE_OFF
+
+GLuint g_FontTexture;
+
 uint32_t g_nTextX2=0;
 namespace
 {
@@ -93,6 +96,7 @@ void TextInit()
 	}
 
 	glGenTextures(1, &g_FontDescription.nTextureId);
+	g_FontTexture = g_FontDescription.nTextureId;
 	glBindTexture(GL_TEXTURE_2D, g_FontDescription.nTextureId);
 	{
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
