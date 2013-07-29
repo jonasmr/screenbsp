@@ -6,7 +6,6 @@
 
 #if MICROPROFILE_ENABLED
 
-uint32_t g_nUseFastDraw = 1;
 
 struct MicroProfileVertex
 {

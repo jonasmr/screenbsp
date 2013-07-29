@@ -401,9 +401,9 @@ int SDL_main(int argc, char* argv[])
 
 
 	std::thread t42(WorkerThread, 42);
-	std::thread t43(WorkerThread, 43);
-	std::thread t44(WorkerThread, 44);
-	std::thread t45(WorkerThread, 45);
+	//std::thread t43(WorkerThread, 43);
+	//std::thread t44(WorkerThread, 44);
+	//std::thread t45(WorkerThread, 45);
 
 
 	InputInit();
@@ -540,9 +540,9 @@ int SDL_main(int argc, char* argv[])
 	t2.join();
 	t3.join();
 	t42.join();
-	t43.join();
-	t44.join();
-	t45.join();
+	//t43.join();
+	//t44.join();
+	//t45.join();
 	return 0;
 }
 
