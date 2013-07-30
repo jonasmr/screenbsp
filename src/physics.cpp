@@ -65,7 +65,11 @@ void PhysicsStep()
 
 void PhysicsAddObjectBox(SWorldObject* pObject)
 {
+	#if 1
 	btBoxShape* pShape = new btBoxShape(btVector3(pObject->vSize.x, pObject->vSize.y, pObject->vSize.z));
+	#else
+	btSphereShape* pShape = new btSphereShape(pObject->vSize.x);
+	#endif
 	btVector3 localInertia(0,0,0);
 	btScalar mass(1.f);
 	pShape->calculateLocalInertia(mass,localInertia);

@@ -98,6 +98,7 @@ void WorldInit()
 		for(uint32 k = 0; k < GRID_SIZE; k++)
 		{
 			v3 vPos = v3init(i,j,k) / (GRID_SIZE-1.f);
+			vPos.z += j * 0.01f;
 			vPos -= 0.5f;
 			vPos *= 8.f;
 			vPos += 0.03f;
