@@ -46,7 +46,7 @@ struct v3
 	v4 tov4();
 	v4 tov4(float w);
 
-
+	uint32_t tocolor();
 };
 struct v4
 {
@@ -69,6 +69,7 @@ struct v4
 
 	v2 tov2();
 	v3 tov3();
+	uint32_t tocolor();
 };
 
 union m
