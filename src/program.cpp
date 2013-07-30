@@ -190,9 +190,9 @@ void WorldRender()
 	{
 		bCulled[i] = BspCullObject(g_Bsp, &g_WorldState.WorldObjects[i]);
 	}
-	static v3 LightPos = v3init(0,-4,0);
+	static v3 LightPos = v3init(0,-2.7,0);
 	static v3 LightColor = v3init(0.9, 0.5, 0.9);
-	static v3 LightPos0 = v3init(0,-4,0);
+	static v3 LightPos0 = v3init(0,-2.7,0);
 	static v3 LightColor0 = v3init(0.3, 1.0, 0.3);
 
 	LightPos.z = (sin(foo*10)) * 5;

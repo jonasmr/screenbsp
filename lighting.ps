@@ -13,11 +13,19 @@ void main(void)
 	vec3 Color = vec3(0,0,0);
 	Color += vec3(0.4, 0.4, 0.4);
 	vec3 Normal = normalize(fNormal);
+	const float fAttenLength = 4.0;
+
 	for(int i = 0; i < 2; i++)
 	{
-		vec3 vToLight = -normalize(fWorldPos - LightPos[i]);
-		float fAngle = max(dot(vToLight, fNormal), 0.0);
-		vec3 vDiffuse = fAngle * LightColor[i];
+		vec3 vToLight = fWorldPos - LightPos[i];
+		float fLen = length(vToLight);
+		float fIntensity = (fLen / fAttenLength);
+		fIntensity = 1.0 - fIntensity;
+		fIntensity = min(max(fIntensity, 0.0), 1.0);
+		fIntensity = fIntensity * fIntensity;
+		vec3 vDir = -normalize(vToLight);
+		float fAngle = max(dot(vDir, fNormal), 0.0);
+		vec3 vDiffuse = fIntensity * fAngle * LightColor[i];
 		Color += vDiffuse;
 	}
 	gl_FragColor.xyz = Color;
