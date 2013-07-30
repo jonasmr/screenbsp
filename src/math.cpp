@@ -526,6 +526,13 @@ v4 v3::tov4()
 	r.w = 0.f;
 	return r;
 }
+uint32_t v3::tocolor()
+{
+	return 0xff000000 
+		| ((uint32_t(z * 255.f) << 16)&0xff0000)
+		| ((uint32_t(y * 255.f) << 8)&0xff00)
+		| (uint32_t(z * 255.f));
+}
 
 v4 v3::tov4(float w)
 {
@@ -642,7 +649,13 @@ v2 v4::tov2()
 	r.y = y;
 	return r;
 }
-
+uint32_t v4::tocolor()
+{
+	return ((uint32_t(w * 255.f) << 24)&0xff000000)
+		| ((uint32_t(z * 255.f) << 16)&0xff0000)
+		| ((uint32_t(y * 255.f) << 8)&0xff00)
+		| (uint32_t(z * 255.f));
+}
 
 
 float v4dot(v4 v0, v4 v1)

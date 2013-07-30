@@ -84,7 +84,7 @@ void MicroProfileEndDraw()
 	glAlphaFunc(GL_GREATER, 0.5f);
 
 	ShaderUse(VS_MICROPROFILE, PS_MICROPROFILE);
-	int32_t loc = ShaderGetLocation(PS_MICROPROFILE, "tex");
+	int32_t loc = ShaderGetLocation("tex");
 	MP_ASSERT(-1 != loc);
 	ShaderSetUniform(loc, 0);
 

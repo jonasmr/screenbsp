@@ -190,7 +190,25 @@ void WorldRender()
 	{
 		bCulled[i] = BspCullObject(g_Bsp, &g_WorldState.WorldObjects[i]);
 	}
+	static v3 LightPos = v3init(0,-4,0);
+	static v3 LightColor = v3init(0.9, 0.5, 0.9);
+	static v3 LightPos0 = v3init(0,-4,0);
+	static v3 LightColor0 = v3init(0.3, 1.0, 0.3);
 
+	LightPos.z = (sin(foo*10)) * 5;
+	LightPos0.x = (sin(foo*10)) * 5;
+
+
+
+	ZDEBUG_DRAWBOX(mid(), LightPos, v3init(0.2f, 0.2f, 0.2f), LightColor.tocolor(), 0);
+	ZDEBUG_DRAWBOX(mid(), LightPos0, v3init(0.2f, 0.2f, 0.2f), LightColor0.tocolor(), 0);
+
+	ShaderUse(VS_LIGHTING, PS_LIGHTING);
+	SHADER_SET("LightPos[0]", LightPos);
+	SHADER_SET("LightColor[0]", LightColor);
+
+	SHADER_SET("LightPos[1]", LightPos0);
+	SHADER_SET("LightColor[1]", LightColor0);
 
 	for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
 	{
@@ -198,21 +216,25 @@ void WorldRender()
 		glMultMatrixf(&g_WorldState.WorldObjects[i].mObjectToWorld.x.x);
 		if(bCulled[i])
 		{
-			uplotfnxt("CULLED %d", i);
+//			uplotfnxt("CULLED %d", i);
 			ZDEBUG_DRAWBOX(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].mObjectToWorld.w.tov3(), g_WorldState.WorldObjects[i].vSize, 0xffff0000, 0);
 		}
 		else
 		{
-			uplotfnxt("NOT CULLED %d", i);
-			ShaderUse(VS_DEFAULT, PS_FLAT_LIT);
+//			uplotfnxt("NOT CULLED %d", i);
+			
+			//ShaderUse(VS_DEFAULT, PS_FLAT_LIT);
 			glEnable(GL_CULL_FACE);
 			MeshDraw(GetBaseMesh(MESH_BOX_FLAT), g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].vSize);
 			glDisable(GL_CULL_FACE);
-			ShaderDisable();
+			
+			CheckGLError();
+
 		}
 
 		glPopMatrix();
 	}
+	ShaderDisable();
 	
 
 }

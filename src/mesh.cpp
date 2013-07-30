@@ -357,10 +357,14 @@ void MeshDraw(const Mesh* pMesh, m mObjectToWorld, v3 vSize)
 	glEnableClientState(GL_NORMAL_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
 
+	CheckGLError();
 
 
-	ShaderSetSize(vSize);
-
+	SHADER_SET("Size", vSize);
+	// int loc = ShaderGetLocation("Size");
+	// if(loc > -1)
+	// 	ShaderSetUniform(loc, vSize);
+	CheckGLError();
 
 
 
@@ -370,7 +374,9 @@ void MeshDraw(const Mesh* pMesh, m mObjectToWorld, v3 vSize)
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_NORMAL_ARRAY);
 	glDisableClientState(GL_COLOR_ARRAY);
-
+	
+	CheckGLError();
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	CheckGLError();
 }

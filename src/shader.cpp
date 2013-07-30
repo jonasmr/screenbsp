@@ -99,6 +99,9 @@ void ShaderInit()
 	g_ShaderState.PS[PS_MICROPROFILE] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "microprofile.ps");
 	g_ShaderState.VS[VS_MICROPROFILE] = CreateProgram(GL_VERTEX_SHADER_ARB, "microprofile.vs");
 
+	g_ShaderState.PS[PS_LIGHTING] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "lighting.ps");
+	g_ShaderState.VS[VS_LIGHTING] = CreateProgram(GL_VERTEX_SHADER_ARB, "lighting.vs");
+
 }
 void ShaderUse(EShaderVS vs, EShaderPS ps)
 {
@@ -106,11 +109,15 @@ void ShaderUse(EShaderVS vs, EShaderPS ps)
 	{
 		g_ShaderState.nCurrentIndex = -1;
 		glUseProgramObjectARB(0);
+		//uprintf("USING NULL\n");
 		return;
 	}
+	CheckGLError();
+
 	uint32 nIndex = ps * VS_SIZE + vs;
 	if(!g_ShaderState.LinkedPrograms[nIndex])
 	{
+		uprintf("LINKING %d\n", nIndex);
 		GLuint prg = glCreateProgramObjectARB();
 		CheckGLError();
 		glCompileShader(g_ShaderState.PS[ps]);
@@ -131,19 +138,21 @@ void ShaderUse(EShaderVS vs, EShaderPS ps)
 	CheckGLError();
 	glUseProgramObjectARB(g_ShaderState.LinkedPrograms[nIndex]);
 	g_ShaderState.nCurrentIndex = nIndex;
+//	uprintf("USING %d.. prg %d\n", nIndex, g_ShaderState.LinkedPrograms[nIndex]);
 	CheckGLError();
 
 }
-void ShaderSetSize(v3 vSize)
+void ShaderSetUniform(int loc, v3 v)
 {
-	GLuint loc = glGetUniformLocation(g_ShaderState.LinkedPrograms[0], "Size");
-	glUniform3fv(loc, 1, &vSize.x);
+	//GLuint loc = glGetUniformLocation(g_ShaderState.LinkedPrograms[0], "Size");
+	glUniform3fv(loc, 1, &v.x);
 }
 
-int ShaderGetLocation(EShaderPS Shader, const char* pVar)
+int ShaderGetLocation(const char* pVar)
 {
 	int r = glGetUniformLocation(g_ShaderState.LinkedPrograms[g_ShaderState.nCurrentIndex], pVar);
-	ZASSERT(r>=0);
+	CheckGLError();
+//	ZASSERT(r>=0);
 	return r;
 }
 void ShaderSetUniform(int location, int value)

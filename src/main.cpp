@@ -423,7 +423,7 @@ int SDL_main(int argc, char* argv[])
 		int64_t nStart = TICK();
 		MICROPROFILE_SCOPE(MAIN);
 		CheckGLError();
-		//PhysicsStep();
+		PhysicsStep();
 		InputClear();
 		SDL_Event Evt;
 		while(SDL_PollEvent(&Evt))
