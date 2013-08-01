@@ -344,7 +344,7 @@ void MeshDestroyBuffers(Mesh* pMesh)
 
 
 
-void MeshDraw(const Mesh* pMesh, m mObjectToWorld, v3 vSize)
+void MeshDraw(const Mesh* pMesh, m mObjectToWorld)
 {
 
 	glBindBuffer(GL_ARRAY_BUFFER, pMesh->VertexBuffer);
@@ -360,7 +360,7 @@ void MeshDraw(const Mesh* pMesh, m mObjectToWorld, v3 vSize)
 	CheckGLError();
 
 
-	SHADER_SET("Size", vSize);
+//	SHADER_SET("Size", vSize);
 	// int loc = ShaderGetLocation("Size");
 	// if(loc > -1)
 	// 	ShaderSetUniform(loc, vSize);

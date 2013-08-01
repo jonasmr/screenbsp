@@ -1,7 +1,7 @@
 #include "debug.h"
 #include "fixedarray.h"
 #include "glinc.h"
-
+#include "mesh.h"
 
 
 struct SDebugDrawLine
@@ -16,6 +16,12 @@ struct SDebugDrawPoly
 	uint32 nVertices;
 	uint32 nColor;
 };
+struct SDebugDrawSphere
+{
+	v3 vCenter;
+	float fRadius;
+	uint32_t nColor;
+};
 
 struct SDebugDrawBounds
 {
@@ -29,8 +35,10 @@ struct SDebugDrawState
 {
 	TFixedArray<SDebugDrawLine, 2048> Lines;
 	TFixedArray<SDebugDrawPoly, 2048> Poly;
+
 	TFixedArray<v4, 2048*4> PolyVert;
 
+	TFixedArray<SDebugDrawSphere, 2048> Spheres;
 	TFixedArray<SDebugDrawBounds, 2048> Bounds;
 	TFixedArray<SDebugDrawBounds, 2048> Boxes;
 } g_DebugDrawState;
@@ -58,6 +66,15 @@ void DebugDrawBox(m rot, v3 pos, v3 size, uint32 nColor, uint32 nUseZ)
 	pBox->nUseZ = nUseZ;
 
 
+}
+
+void DebugDrawSphere(v3 vCenter, float fRadius, uint32_t nColor)
+{
+	if(g_DebugDrawState.Spheres.Full()) return;
+	SDebugDrawSphere* pSphere = g_DebugDrawState.Spheres.PushBack();
+	pSphere->vCenter = vCenter;
+	pSphere->fRadius = fRadius;
+	pSphere->nColor = nColor;
 }
 
 void DebugDrawLine(v3 start, v3 end, uint32_t nColor)
@@ -323,15 +340,31 @@ void DebugDrawFlush()
 			glVertex3fv((float*)&g_DebugDrawState.Lines[i].end);
 		}
 		glEnd();
-	
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		glMatrixMode(GL_MODELVIEW);
+		for(uint32_t i = 0; i < g_DebugDrawState.Spheres.Size(); ++i)
+		{
+			SDebugDrawSphere& pSphere = g_DebugDrawState.Spheres[i];
+			//glPushMatrix();
+			//glScale3f(pSphere.fRadius, pSphere.fRadius, pSphere.fRadius);
+			m m0 = mid();
+			m0.trans = pSphere.vCenter.tov4();
+			m scale = mscale(pSphere.fRadius);
+			m mfinal = mmult(m0, scale);
+			MeshDraw(GetBaseMesh(MESH_SPHERE_2), m0);
+			//glPopMatrix();
 
+		}
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	
 	}
 	g_DebugDrawState.Lines.Clear();
 	g_DebugDrawState.Poly.Clear();
 	g_DebugDrawState.PolyVert.Clear();
 	g_DebugDrawState.Bounds.Clear();
 	g_DebugDrawState.Boxes.Clear();
-
+	g_DebugDrawState.Spheres.Clear();
+	
 	glEnable(GL_DEPTH_TEST);
 	glDepthMask(1);
 

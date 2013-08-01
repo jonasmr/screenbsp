@@ -544,7 +544,15 @@ v4 v3::tov4(float w)
 	return r;
 }
 
-
+v3 v3fromcolor(uint32_t nColor)
+{
+	float fMul = 1.f / 255.f;
+	v3 r;
+	r.x = (nColor&0xff) * fMul;
+	r.y = ((nColor>>8)&0xff) * fMul;
+	r.z = ((nColor>>16)&0xff) * fMul;
+	return r;
+}
 v3 v3cross(v3 v0, v3 v1)
 {
 	v3 r;
@@ -656,6 +664,18 @@ uint32_t v4::tocolor()
 		| ((uint32_t(y * 255.f) << 8)&0xff00)
 		| (uint32_t(z * 255.f));
 }
+
+v4 v4fromcolor(uint32_t nColor)
+{
+	float fMul = 1.f / 255.f;
+	v4 r;
+	r.x = (nColor&0xff) * fMul;
+	r.y = ((nColor>>8)&0xff) * fMul;
+	r.z = ((nColor>>16)&0xff) * fMul;
+	r.w = ((nColor>>24)&0xff) * fMul;
+	return r;
+}
+
 
 
 float v4dot(v4 v0, v4 v1)
@@ -1003,10 +1023,27 @@ m mrotatez(float fAngle)
 	r.y.x = -sa;
 	r.y.y = ca;
 	ZASSERTAFFINE(r);
-
 	return r;	
-
 }
+
+m mscale(float fScale)
+{
+	m r = mid();
+	r.x.x = r.y.y = r.z.z = fScale;
+	return r;
+}
+m mscale(float fScaleX, float fScaleY, float fScaleZ)
+{
+	m r = mid();
+	r.x.x = fScaleX;
+	r.y.y = fScaleY;
+	r.z.z = fScaleZ;
+	return r;
+}
+
+
+
+
 m mtranslate(v3 trans)
 {
 	m r = mid();

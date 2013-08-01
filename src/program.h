@@ -7,6 +7,7 @@ enum
 {
 	MAX_OCCLUDERS = 100,
 	MAX_WORLD_OBJECTS = 2048,
+	MAX_LIGHTS = 1024,
 };
 
 #ifdef __APPLE__
@@ -40,11 +41,15 @@ struct SCameraState : SObject
 	m mprj;
 	m mprjinv;
 	m mviewport;
-	m mviewportinv;
-	
+	m mviewportinv;	
 	float fNear;
 	float fFar;
 	float fFovY;
+};
+
+struct SLight : SObject
+{
+	uint32_t nColor;
 };
 
 v3 DirectionFromScreen(v2 vScreen, SCameraState& Camera);
@@ -97,6 +102,9 @@ struct SWorldState
 
 	SWorldObject WorldObjects[MAX_WORLD_OBJECTS];
 	uint32 nNumWorldObjects;
+
+	SLight Lights[MAX_LIGHTS];
+	uint32 nNumLights;
 
 
 	SCameraState Camera;

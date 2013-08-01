@@ -18,6 +18,8 @@
 
 extern uint32_t g_Width;
 extern uint32_t g_Height;
+
+
 uint32 g_nUseOrtho = 0;
 float g_fOrthoScale = 10;
 SOccluderBsp* g_Bsp = 0;
@@ -27,6 +29,22 @@ v3 vLockedCamRight = v3init(0,-1,0);
 v3 vLockedCamDir = v3init(1,0,0);
 
 
+#define TILE_SIZE 8
+#define TILE_HEIGHT 8
+#define MAX_NUM_LIGHTS 1024
+GLuint g_LightTexture;
+GLuint g_LightTileTexture;
+uint32_t g_LightTileWidth;
+uint32_t g_LightTileHeight;
+
+struct LightDesc
+{
+	float Pos[4];
+	float Color[4];
+};
+
+
+LightDesc g_LightBuffer[MAX_NUM_LIGHTS];
 
 SWorldState g_WorldState;
 SEditorState g_EditorState;
@@ -117,15 +135,64 @@ void WorldInit()
 		PhysicsAddObjectBox(&g_WorldState.WorldObjects[i]);
 	}
 
+	g_WorldState.nNumLights = 15;
+	for(int i = 0; i < g_WorldState.nNumLights; ++i)
+	{
+		m mat = mid();
+		mat.trans.x = frandrange(-5.f, 5.f);
+		mat.trans.y = frandrange(-2.7f, -3.f);
+		mat.trans.z = frandrange(-5.f, 5.f);
+//		uprintf("LIGHT AT %f %f %f\n", mat.trans.x, mat.trans.y, mat.trans.z);
+		g_WorldState.Lights[i].mObjectToWorld = mat;
+		g_WorldState.Lights[i].nColor = randcolor() | 0xff000000;
+	}
+
+
 
 	g_EditorState.pSelected = 0;
+
+
+	CheckGLError();
+	glGenTextures(1, &g_LightTexture);
+	glGenTextures(1, &g_LightTileTexture);
+	memset(&g_LightBuffer, 0, sizeof(g_LightBuffer));
+	glBindTexture(GL_TEXTURE_2D, g_LightTexture);
+	{
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);     
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_FALSE);
+    }
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, MAX_NUM_LIGHTS*2, 1, 0, GL_RGBA, GL_FLOAT, &g_LightBuffer);
+
+
+	glBindTexture(GL_TEXTURE_2D, g_LightTileTexture);
+	{
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);     
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_FALSE);
+    }
+    g_LightTileWidth = g_Width / TILE_SIZE;
+    g_LightTileHeight = g_Height / TILE_SIZE;
+    ZASSERT(g_LightTileWidth * TILE_SIZE == g_Width);
+    ZASSERT(g_LightTileHeight * TILE_SIZE == g_Height);
+    
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, g_LightTileWidth, g_LightTileHeight, 0, GL_RGBA, GL_SHORT, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    CheckGLError();
+
 }
+
 
 
 
 int g_nSimulate = 0;
 void WorldRender()
 {
+	MICROPROFILE_SCOPEI("MAIN", "WorldRender", 0xff44dddd);
 	if(g_KeyboardState.keys[SDLK_F1] & BUTTON_RELEASED)
 	{
 		g_nSimulate = !g_nSimulate;
@@ -199,12 +266,61 @@ void WorldRender()
 	LightPos.z = (sin(foo*10)) * 5;
 	LightPos0.x = (sin(foo*10)) * 5;
 
+	g_WorldState.Lights[0].mObjectToWorld.trans.z = (sin(foo*5.5)) * 5;
+	g_WorldState.Lights[1].mObjectToWorld.trans.x = (cos((foo+2)*3)) * 5;
 
 
-	ZDEBUG_DRAWBOX(mid(), LightPos, v3init(0.2f, 0.2f, 0.2f), LightColor.tocolor(), 0);
-	ZDEBUG_DRAWBOX(mid(), LightPos0, v3init(0.2f, 0.2f, 0.2f), LightColor0.tocolor(), 0);
+
+	// ZDEBUG_DRAWBOX(mid(), LightPos, v3init(0.2f, 0.2f, 0.2f), LightColor.tocolor(), 0);
+	// ZDEBUG_DRAWBOX(mid(), LightPos0, v3init(0.2f, 0.2f, 0.2f), LightColor0.tocolor(), 0);
+	ZDEBUG_DRAWSPHERE(LightPos, 4.f, LightColor.tocolor());
+	ZDEBUG_DRAWSPHERE(LightPos0, 4.f, LightColor0.tocolor());
+	{
+		MICROPROFILE_SCOPEI("MAIN", "UpdateTexture", 0xff44dd44);
+		CheckGLError();
+		glBindTexture(GL_TEXTURE_2D, g_LightTexture);
+	    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, MAX_NUM_LIGHTS*2, 1, GL_RGBA, GL_FLOAT, &g_LightBuffer);
+	    glBindTexture(GL_TEXTURE_2D, 0);
+	    CheckGLError();
+	}
+	#if 1
+	for(int i = 0; i < g_WorldState.nNumLights; ++ i)
+	{
+		g_LightBuffer[i].Pos[0] = g_WorldState.Lights[i].mObjectToWorld.trans.x;
+		g_LightBuffer[i].Pos[1] = g_WorldState.Lights[i].mObjectToWorld.trans.y;
+		g_LightBuffer[i].Pos[2] = g_WorldState.Lights[i].mObjectToWorld.trans.z;
+		v3 col = v3fromcolor(g_WorldState.Lights[i].nColor);
+		g_LightBuffer[i].Color[0] = col.x;
+		g_LightBuffer[i].Color[1] = col.y;
+		g_LightBuffer[i].Color[2] = col.z;
+	}
+	int nNumLights = g_WorldState.nNumLights;
+	#else
+	g_LightBuffer[0].Pos[0] = LightPos.x;
+	g_LightBuffer[0].Pos[1] = LightPos.y;
+	g_LightBuffer[0].Pos[2] = LightPos.z;
+	g_LightBuffer[0].Color[0] = LightColor.x;
+	g_LightBuffer[0].Color[1] = LightColor.y;
+	g_LightBuffer[0].Color[2] = LightColor.z;
+
+	g_LightBuffer[1].Pos[0] = LightPos0.x;
+	g_LightBuffer[1].Pos[1] = LightPos0.y;
+	g_LightBuffer[1].Pos[2] = LightPos0.z;
+	g_LightBuffer[1].Color[0] = LightColor0.x;
+	g_LightBuffer[1].Color[1] = LightColor0.y;
+	g_LightBuffer[1].Color[2] = LightColor0.z;
+		int nNumLights = g_WorldState.nNumLights;
+	#endif
+
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, g_LightTexture);
+	glActiveTexture(GL_TEXTURE0);
 
 	ShaderUse(VS_LIGHTING, PS_LIGHTING);
+	SHADER_SET("texLight", 1);
+	SHADER_SET("NumLights", nNumLights);
+	SHADER_SET("lightDelta", 1.f / (2*MAX_NUM_LIGHTS));
 	SHADER_SET("LightPos[0]", LightPos);
 	SHADER_SET("LightColor[0]", LightColor);
 
@@ -225,8 +341,9 @@ void WorldRender()
 //			uplotfnxt("NOT CULLED %d", i);
 			
 			//ShaderUse(VS_DEFAULT, PS_FLAT_LIT);
+			SHADER_SET("Size", g_WorldState.WorldObjects[i].vSize);
 			glEnable(GL_CULL_FACE);
-			MeshDraw(GetBaseMesh(MESH_BOX_FLAT), g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].vSize);
+			MeshDraw(GetBaseMesh(MESH_BOX_FLAT), g_WorldState.WorldObjects[i].mObjectToWorld);
 			glDisable(GL_CULL_FACE);
 			
 			CheckGLError();
@@ -236,6 +353,10 @@ void WorldRender()
 		glPopMatrix();
 	}
 	ShaderDisable();
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glActiveTexture(GL_TEXTURE0);
 	
 
 }
