@@ -194,11 +194,15 @@ inline
 v3 v3init(v4 v)
 { v3 r; r.x = v.x; r.y = v.y; r.z = v.z; return r;}
 
+
 inline
 float v3dot(v3 v0, v3 v1)
 {
 	return v0.x * v1.x + v0.y * v1.y + v0.z * v1.z;
 }
+
+v3 v3fromcolor(uint32_t nColor);
+
 v3 v3cross(v3 v0, v3 v1);
 float v3length(v3 v);
 float v3lengthsq(v3 v);
@@ -229,6 +233,8 @@ inline
 v4 v4init(v3 v, float w){ v4 r; r.x = v.x; r.y = v.y; r.z = v.z; r.w = w; return r; }
 inline
 v4 v4init(v4 v, float w){ v4 r; r.x = v.x; r.y = v.y; r.z = v.z; r.w = w; return r; }
+
+v4 v4fromcolor(uint32_t nColor);
 float v4dot(v4 v0, v4 v1);
 float v4length(v4 v0);
 float v4length2(v4 v0);
@@ -258,6 +264,8 @@ m mmult(m m0, m m1);
 m mrotatex(float fAngle);
 m mrotatey(float fAngle);
 m mrotatez(float fAngle);
+m mscale(float fScale);
+m mscale(float fScaleX, float fScaleY, float fScaleZ);
 m mtranslate(v3 trans);
 m mviewport(float x, float y, float w, float h);
 m mperspective(float fFovY, float fAspect, float fNear, float fFar);

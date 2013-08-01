@@ -161,3 +161,8 @@ void ShaderSetUniform(int location, int value)
 	CheckGLError();
 }
 
+void ShaderSetUniform(int location, float value)
+{
+	glUniform1f(location, value);
+	CheckGLError();
+}

@@ -49,7 +49,7 @@ struct Mesh
 
 void MeshInit();
 void MeshDestroy();
-void MeshDraw(const Mesh* pMesh, m mObjectToWorld, v3 vSize);
+void MeshDraw(const Mesh* pMesh, m mObjectToWorld);
 const Mesh* GetBaseMesh(EBaseMesh type);
 
 
