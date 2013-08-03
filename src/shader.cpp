@@ -102,6 +102,8 @@ void ShaderInit()
 	g_ShaderState.PS[PS_LIGHTING] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "lighting.ps");
 	g_ShaderState.VS[VS_LIGHTING] = CreateProgram(GL_VERTEX_SHADER_ARB, "lighting.vs");
 
+	g_ShaderState.PS[PS_DEBUG] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "debug.ps");
+	g_ShaderState.VS[VS_DEBUG] = CreateProgram(GL_VERTEX_SHADER_ARB, "debug.vs");
 }
 void ShaderUse(EShaderVS vs, EShaderPS ps)
 {
@@ -146,6 +148,12 @@ void ShaderSetUniform(int loc, v3 v)
 {
 	//GLuint loc = glGetUniformLocation(g_ShaderState.LinkedPrograms[0], "Size");
 	glUniform3fv(loc, 1, &v.x);
+}
+
+void ShaderSetUniform(int loc, v4 v)
+{
+	//GLuint loc = glGetUniformLocation(g_ShaderState.LinkedPrograms[0], "Size");
+	glUniform4fv(loc, 1, &v.x);
 }
 
 int ShaderGetLocation(const char* pVar)
