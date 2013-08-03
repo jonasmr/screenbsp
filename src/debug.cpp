@@ -2,6 +2,7 @@
 #include "fixedarray.h"
 #include "glinc.h"
 #include "mesh.h"
+#include "shader.h"
 
 
 struct SDebugDrawLine
@@ -340,23 +341,34 @@ void DebugDrawFlush()
 			glVertex3fv((float*)&g_DebugDrawState.Lines[i].end);
 		}
 		glEnd();
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		glMatrixMode(GL_MODELVIEW);
-		for(uint32_t i = 0; i < g_DebugDrawState.Spheres.Size(); ++i)
 		{
-			SDebugDrawSphere& pSphere = g_DebugDrawState.Spheres[i];
-			//glPushMatrix();
-			//glScale3f(pSphere.fRadius, pSphere.fRadius, pSphere.fRadius);
-			m m0 = mid();
-			m0.trans = pSphere.vCenter.tov4();
-			m scale = mscale(pSphere.fRadius);
-			m mfinal = mmult(m0, scale);
-			MeshDraw(GetBaseMesh(MESH_SPHERE_2), m0);
-			//glPopMatrix();
+			glDisable(GL_DEPTH_TEST);
+			ShaderUse(VS_DEBUG, PS_DEBUG);
+			int nSizeLoc = ShaderGetLocation("Size");
+			int nColorLoc = ShaderGetLocation("Color");
+			ZASSERT(-1 != nSizeLoc);
+			ZASSERT(-1 != nColorLoc);
 
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			glMatrixMode(GL_MODELVIEW);
+			for(uint32_t i = 0; i < g_DebugDrawState.Spheres.Size(); ++i)
+			{
+				SDebugDrawSphere& Sphere = g_DebugDrawState.Spheres[i];
+				glPushMatrix();
+				m m0 = mid();
+				v3 vPos = Sphere.vCenter;
+				m0.trans = v4init(vPos, 1.f);
+				glLoadMatrixf(&m0.x.x);
+				ShaderSetUniform(nSizeLoc, v3rep(Sphere.fRadius));
+				ShaderSetUniform(nColorLoc, v4fromcolor(Sphere.nColor));
+				MeshDraw(GetBaseMesh(MESH_SPHERE_1));
+				glPopMatrix();
+
+			}
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			ShaderDisable();
 		}
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	
+		
 	}
 	g_DebugDrawState.Lines.Clear();
 	g_DebugDrawState.Poly.Clear();
@@ -364,7 +376,7 @@ void DebugDrawFlush()
 	g_DebugDrawState.Bounds.Clear();
 	g_DebugDrawState.Boxes.Clear();
 	g_DebugDrawState.Spheres.Clear();
-	
+
 	glEnable(GL_DEPTH_TEST);
 	glDepthMask(1);
 

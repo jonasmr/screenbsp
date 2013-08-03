@@ -344,7 +344,7 @@ void MeshDestroyBuffers(Mesh* pMesh)
 
 
 
-void MeshDraw(const Mesh* pMesh, m mObjectToWorld)
+void MeshDraw(const Mesh* pMesh)
 {
 
 	glBindBuffer(GL_ARRAY_BUFFER, pMesh->VertexBuffer);

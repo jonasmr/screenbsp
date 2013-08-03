@@ -18,7 +18,9 @@
 
 extern uint32_t g_Width;
 extern uint32_t g_Height;
-
+//render todo
+//tile calc
+//debug render fixing + color
 
 uint32 g_nUseOrtho = 0;
 float g_fOrthoScale = 10;
@@ -273,8 +275,8 @@ void WorldRender()
 
 	// ZDEBUG_DRAWBOX(mid(), LightPos, v3init(0.2f, 0.2f, 0.2f), LightColor.tocolor(), 0);
 	// ZDEBUG_DRAWBOX(mid(), LightPos0, v3init(0.2f, 0.2f, 0.2f), LightColor0.tocolor(), 0);
-	ZDEBUG_DRAWSPHERE(LightPos, 4.f, LightColor.tocolor());
-	ZDEBUG_DRAWSPHERE(LightPos0, 4.f, LightColor0.tocolor());
+	// ZDEBUG_DRAWSPHERE(LightPos, 4.f, LightColor.tocolor());
+	// ZDEBUG_DRAWSPHERE(LightPos0, 4.f, LightColor0.tocolor());
 	{
 		MICROPROFILE_SCOPEI("MAIN", "UpdateTexture", 0xff44dd44);
 		CheckGLError();
@@ -286,6 +288,11 @@ void WorldRender()
 	#if 1
 	for(int i = 0; i < g_WorldState.nNumLights; ++ i)
 	{
+
+//		v3 col = ;
+
+		ZDEBUG_DRAWSPHERE(g_WorldState.Lights[i].mObjectToWorld.trans.tov3(), 1.f, g_WorldState.Lights[i].nColor);
+	
 		g_LightBuffer[i].Pos[0] = g_WorldState.Lights[i].mObjectToWorld.trans.x;
 		g_LightBuffer[i].Pos[1] = g_WorldState.Lights[i].mObjectToWorld.trans.y;
 		g_LightBuffer[i].Pos[2] = g_WorldState.Lights[i].mObjectToWorld.trans.z;
@@ -343,7 +350,7 @@ void WorldRender()
 			//ShaderUse(VS_DEFAULT, PS_FLAT_LIT);
 			SHADER_SET("Size", g_WorldState.WorldObjects[i].vSize);
 			glEnable(GL_CULL_FACE);
-			MeshDraw(GetBaseMesh(MESH_BOX_FLAT), g_WorldState.WorldObjects[i].mObjectToWorld);
+			MeshDraw(GetBaseMesh(MESH_BOX_FLAT));
 			glDisable(GL_CULL_FACE);
 			
 			CheckGLError();
