@@ -941,6 +941,8 @@ m mcreate(v3 vDir, v3 vRight, v3 vPoint)
 
 	return mtotales;
 }
+
+//cmajor check
 m mmult(m m0, m m1)
 {
 	m r;
@@ -1053,6 +1055,8 @@ m mtranslate(v3 trans)
 
 #define MAT_INDEX(i, j) (i*4+j)
 
+
+//cmajor
 v3 mtransform(m mat, v3 point)
 {
 	v3 r;
@@ -1063,13 +1067,14 @@ v3 mtransform(m mat, v3 point)
 	return r;
 }
 
+
 v4 mtransform(m mat, v4 v)
 {
 	v4 r;
 	r.x = mat.x.x * v.x + mat.y.x * v.y + mat.z.x * v.z + mat.trans.x * v.w;
 	r.y = mat.x.y * v.x + mat.y.y * v.y + mat.z.y * v.z + mat.trans.y * v.w;
 	r.z = mat.x.z * v.x + mat.y.z * v.y + mat.z.z * v.z + mat.trans.z * v.w;
-	r.w = mat.x.w * v.x + mat.y.w * v.y + mat.w.z * v.z + mat.trans.w * v.w;
+	r.w = mat.x.w * v.x + mat.y.w * v.y + mat.z.w * v.z + mat.trans.w * v.w;
 	return r;
 }
 
@@ -1135,11 +1140,35 @@ m minverse(m mat)
 	mreduceup(3, fmat, finv);
 	mreduceup(2, fmat, finv);
 	mreduceup(1, fmat, finv);
-
-
 	return inv;
-
 }
+
+m mtranspose(m mat)
+{
+	m r;
+	r.x.x = mat.x.x;
+	r.x.y = mat.y.x;
+	r.x.z = mat.z.x;
+	r.x.w = mat.w.x;
+
+	r.y.x = mat.x.y;
+	r.y.y = mat.y.y;
+	r.y.z = mat.z.y;
+	r.y.w = mat.w.y;
+
+	r.z.x = mat.x.z;
+	r.z.y = mat.y.z;
+	r.z.z = mat.z.z;
+	r.z.w = mat.w.z;
+
+	r.w.x = mat.x.w;
+	r.w.y = mat.y.w;
+	r.w.z = mat.z.w;
+	r.w.w = mat.w.w;
+	return r;
+}
+
+
 
 v3 mrotate(m mat, v3 point)
 {
@@ -1167,12 +1196,8 @@ m mperspective(float fFovY, float fAspect, float fNear, float fFar)
 	r.x.x = f * fAspect;
 	r.y.y = f;
 	r.z.z = (fFar + fNear) / (fNear - fFar);
-	r.z.w = (2*fFar*fNear) / (fNear - fFar);
-	r.w.z = -1.f;
-	if(1)
-	{
-		Swap(r.z.w, r.w.z);
-	}
+	r.w.z = (2*fFar*fNear) / (fNear - fFar);
+	r.z.w = -1.f;
 	r.w.w = 0.f;
 	return r;
 }

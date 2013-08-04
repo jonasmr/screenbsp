@@ -34,12 +34,12 @@ struct SDebugDrawBounds
 
 struct SDebugDrawState
 {
-	TFixedArray<SDebugDrawLine, 2048> Lines;
+	TFixedArray<SDebugDrawLine, 16<<10> Lines;
 	TFixedArray<SDebugDrawPoly, 2048> Poly;
 
 	TFixedArray<v4, 2048*4> PolyVert;
 
-	TFixedArray<SDebugDrawSphere, 2048> Spheres;
+	TFixedArray<SDebugDrawSphere, 16<<10> Spheres;
 	TFixedArray<SDebugDrawBounds, 2048> Bounds;
 	TFixedArray<SDebugDrawBounds, 2048> Boxes;
 } g_DebugDrawState;

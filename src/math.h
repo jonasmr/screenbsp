@@ -71,7 +71,13 @@ struct v4
 	v3 tov3();
 	uint32_t tocolor();
 };
-
+///
+/// ROW-MAJOR
+///
+/// x y z w    x
+/// x y z w  * y
+/// x y z w    z
+/// x y z w    w
 union m
 {
 	struct
@@ -84,6 +90,13 @@ union m
 			v4 trans;
 			v4 w;
 		};
+	};
+	struct
+	{
+		v4 r0;
+		v4 r1;
+		v4 r2;
+		v4 r3;
 	};
 };
 
@@ -261,6 +274,7 @@ m minit(v3 vx, v3 vy, v3 vz, v3 vtrans);
 m mid();
 m mcreate(v3 vDir, v3 vRight, v3 vPoint);
 m mmult(m m0, m m1);
+m mtranspose(m mat);
 m mrotatex(float fAngle);
 m mrotatey(float fAngle);
 m mrotatez(float fAngle);
