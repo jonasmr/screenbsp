@@ -31,8 +31,8 @@ v3 vLockedCamRight = v3init(0,-1,0);
 v3 vLockedCamDir = v3init(1,0,0);
 
 
-#define TILE_SIZE 8
-#define TILE_HEIGHT 8
+#define TILE_SIZE 16
+//#define TILE_HEIGHT 8
 #define MAX_NUM_LIGHTS 1024
 GLuint g_LightTexture;
 GLuint g_LightTileTexture;
@@ -271,12 +271,101 @@ void WorldRender()
 	g_WorldState.Lights[0].mObjectToWorld.trans.z = (sin(foo*5.5)) * 5;
 	g_WorldState.Lights[1].mObjectToWorld.trans.x = (cos((foo+2)*3)) * 5;
 
+	#define BUFFER_SIZE (512*512)
+	static v3 PointBuffer[BUFFER_SIZE];
+	static int nNumPoints = 0;
+	bool bDumpPoints = false;
+	if(g_KeyboardState.keys['b']&BUTTON_RELEASED)
+	{
+		bDumpPoints = true;
+		nNumPoints = 0;
+	}
+
+	m mprj = (g_WorldState.Camera.mprj);
+	m mprjinv = minverse(g_WorldState.Camera.mprj);
+	//#define PP uprintf
+	#define PP(...)
+	for(int i=0; i < 200; ++i)
+	{
+		float foo = i - 100.f;
+		v4 val = v4init(0.f,0.f,foo* g_WorldState.Camera.fNear, 1.f);
+		PP("DIST %f  :: ", val.z);
+		val = mtransform(mprj, val);
+		val = val / val.w;
+		PP(" %f %f %f\n", val.x, val.y, val.z);
+	}
+
+	for(int i=0; i < 20; ++i)
+	{
+		float z = (i / 19.f) * 2.f - 1.f;
+		PP("inv z %f :: ", z);
+		v4 val = v4init(0,0,z,1.f);
+		val = mtransform(mprjinv, val);
+		PP(" UNPRJ %f %f %f %f ::", val.x, val.y, val.z, val.w);
+		val = val / val.w;
+		PP(" PRJ %f %f %f %f\n", val.x, val.y, val.z, val.w);
+	}
 
 
-	// ZDEBUG_DRAWBOX(mid(), LightPos, v3init(0.2f, 0.2f, 0.2f), LightColor.tocolor(), 0);
-	// ZDEBUG_DRAWBOX(mid(), LightPos0, v3init(0.2f, 0.2f, 0.2f), LightColor0.tocolor(), 0);
-	// ZDEBUG_DRAWSPHERE(LightPos, 4.f, LightColor.tocolor());
-	// ZDEBUG_DRAWSPHERE(LightPos0, 4.f, LightColor0.tocolor());
+	v4 z = v4init(0,0,-g_WorldState.Camera.fNear,1);
+	v4 z1 = v4init(0,0,g_WorldState.Camera.fNear,1);
+
+	v4 l = mtransform(mprj, z);
+	v4 l1 = mtransform(mprj, z1);
+	l = l / l.w;
+	l1 = l1 / l1.w;
+//	ZBREAK();
+
+
+	m mcliptoworld = mmult(g_WorldState.Camera.mviewinv, g_WorldState.Camera.mprjinv);
+	for(int i = 0; i < g_LightTileWidth; ++i)
+	{
+		float x0 = 2*(float)i / (g_LightTileWidth)-1;
+		float x1 = 2*(float)(i+1) / (g_LightTileWidth)-1;
+		for(int j = 0; j < g_LightTileHeight; ++j)
+		{
+			float y0 = 2*(float)j / (g_LightTileHeight)-1;
+			float y1 = 2*(float)(j+1) / (g_LightTileHeight)-1;
+			v4 v0 = mtransform(mcliptoworld, v4init(x0,y0,-1.f,1));
+			v4 v1 = mtransform(mcliptoworld, v4init(x1,y0,-1.f,1));
+			v4 v2 = mtransform(mcliptoworld, v4init(x1,y1,-1.f,1));
+			v4 v3 = mtransform(mcliptoworld, v4init(x0,y1,-1.f,1));
+			v0 = v0 / v0.w;
+			v1 = v1 / v1.w;
+			v2 = v2 / v2.w;
+			v3 = v3 / v3.w;
+
+			if(bDumpPoints)
+			{
+				uprintf("DUMP %f %f %f\n", v0.x, v0.y, v0.z);
+				PointBuffer[nNumPoints++] = v0.tov3();
+				PointBuffer[nNumPoints++] = v1.tov3();
+				PointBuffer[nNumPoints++] = v2.tov3();
+				PointBuffer[nNumPoints++] = v3.tov3();
+				ZASSERT(nNumPoints < BUFFER_SIZE);
+			}
+		}
+	}
+	if(nNumPoints)
+	{
+		ZASSERT(nNumPoints == 4 * g_LightTileWidth * g_LightTileHeight);
+
+		///uprintf("NUM POINTS %d\n", nNumPoints);
+		for(int i = 0; i < nNumPoints;i+=4)
+		{
+			ZDEBUG_DRAWLINE(PointBuffer[i], PointBuffer[i+1], -1, 0);
+//			ZDEBUG_DRAWLINE(PointBuffer[i+1], PointBuffer[i+2], -1, 0);
+//			ZDEBUG_DRAWLINE(PointBuffer[i+2], PointBuffer[i+3], -1, 0);
+			ZDEBUG_DRAWLINE(PointBuffer[i+3], PointBuffer[i], -1, 0);
+
+
+
+//			ZDEBUG_DRAWBOX(mid(), PointBuffer[i], v3rep(0.1f), (uint32_t)-1, 0);
+//			ZDEBUG_DRAWBOX(ObjectToWorld, g_WorldStatew.tov3(), g_WorldState.WorldObjects[i].vSize, 0xffff0000, 0);
+
+		}
+	}
+
 	{
 		MICROPROFILE_SCOPEI("MAIN", "UpdateTexture", 0xff44dd44);
 		CheckGLError();
@@ -291,7 +380,7 @@ void WorldRender()
 
 //		v3 col = ;
 
-		ZDEBUG_DRAWSPHERE(g_WorldState.Lights[i].mObjectToWorld.trans.tov3(), 1.f, g_WorldState.Lights[i].nColor);
+		ZDEBUG_DRAWSPHERE(g_WorldState.Lights[i].mObjectToWorld.trans.tov3(), 2.f, g_WorldState.Lights[i].nColor);
 	
 		g_LightBuffer[i].Pos[0] = g_WorldState.Lights[i].mObjectToWorld.trans.x;
 		g_LightBuffer[i].Pos[1] = g_WorldState.Lights[i].mObjectToWorld.trans.y;
@@ -629,7 +718,7 @@ void UpdateCamera()
 	}
 	else
 	{
-		g_WorldState.Camera.mprj = mperspective(g_WorldState.Camera.fFovY, ((float)g_Height / (float)g_Width), 0.001f, 100.f);
+		g_WorldState.Camera.mprj = mperspective(g_WorldState.Camera.fFovY, ((float)g_Height / (float)g_Width), g_WorldState.Camera.fNear, 100.f);
 	}
 	
 	g_WorldState.Camera.mviewport = mviewport(0,0,g_Width, g_Height);
