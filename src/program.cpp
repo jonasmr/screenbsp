@@ -31,11 +31,16 @@ v3 vLockedCamRight = v3init(0,-1,0);
 v3 vLockedCamDir = v3init(1,0,0);
 
 
-#define TILE_SIZE 16
+#define TILE_SIZE 8
+#define MAX_WIDTH 1920
+#define MAX_HEIGHT 1080
+#define MAX_LIGHT_INDEX (32<<10)
+#define LIGHT_INDEX_SIZE 1024
 //#define TILE_HEIGHT 8
 #define MAX_NUM_LIGHTS 1024
 GLuint g_LightTexture;
 GLuint g_LightTileTexture;
+GLuint g_LightIndexTexture;
 uint32_t g_LightTileWidth;
 uint32_t g_LightTileHeight;
 
@@ -45,7 +50,14 @@ struct LightDesc
 	float Color[4];
 };
 
+struct LightTileIndex
+{
+	int16_t nBase;
+	int16_t nCount;
+};
 
+int16_t g_LightIndex[MAX_LIGHT_INDEX];
+LightTileIndex g_LightTileInfo[(MAX_HEIGHT/TILE_SIZE)*(MAX_WIDTH/TILE_SIZE)];
 LightDesc g_LightBuffer[MAX_NUM_LIGHTS];
 
 SWorldState g_WorldState;
@@ -157,6 +169,8 @@ void WorldInit()
 	CheckGLError();
 	glGenTextures(1, &g_LightTexture);
 	glGenTextures(1, &g_LightTileTexture);
+	glGenTextures(1, &g_LightIndexTexture);
+	memset(&g_LightIndex, 0, sizeof(g_LightIndex));
 	memset(&g_LightBuffer, 0, sizeof(g_LightBuffer));
 	glBindTexture(GL_TEXTURE_2D, g_LightTexture);
 	{
@@ -181,8 +195,20 @@ void WorldInit()
     g_LightTileHeight = g_Height / TILE_SIZE;
     ZASSERT(g_LightTileWidth * TILE_SIZE == g_Width);
     ZASSERT(g_LightTileHeight * TILE_SIZE == g_Height);
-    
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, g_LightTileWidth, g_LightTileHeight, 0, GL_RGBA, GL_SHORT, 0);
+    
+
+	glBindTexture(GL_TEXTURE_2D, g_LightIndexTexture);
+	{
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);     
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_FALSE);
+    }
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LIGHT_INDEX_SIZE, LIGHT_INDEX_SIZE, 0, GL_RGBA, GL_SHORT, 0);
+
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, g_LightTileWidth, g_LightTileHeight, 0, GL_RGBA, GL_SHORT, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     CheckGLError();
 
@@ -283,67 +309,104 @@ void WorldRender()
 
 	m mprj = (g_WorldState.Camera.mprj);
 	m mprjinv = minverse(g_WorldState.Camera.mprj);
-	//#define PP uprintf
-	#define PP(...)
-	for(int i=0; i < 200; ++i)
-	{
-		float foo = i - 100.f;
-		v4 val = v4init(0.f,0.f,foo* g_WorldState.Camera.fNear, 1.f);
-		PP("DIST %f  :: ", val.z);
-		val = mtransform(mprj, val);
-		val = val / val.w;
-		PP(" %f %f %f\n", val.x, val.y, val.z);
-	}
+	// //#define PP uprintf
+	// #define PP(...)
+	// for(int i=0; i < 200; ++i)
+	// {
+	// 	float foo = i - 100.f;
+	// 	v4 val = v4init(0.f,0.f,foo* g_WorldState.Camera.fNear, 1.f);
+	// 	PP("DIST %f  :: ", val.z);
+	// 	val = mtransform(mprj, val);
+	// 	val = val / val.w;
+	// 	PP(" %f %f %f\n", val.x, val.y, val.z);
+	// }
 
-	for(int i=0; i < 20; ++i)
-	{
-		float z = (i / 19.f) * 2.f - 1.f;
-		PP("inv z %f :: ", z);
-		v4 val = v4init(0,0,z,1.f);
-		val = mtransform(mprjinv, val);
-		PP(" UNPRJ %f %f %f %f ::", val.x, val.y, val.z, val.w);
-		val = val / val.w;
-		PP(" PRJ %f %f %f %f\n", val.x, val.y, val.z, val.w);
-	}
+	// for(int i=0; i < 20; ++i)
+	// {
+	// 	float z = (i / 19.f) * 2.f - 1.f;
+	// 	PP("inv z %f :: ", z);
+	// 	v4 val = v4init(0,0,z,1.f);
+	// 	val = mtransform(mprjinv, val);
+	// 	PP(" UNPRJ %f %f %f %f ::", val.x, val.y, val.z, val.w);
+	// 	val = val / val.w;
+	// 	PP(" PRJ %f %f %f %f\n", val.x, val.y, val.z, val.w);
+	// }
 
 
-	v4 z = v4init(0,0,-g_WorldState.Camera.fNear,1);
-	v4 z1 = v4init(0,0,g_WorldState.Camera.fNear,1);
+	// v4 z = v4init(0,0,-g_WorldState.Camera.fNear,1);
+	// v4 z1 = v4init(0,0,g_WorldState.Camera.fNear,1);
 
-	v4 l = mtransform(mprj, z);
-	v4 l1 = mtransform(mprj, z1);
-	l = l / l.w;
-	l1 = l1 / l1.w;
+	// v4 l = mtransform(mprj, z);
+	// v4 l1 = mtransform(mprj, z1);
+	// l = l / l.w;
+	// l1 = l1 / l1.w;
 //	ZBREAK();
 
 
+	int nLightIndex = 0;
+
 	m mcliptoworld = mmult(g_WorldState.Camera.mviewinv, g_WorldState.Camera.mprjinv);
+	v3 veye = g_WorldState.Camera.vPosition;
+	uprintf("DISTANCE %f\n", v3distance(g_WorldState.Camera.vPosition, g_WorldState.Camera.mview.trans.tov3()));
 	for(int i = 0; i < g_LightTileWidth; ++i)
 	{
+			MICROPROFILE_SCOPEI("MAIN", "Tile Stuff", 0xff44dddd);
+
 		float x0 = 2*(float)i / (g_LightTileWidth)-1;
 		float x1 = 2*(float)(i+1) / (g_LightTileWidth)-1;
 		for(int j = 0; j < g_LightTileHeight; ++j)
 		{
 			float y0 = 2*(float)j / (g_LightTileHeight)-1;
 			float y1 = 2*(float)(j+1) / (g_LightTileHeight)-1;
-			v4 v0 = mtransform(mcliptoworld, v4init(x0,y0,-1.f,1));
-			v4 v1 = mtransform(mcliptoworld, v4init(x1,y0,-1.f,1));
-			v4 v2 = mtransform(mcliptoworld, v4init(x1,y1,-1.f,1));
-			v4 v3 = mtransform(mcliptoworld, v4init(x0,y1,-1.f,1));
-			v0 = v0 / v0.w;
-			v1 = v1 / v1.w;
-			v2 = v2 / v2.w;
-			v3 = v3 / v3.w;
+			v4 p0 = mtransform(mcliptoworld, v4init(x0,y0,-1.f,1));
+			v4 p1 = mtransform(mcliptoworld, v4init(x1,y0,-1.f,1));
+			v4 p2 = mtransform(mcliptoworld, v4init(x1,y1,-1.f,1));
+			v4 p3 = mtransform(mcliptoworld, v4init(x0,y1,-1.f,1));
+			v3 _p0 = p0.tov3() / p0.w;
+			v3 _p1 = p1.tov3() / p1.w;
+			v3 _p2 = p2.tov3() / p2.w;
+			v3 _p3 = p3.tov3() / p3.w;
 
-			if(bDumpPoints)
+			LightTileIndex& Index = g_LightTileInfo[i+j*g_LightTileWidth];
+			Index.nBase = nLightIndex;
+			Index.nCount = nLightIndex;
+			v3 vNormal0 = v3normalize(v3cross(_p0-_p1, _p1 - veye));
+			v3 vNormal1 = v3normalize(v3cross(_p1-_p2, _p2 - veye));
+			v3 vNormal2 = v3normalize(v3cross(_p2-_p3, _p3 - veye));
+			v3 vNormal3 = v3normalize(v3cross(_p3-_p0, _p0 - veye));
+			v4 plane0 = v4makeplane(_p0, vNormal0);
+			v4 plane1 = v4makeplane(_p1, vNormal1);
+			v4 plane2 = v4makeplane(_p2, vNormal2);
+			v4 plane3 = v4makeplane(_p3, vNormal3);
+
+			for(int k = 0; k < g_WorldState.nNumLights; ++k)
 			{
-				uprintf("DUMP %f %f %f\n", v0.x, v0.y, v0.z);
-				PointBuffer[nNumPoints++] = v0.tov3();
-				PointBuffer[nNumPoints++] = v1.tov3();
-				PointBuffer[nNumPoints++] = v2.tov3();
-				PointBuffer[nNumPoints++] = v3.tov3();
-				ZASSERT(nNumPoints < BUFFER_SIZE);
+				v4 center = g_WorldState.Lights[i].mObjectToWorld.trans;
+				float radius = g_WorldState.Lights[i].fRadius;
+				center.w = 1.f;
+				//ZASSERT(center.w == 1.f);
+				if( v4dot(plane0, center) + radius > 0 &&
+					v4dot(plane1, center) + radius > 0 &&
+					v4dot(plane2, center) + radius > 0 &&
+					v4dot(plane3, center) + radius > 0)
+				{
+					int idx = nLightIndex++;
+					g_LightIndex[idx] = k;
+					Index.nCount++;
+					ZASSERT(Index.nCount == (nLightIndex - Index.nBase));
+					ZASSERT(nLightIndex < MAX_LIGHT_INDEX);
+				}
 			}
+
+			// if(bDumpPoints)
+			// {
+			// 	uprintf("DUMP %f %f %f\n", p0.x, p0.y, p0.z);
+			// 	PointBuffer[nNumPoints++] = p0.tov3();
+			// 	PointBuffer[nNumPoints++] = p1.tov3();
+			// 	PointBuffer[nNumPoints++] = p2.tov3();
+			// 	PointBuffer[nNumPoints++] = v3.tov3();
+			// 	ZASSERT(nNumPoints < BUFFER_SIZE);
+			// }
 		}
 	}
 	if(nNumPoints)
@@ -365,23 +428,9 @@ void WorldRender()
 
 		}
 	}
-
-	{
-		MICROPROFILE_SCOPEI("MAIN", "UpdateTexture", 0xff44dd44);
-		CheckGLError();
-		glBindTexture(GL_TEXTURE_2D, g_LightTexture);
-	    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, MAX_NUM_LIGHTS*2, 1, GL_RGBA, GL_FLOAT, &g_LightBuffer);
-	    glBindTexture(GL_TEXTURE_2D, 0);
-	    CheckGLError();
-	}
-	#if 1
 	for(int i = 0; i < g_WorldState.nNumLights; ++ i)
 	{
-
-//		v3 col = ;
-
 		ZDEBUG_DRAWSPHERE(g_WorldState.Lights[i].mObjectToWorld.trans.tov3(), 2.f, g_WorldState.Lights[i].nColor);
-	
 		g_LightBuffer[i].Pos[0] = g_WorldState.Lights[i].mObjectToWorld.trans.x;
 		g_LightBuffer[i].Pos[1] = g_WorldState.Lights[i].mObjectToWorld.trans.y;
 		g_LightBuffer[i].Pos[2] = g_WorldState.Lights[i].mObjectToWorld.trans.z;
@@ -391,22 +440,14 @@ void WorldRender()
 		g_LightBuffer[i].Color[2] = col.z;
 	}
 	int nNumLights = g_WorldState.nNumLights;
-	#else
-	g_LightBuffer[0].Pos[0] = LightPos.x;
-	g_LightBuffer[0].Pos[1] = LightPos.y;
-	g_LightBuffer[0].Pos[2] = LightPos.z;
-	g_LightBuffer[0].Color[0] = LightColor.x;
-	g_LightBuffer[0].Color[1] = LightColor.y;
-	g_LightBuffer[0].Color[2] = LightColor.z;
-
-	g_LightBuffer[1].Pos[0] = LightPos0.x;
-	g_LightBuffer[1].Pos[1] = LightPos0.y;
-	g_LightBuffer[1].Pos[2] = LightPos0.z;
-	g_LightBuffer[1].Color[0] = LightColor0.x;
-	g_LightBuffer[1].Color[1] = LightColor0.y;
-	g_LightBuffer[1].Color[2] = LightColor0.z;
-		int nNumLights = g_WorldState.nNumLights;
-	#endif
+	{
+		MICROPROFILE_SCOPEI("MAIN", "UpdateTexture", 0xff44dd44);
+		CheckGLError();
+		glBindTexture(GL_TEXTURE_2D, g_LightTexture);
+	    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, nNumLights*2, 1, GL_RGBA, GL_FLOAT, &g_LightBuffer);
+	    glBindTexture(GL_TEXTURE_2D, 0);
+	    CheckGLError();
+	}
 
 
 	glActiveTexture(GL_TEXTURE1);

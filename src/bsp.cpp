@@ -117,17 +117,6 @@ static const char* Spaces(int n)
 }
 
 
-v4 MakePlane(v3 p, v3 normal)
-{
-	v4 r = v4init(normal, -(v3dot(normal,p)));
-	float vDot = v4dot(v4init(p, 1.f), r);
-	if(fabsf(vDot) > 0.001f)
-	{
-		ZBREAK();
-	}
-
-	return r;
-}
 void BspDump(SOccluderBsp* pBsp, int nNode, int nLevel)
 {
 	SOccluderBspNode* pNode = pBsp->Nodes.Ptr() + nNode;
@@ -230,7 +219,7 @@ MICROPROFILE_SCOPEIC("BSP", "Build");
 			v3 vCenter = (v0 + v1 + v2) / v3init(3.f);
 			v3 vNormal = v3normalize(v3cross(v3normalize(v1 - v0), v3normalize(v2 - v0)));
 			v3 vEnd = vCenter + vNormal;
-			Plane.p[i] = -(MakePlane(vFrustumCorners[i], vNormal));
+			Plane.p[i] = -(v4makeplane(vFrustumCorners[i], vNormal));
 			{
 				int nIndex = (int)pBsp->Nodes.Size();
 				SOccluderBspNode* pNode = pBsp->Nodes.PushBack();
@@ -363,7 +352,7 @@ MICROPROFILE_SCOPEIC("BSP", "Build");
 		// SOccluderPlane& Plane = pPlanes[nOccluderIndex];
 		// v3 vInnerNormal = v3normalize(v3cross(vCorners[1]-vCorners[0], vCorners[3]-vCorners[0]));
 		// bool bFlip = false;
-		// v4 vNormalPlane = MakePlane(vCorners[0], vInnerNormal);
+		// v4 vNormalPlane = v4makeplane(vCorners[0], vInnerNormal);
 		// {
 		// 	float fMinDot = v3dot(vCorners[0]-vOrigin, vDirection);
 		// 	fMinDot = Min(fMinDot, v3dot(vCorners[1]-vOrigin, vDirection));
@@ -403,7 +392,7 @@ MICROPROFILE_SCOPEIC("BSP", "Build");
 		// 	v3 vCenter = (v0 + v1 + v2) / v3init(3.f);
 		// 	v3 vNormal = v3normalize(v3cross(v3normalize(v1 - v0), v3normalize(v2 - v0)));
 		// 	v3 vEnd = vCenter + vNormal;
-		// 	Plane.p[i] = MakePlane(vCorners[i], vNormal);
+		// 	Plane.p[i] = v4makeplane(vCorners[i], vNormal);
 		// 	if(bFlip)
 		// 		Plane.p[i] = -Plane.p[i];
 		// 	if(g_nBspOccluderDrawEdges&1)
@@ -501,7 +490,7 @@ bool BspAddOccluder(SOccluderBsp* pBsp, v3* vCorners, uint32 nNumCorners)
 	SOccluderPlane* pPlane = pBsp->Occluders.PushBack();
 	v3 vInnerNormal = v3normalize(v3cross(vCorners[1]-vCorners[0], vCorners[3]-vCorners[0]));
 	bool bFlip = false;
-	v4 vNormalPlane = MakePlane(vCorners[0], vInnerNormal);
+	v4 vNormalPlane = v4makeplane(vCorners[0], vInnerNormal);
 	{
 		float fMinDot = v3dot(vCorners[0]-vOrigin, vDirection);
 		fMinDot = Min(fMinDot, v3dot(vCorners[1]-vOrigin, vDirection));
@@ -540,7 +529,7 @@ bool BspAddOccluder(SOccluderBsp* pBsp, v3* vCorners, uint32 nNumCorners)
 		v3 vCenter = (v0 + v1 + v2) / v3init(3.f);
 		v3 vNormal = v3normalize(v3cross(v3normalize(v1 - v0), v3normalize(v2 - v0)));
 		v3 vEnd = vCenter + vNormal;
-		pPlane->p[i] = MakePlane(vCorners[i], vNormal);
+		pPlane->p[i] = v4makeplane(vCorners[i], vNormal);
 		if(bFlip)
 			pPlane->p[i] = -pPlane->p[i];
 		if(g_nBspOccluderDrawEdges&1)
@@ -1017,11 +1006,11 @@ MICROPROFILE_SCOPEIC("BSP", "Cull");
 		v3 n1 = v3normalize(v3cross(v1, v1 - v2));
 		v3 n2 = v3normalize(v3cross(v2, v2 - p3));
 		v3 n3 = v3normalize(v3cross(p3, p3 - v0));
-		pPlanes[0].p[0] = MakePlane(v0, n0);
-		pPlanes[0].p[1] = MakePlane(v1, n1);
-		pPlanes[0].p[2] = MakePlane(v2, n2);
-		pPlanes[0].p[3] = MakePlane(p3, n3);
-		pPlanes[0].p[4] = MakePlane(p3, v3normalize(vToCenter));
+		pPlanes[0].p[0] = v4makeplane(v0, n0);
+		pPlanes[0].p[1] = v4makeplane(v1, n1);
+		pPlanes[0].p[2] = v4makeplane(v2, n2);
+		pPlanes[0].p[3] = v4makeplane(p3, n3);
+		pPlanes[0].p[4] = v4makeplane(p3, v3normalize(vToCenter));
 
 
 

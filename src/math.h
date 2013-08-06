@@ -213,7 +213,7 @@ float v3dot(v3 v0, v3 v1)
 {
 	return v0.x * v1.x + v0.y * v1.y + v0.z * v1.z;
 }
-
+float v3distance(v3 p0, v3 p1);
 v3 v3fromcolor(uint32_t nColor);
 
 v3 v3cross(v3 v0, v3 v1);
@@ -251,6 +251,10 @@ v4 v4fromcolor(uint32_t nColor);
 float v4dot(v4 v0, v4 v1);
 float v4length(v4 v0);
 float v4length2(v4 v0);
+
+v4 v4makeplane(v3 p, v3 normal);
+
+
 
 
 v4 operator +(const v4 l, const v4 r);
