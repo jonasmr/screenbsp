@@ -544,6 +544,11 @@ v4 v3::tov4(float w)
 	return r;
 }
 
+float v3distance(v3 p0, v3 p1)
+{
+	return v3length(p0 - p1);
+}
+
 v3 v3fromcolor(uint32_t nColor)
 {
 	float fMul = 1.f / 255.f;
@@ -692,6 +697,20 @@ float v4length2(v4 v0)
 {
 	return v0.x * v0.x + v0.y * v0.y + v0.z * v0.z + v0.w * v0.w;
 }
+
+
+v4 v4makeplane(v3 p, v3 normal)
+{
+	v4 r = v4init(normal, -(v3dot(normal,p)));
+	float vDot = v4dot(v4init(p, 1.f), r);
+	if(fabsf(vDot) > 0.001f)
+	{
+		ZBREAK();
+	}
+
+	return r;
+}
+
 
 void v4::operator +=(const v4& r)
 {

@@ -15,9 +15,6 @@ extern uint32_t g_lShowDebug, g_lShowDebugText;
 extern uint32_t g_Width;
 extern uint32_t g_Height;
 
-
-//ZPUSH_OPTIMIZE_OFF
-
 GLuint g_FontTexture;
 
 uint32_t g_nTextX2=0;
@@ -41,6 +38,7 @@ namespace
 		uint32_t nFnxtPos;
 	};
 	STextRenderState g_TextRenderState;
+
 }
 SFontDescription g_FontDescription;
 
@@ -87,14 +85,24 @@ void TextInit()
 
 	const unsigned char* pImage = stbi_load(fname, &x, &y, &comp, 4);
 	uint32_t* p4 = (uint32_t*)pImage;
+	uprintf("TEXTURE %d %d\n", x, y);
+	//FILE* F = fopen("hest.txt", "w");
 	for(uint32_t i = 0; i < x*y; ++i)
 	{
 		if(0 == (0xff & p4[i]))
 			p4[i] = ~p4[i] | 0xff000000;
 		else
 			p4[i] = ~p4[i] & 0xffffff;
+		// if(0 == (i%8))
+		// {
+		// 	uprintf("\n");
+		// 	fprintf(F, "\n");
+		// }
+		// uprintf("0x%08x, ", p4[i]);
+		// fprintf(F, "0x%08x, ", p4[i]);
 	}
-
+	// fclose(F);
+	// ZBREAK();
 	glGenTextures(1, &g_FontDescription.nTextureId);
 	g_FontTexture = g_FontDescription.nTextureId;
 	glBindTexture(GL_TEXTURE_2D, g_FontDescription.nTextureId);

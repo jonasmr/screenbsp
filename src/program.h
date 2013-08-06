@@ -50,6 +50,7 @@ struct SCameraState : SObject
 struct SLight : SObject
 {
 	uint32_t nColor;
+	float fRadius;
 };
 
 v3 DirectionFromScreen(v2 vScreen, SCameraState& Camera);
