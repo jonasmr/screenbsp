@@ -85,24 +85,13 @@ void TextInit()
 
 	const unsigned char* pImage = stbi_load(fname, &x, &y, &comp, 4);
 	uint32_t* p4 = (uint32_t*)pImage;
-	uprintf("TEXTURE %d %d\n", x, y);
-	//FILE* F = fopen("hest.txt", "w");
 	for(uint32_t i = 0; i < x*y; ++i)
 	{
 		if(0 == (0xff & p4[i]))
 			p4[i] = ~p4[i] | 0xff000000;
 		else
 			p4[i] = ~p4[i] & 0xffffff;
-		// if(0 == (i%8))
-		// {
-		// 	uprintf("\n");
-		// 	fprintf(F, "\n");
-		// }
-		// uprintf("0x%08x, ", p4[i]);
-		// fprintf(F, "0x%08x, ", p4[i]);
 	}
-	// fclose(F);
-	// ZBREAK();
 	glGenTextures(1, &g_FontDescription.nTextureId);
 	g_FontTexture = g_FontDescription.nTextureId;
 	glBindTexture(GL_TEXTURE_2D, g_FontDescription.nTextureId);
@@ -118,13 +107,6 @@ void TextInit()
 
 	free((void*)pImage);
 
-	//char array[] = "$+-*/=%\\\"'#@&_(),.;:?!|{}<>[]'^~";
-	//uint32_t nLen = strlen(array);
-	//std::sort(&array[0], &array[nLen]);
-	//for(uint32_t i = 0; i < nLen; ++i)
-	//{
-	//	uprintf("%c : %d\n", array[i], array[i]);
-	//}
 	g_TextRenderState.nFnxtPos = UPLOTF_START;
 
 	glBindTexture(GL_TEXTURE_2D, 0);

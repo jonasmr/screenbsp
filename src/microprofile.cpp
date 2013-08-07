@@ -73,8 +73,38 @@ namespace
 		uint32_t nTextureId;
 	};
 
-	extern unsigned char g_Font2[]; 
+	extern unsigned char g_Font[]; 
 	SFontDescription g_FontDescription;
+
+
+	const char* g_PixelShaderCode = "\
+uniform sampler2D tex; \
+\
+void main(void)  \
+{\
+	vec4 color = texture2D(tex, gl_TexCoord[0].xy);\
+	if(gl_TexCoord[0].x > 1.0 )\
+	{\
+		gl_FragColor.xyz = gl_Color.xyz;\
+		gl_FragColor.w = 1.0;\
+	}\
+	else\
+	{\
+		gl_FragColor.xyz = color.xyz * gl_Color.xyz;\
+		gl_FragColor.w = color.w;\
+	}\
+}\
+";
+
+	const char* g_VertexShaderCode = "\
+void main(void)\
+{\
+	gl_FrontColor = gl_Color;\
+	gl_TexCoord[0] = gl_MultiTexCoord0;\
+	gl_Position = gl_ProjectionMatrix * gl_ModelViewMatrix * gl_Vertex;\
+}\
+";
+
 
 
 
@@ -98,39 +128,14 @@ namespace
 		}
 		return &nDrawBuffer[nOut];
 	}
-
-	char* ReadTextFile(const char *file_) 
+	GLuint CreateProgram(int nType, const char* pShader)
 	{
-	    FILE * pFile;
-	    long lSize;
-	    pFile = fopen ( file_, "r" );
-	    if (pFile==NULL) 
-	    	return 0;
-	    fseek (pFile , 0 , SEEK_END);
-	    lSize = ftell (pFile) + 1;
-	    rewind (pFile);
-	    char* buffer = (char*) malloc (lSize);
-	    if (buffer == NULL)
-			return 0;
-	    
-		fread (buffer,1,lSize,pFile);
-	    buffer[lSize - 1] = 0;
-	    fclose(pFile);
-
-	    return buffer;
-	}
-
-
-	GLuint CreateProgram(int nType, const char* pFile)
-	{
-		char* pBuffer = ReadTextFile(pFile);
 		GLuint handle = glCreateShaderObjectARB(nType);
 		CHECKGL();
-		glShaderSource(handle, 1, (const char**)&pBuffer, 0);
+		glShaderSource(handle, 1, (const char**)&pShader, 0);
 		CHECKGL();
 		glCompileShader(handle);
 		CHECKGL();
-		free(pBuffer);
 		MP_ASSERT(handle);	
 		return handle;
 	}
@@ -138,8 +143,8 @@ namespace
 void MicroProfileDrawInit()
 {
 	glGenBuffers(1, &g_VBO);
-	g_PixelShader = CreateProgram(GL_FRAGMENT_SHADER_ARB, "microprofile.ps");
-	g_VertexShader = CreateProgram(GL_VERTEX_SHADER_ARB, "microprofile.vs");
+	g_PixelShader = CreateProgram(GL_FRAGMENT_SHADER_ARB, g_PixelShaderCode);
+	g_VertexShader = CreateProgram(GL_VERTEX_SHADER_ARB, g_VertexShaderCode);
 	g_Program = glCreateProgramObjectARB();
 	glAttachObjectARB(g_Program, g_PixelShader);
 	glAttachObjectARB(g_Program, g_VertexShader);
@@ -177,27 +182,22 @@ void MicroProfileDrawInit()
 	{
 		g_FontDescription.nCharOffsets[i] = (i-'{')*8+721+8;
 	}
-	#define FONT_TEX_X 1024
-	#define FONT_TEX_Y 9
+#define FONT_TEX_X 1024
+#define FONT_TEX_Y 9
 #define UNPACKED_SIZE (FONT_TEX_X*FONT_TEX_Y * 4)
 	uint32_t* pUnpacked = (uint32_t*)alloca(UNPACKED_SIZE);
-	printf("unpack size %d\n", UNPACKED_SIZE);
 	int idx = 0;
-	int lim = FONT_TEX_X * FONT_TEX_Y / 8;
-	MP_ASSERT(lim == FONT_TEX_X * FONT_TEX_Y / 8);
-	for(int i = 0; i < lim; i++)
+	int end = FONT_TEX_X * FONT_TEX_Y / 8;
+	for(int i = 0; i < end; i++)
 	{
-		unsigned char pValue = g_Font2[i];
+		unsigned char pValue = g_Font[i];
 		for(int j = 0; j < 8; ++j)
 		{
 			pUnpacked[idx++] = pValue & 0x80 ? (uint32_t)-1 : 0;
 			pValue <<= 1;
 		}
 	}
-
-
-
-	uint32_t* p4 = &pUnpacked[0];//&g_Font[0];
+	uint32_t* p4 = &pUnpacked[0];
 	glGenTextures(1, &g_FontTexture);
 	glBindTexture(GL_TEXTURE_2D, g_FontTexture);
 	{
@@ -451,7 +451,7 @@ uint64_t MicroProfileTicksPerSecondGpu()
 
 namespace
 {
-	unsigned char g_Font2[] = 
+	unsigned char g_Font[] = 
 	{
 		0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 		0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
