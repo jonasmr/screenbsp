@@ -55,8 +55,13 @@ struct LightTileIndex
 	int16_t nBase;
 	int16_t nCount;
 };
+struct LightIndex
+{
+	int16_t nIndex;
+	int16_t nDummy;
+};
 
-int16_t g_LightIndex[MAX_LIGHT_INDEX];
+LightIndex g_LightIndex[MAX_LIGHT_INDEX];
 LightTileIndex g_LightTileInfo[(MAX_HEIGHT/TILE_SIZE)*(MAX_WIDTH/TILE_SIZE)];
 LightDesc g_LightBuffer[MAX_NUM_LIGHTS];
 
@@ -180,7 +185,7 @@ void WorldInit()
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_FALSE);
     }
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, MAX_NUM_LIGHTS*2, 1, 0, GL_RGBA, GL_FLOAT, &g_LightBuffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, MAX_NUM_LIGHTS*2, 1, 0, GL_RGBA, GL_FLOAT, &g_LightBuffer);
 
 
 	glBindTexture(GL_TEXTURE_2D, g_LightTileTexture);
@@ -195,7 +200,9 @@ void WorldInit()
     g_LightTileHeight = g_Height / TILE_SIZE;
     ZASSERT(g_LightTileWidth * TILE_SIZE == g_Width);
     ZASSERT(g_LightTileHeight * TILE_SIZE == g_Height);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, g_LightTileWidth, g_LightTileHeight, 0, GL_RGBA, GL_SHORT, 0);
+    CheckGLError();
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16, g_LightTileWidth, g_LightTileHeight, 0, GL_RGBA, GL_SHORT, 0);
+    CheckGLError();
     
 
 	glBindTexture(GL_TEXTURE_2D, g_LightIndexTexture);
@@ -206,7 +213,8 @@ void WorldInit()
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_FALSE);
     }
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LIGHT_INDEX_SIZE, LIGHT_INDEX_SIZE, 0, GL_RGBA, GL_SHORT, 0);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16, LIGHT_INDEX_SIZE, LIGHT_INDEX_SIZE, 0, GL_RGBA, GL_SHORT, 0);
+    CheckGLError();
 
     //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, g_LightTileWidth, g_LightTileHeight, 0, GL_RGBA, GL_SHORT, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -348,6 +356,7 @@ void WorldRender()
 	m mcliptoworld = mmult(g_WorldState.Camera.mviewinv, g_WorldState.Camera.mprjinv);
 	v3 veye = g_WorldState.Camera.vPosition;
 	uprintf("DISTANCE %f\n", v3distance(g_WorldState.Camera.vPosition, g_WorldState.Camera.mview.trans.tov3()));
+	int nMaxTileLights = 0;
 	for(int i = 0; i < g_LightTileWidth; ++i)
 	{
 			MICROPROFILE_SCOPEI("MAIN", "Tile Stuff", 0xff44dddd);
@@ -391,12 +400,14 @@ void WorldRender()
 					v4dot(plane3, center) + radius > 0)
 				{
 					int idx = nLightIndex++;
-					g_LightIndex[idx] = k;
+					g_LightIndex[idx].nIndex = k;
+					g_LightIndex[idx].nDummy = 0;
 					Index.nCount++;
 					ZASSERT(Index.nCount == (nLightIndex - Index.nBase));
 					ZASSERT(nLightIndex < MAX_LIGHT_INDEX);
 				}
 			}
+			nMaxTileLights = Max((int)Index.nCount, nMaxTileLights);
 
 			// if(bDumpPoints)
 			// {
@@ -412,20 +423,10 @@ void WorldRender()
 	if(nNumPoints)
 	{
 		ZASSERT(nNumPoints == 4 * g_LightTileWidth * g_LightTileHeight);
-
-		///uprintf("NUM POINTS %d\n", nNumPoints);
 		for(int i = 0; i < nNumPoints;i+=4)
 		{
 			ZDEBUG_DRAWLINE(PointBuffer[i], PointBuffer[i+1], -1, 0);
-//			ZDEBUG_DRAWLINE(PointBuffer[i+1], PointBuffer[i+2], -1, 0);
-//			ZDEBUG_DRAWLINE(PointBuffer[i+2], PointBuffer[i+3], -1, 0);
 			ZDEBUG_DRAWLINE(PointBuffer[i+3], PointBuffer[i], -1, 0);
-
-
-
-//			ZDEBUG_DRAWBOX(mid(), PointBuffer[i], v3rep(0.1f), (uint32_t)-1, 0);
-//			ZDEBUG_DRAWBOX(ObjectToWorld, g_WorldStatew.tov3(), g_WorldState.WorldObjects[i].vSize, 0xffff0000, 0);
-
 		}
 	}
 	for(int i = 0; i < g_WorldState.nNumLights; ++ i)
@@ -445,24 +446,39 @@ void WorldRender()
 		CheckGLError();
 		glBindTexture(GL_TEXTURE_2D, g_LightTexture);
 	    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, nNumLights*2, 1, GL_RGBA, GL_FLOAT, &g_LightBuffer);
+	    CheckGLError();
+
+	    glBindTexture(GL_TEXTURE_2D, g_LightTileTexture);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, g_LightTileWidth, g_LightTileHeight, GL_RG, GL_SHORT, &g_LightTileInfo);
+	    CheckGLError();
+
+	    glBindTexture(GL_TEXTURE_2D, g_LightIndexTexture);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, LIGHT_INDEX_SIZE, MAX_LIGHT_INDEX/LIGHT_INDEX_SIZE, GL_RG, GL_SHORT, &g_LightIndex);
+	    CheckGLError();
+
 	    glBindTexture(GL_TEXTURE_2D, 0);
 	    CheckGLError();
+
 	}
 
 
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, g_LightTexture);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, g_LightTileTexture);
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, g_LightIndexTexture);
+
+
 	glActiveTexture(GL_TEXTURE0);
 
 	ShaderUse(VS_LIGHTING, PS_LIGHTING);
 	SHADER_SET("texLight", 1);
+	SHADER_SET("texLightTile", 2);
+	SHADER_SET("texLightIndex", 3);
 	SHADER_SET("NumLights", nNumLights);
 	SHADER_SET("lightDelta", 1.f / (2*MAX_NUM_LIGHTS));
-	SHADER_SET("LightPos[0]", LightPos);
-	SHADER_SET("LightColor[0]", LightColor);
-
-	SHADER_SET("LightPos[1]", LightPos0);
-	SHADER_SET("LightColor[1]", LightColor0);
+	SHADER_SET("MaxTileLights", nMaxTileLights);
 
 	for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
 	{
@@ -470,7 +486,6 @@ void WorldRender()
 		glMultMatrixf(&g_WorldState.WorldObjects[i].mObjectToWorld.x.x);
 		if(bCulled[i])
 		{
-//			uplotfnxt("CULLED %d", i);
 			ZDEBUG_DRAWBOX(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].mObjectToWorld.w.tov3(), g_WorldState.WorldObjects[i].vSize, 0xffff0000, 0);
 		}
 		else
