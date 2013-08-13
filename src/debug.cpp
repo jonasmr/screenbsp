@@ -32,9 +32,16 @@ struct SDebugDrawBounds
 	uint32 nUseZ;
 };
 
+struct SDebugDrawPlane
+{
+	v3 vNormal;
+	v3 vPosition;
+};
+
 struct SDebugDrawState
 {
 	TFixedArray<SDebugDrawLine, 16<<10> Lines;
+	TFixedArray<SDebugDrawPlane, 128> Planes;
 	TFixedArray<SDebugDrawPoly, 2048> Poly;
 
 	TFixedArray<v4, 2048*4> PolyVert;
@@ -44,6 +51,15 @@ struct SDebugDrawState
 	TFixedArray<SDebugDrawBounds, 2048> Boxes;
 } g_DebugDrawState;
 
+
+void DebugDrawPlane(v3 vNormal, v3 vPosition)
+{
+	if(g_DebugDrawState.Planes.Full()) return;
+	SDebugDrawPlane* pPlane = g_DebugDrawState.Planes.PushBack();
+	ZASSERT(v3length(vNormal) > 0.8f);
+	pPlane->vNormal = vNormal;
+	pPlane->vPosition = vPosition;
+}
 
 void DebugDrawBounds(m mObjectToWorld, v3 vSize, uint32 nColor)
 {
@@ -125,6 +141,61 @@ void DebugDrawBounds(v3 vmin, v3 vmax, uint32_t nColor)
 	DebugDrawLine(p3, p2, nColor);
 	DebugDrawLine(p2, p0, nColor);
 }
+
+
+#define PLANE_DEBUG_TESSELATION 20
+#define PLANE_DEBUG_SIZE 5
+
+
+void DebugDrawPlane(SDebugDrawPlane& Plane)
+{
+	v3 vNormal = Plane.vNormal;
+	v3 vPosition = Plane.vPosition;
+	v3 vLeft = v3cross(vNormal, v3init(1,0,0));
+	if(v3length(vLeft) < 0.1f)
+		vLeft = v3cross(vNormal, v3init(0,1,0));
+	if(v3length(vLeft) < 0.51f)
+		vLeft = v3cross(vNormal, v3init(0,0,1));
+
+	ZASSERT(v3length(vLeft) > 0.4f);
+	vLeft = v3normalize(vLeft);
+	v3 vUp = v3normalize(v3cross(vNormal, vLeft));
+	vLeft = v3normalize(v3cross(vUp, vNormal));
+	v3 vPoints[PLANE_DEBUG_TESSELATION * PLANE_DEBUG_TESSELATION];
+	for(int i = 0; i < PLANE_DEBUG_TESSELATION; ++i)
+	{
+		float x = PLANE_DEBUG_SIZE * (((float)i / (PLANE_DEBUG_TESSELATION-1)) - 0.5f);
+		for(int j = 0; j < PLANE_DEBUG_TESSELATION; ++j)
+		{
+			float y = PLANE_DEBUG_SIZE * (((float)j / (PLANE_DEBUG_TESSELATION-1)) - 0.5f);
+			vPoints[i*PLANE_DEBUG_TESSELATION+j] = vPosition + vUp * x + vLeft * y;
+		}
+	}
+
+	glBegin(GL_LINES);
+	for(int i = 0; i < PLANE_DEBUG_TESSELATION-1; ++i)
+	{
+		for(int j = 0; j < PLANE_DEBUG_TESSELATION-1; ++j)
+		{
+
+			glColor3f(1.f, 0.f, 0.f);
+			glVertex3fv((float*)&vPoints[i*PLANE_DEBUG_TESSELATION+j]);
+			glVertex3fv((float*)&vPoints[i*PLANE_DEBUG_TESSELATION+j+1]);
+			glVertex3fv((float*)&vPoints[(1+i)*PLANE_DEBUG_TESSELATION+j]);
+			glVertex3fv((float*)&vPoints[i*PLANE_DEBUG_TESSELATION+j]); 
+			glColor3f(0.f, 1.f, 0.f);
+			v3 vPointOffset = vPoints[i*PLANE_DEBUG_TESSELATION+j] + vNormal * 0.03;
+			glVertex3fv((float*)&vPoints[i*PLANE_DEBUG_TESSELATION+j]);
+			glVertex3fv((float*)&vPointOffset);
+		}
+	}
+	glEnd();
+
+
+}
+
+
+
 namespace
 {
 	void DebugDrawBox(const SDebugDrawBounds& Box)
@@ -369,6 +440,14 @@ void DebugDrawFlush()
 			ShaderDisable();
 		}
 		
+		for(SDebugDrawPlane& Plane : g_DebugDrawState.Planes)
+		{
+			DebugDrawPlane(Plane);
+
+		}
+
+
+
 	}
 	g_DebugDrawState.Lines.Clear();
 	g_DebugDrawState.Poly.Clear();
@@ -376,6 +455,7 @@ void DebugDrawFlush()
 	g_DebugDrawState.Bounds.Clear();
 	g_DebugDrawState.Boxes.Clear();
 	g_DebugDrawState.Spheres.Clear();
+	g_DebugDrawState.Planes.Clear();
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthMask(1);

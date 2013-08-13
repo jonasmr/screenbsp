@@ -27,6 +27,7 @@ void ShaderSetSize(v3 vSize);
 int ShaderGetLocation(const char* pVar);
 void ShaderSetUniform(int location, int value);
 void ShaderSetUniform(int location, float value);
+void ShaderSetUniform(int location, v2 v);
 void ShaderSetUniform(int location, v3 v);
 void ShaderSetUniform(int location, v4 v);
 #define SHADER_SET(name, v)do{ int i = ShaderGetLocation(name); ShaderSetUniform(i, v);} while(0)

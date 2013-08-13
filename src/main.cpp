@@ -370,6 +370,11 @@ int SDL_main(int argc, char* argv[])
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,  	    24);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE,  	    8);	
 	SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE,		    32);	
+	// SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	// SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+
+
+
 	if((g_Surface = SDL_SetVideoMode(g_BaseWidth, g_BaseHeight, 32, SDL_HWSURFACE | SDL_GL_DOUBLEBUFFER | SDL_OPENGL  )) == NULL) 
 	{
 		return 1;
