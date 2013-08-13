@@ -1,5 +1,5 @@
 
-LDFLAGS=-framework OpenGL -framework CoreAudio `/usr/local/bin/sdl-config --static-libs` -lBulletDynamics -lBulletCollision -lLinearMath -lpthread
+LDFLAGS=-framework OpenGL `/usr/local/bin/sdl-config --static-libs` -lBulletDynamics -lBulletCollision -lLinearMath -lpthread
 CFLAGS=`/usr/local/bin/sdl-config --cflags` -I../glew/glew-1.9.0/include -DGLEW_STATIC -Wno-c++11-extensions -I/usr/local/include/bullet
 CFLAGS+=-g -O0 -Wno-invalid-offsetof
 CPPFLAGS=$(CFLAGS)

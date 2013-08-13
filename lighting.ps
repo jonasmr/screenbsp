@@ -1,4 +1,5 @@
 //uniform sampler2D tex1; 
+//#version 140 
 
 
 uniform sampler2D texLight;
@@ -8,6 +9,8 @@ uniform sampler2D texLightIndex;
 uniform float lightDelta;
 uniform int NumLights;
 uniform int MaxTileLights;
+uniform vec2 ScreenSize;
+uniform vec3 TileSize;
 
 
 varying vec3 fNormal;
@@ -21,7 +24,40 @@ void main(void)
 	Color += vec3(0.4, 0.4, 0.4);
 	vec3 Normal = normalize(fNormal);
 	const float fAttenLength = 2.0;
+#if 1
+	vec2 Tile = floor(gl_FragCoord.xy / TileSize.z);
+	vec2 TileCoord = Tile / TileSize.xy;
+	vec2 LightInfo = texture2D(texLightTile, TileCoord).xy;
+	float fBaseOffset = LightInfo.x*32768.0;
+	float fCount = LightInfo.y*32768.0;
+	float fMaxLights = float(MaxTileLights);
+	float fScale = clamp(fCount / 5.0, 0.0, 1.0);
 
+#if 1
+	vec2 foo = (LightInfo.yy*32768.0) /fMaxLights;
+	Color = mix(vec3(1.0,0.0,0.0), vec3(0.0,1.0,0.0), vec3(foo, 0.0));//fScale + fWorldPos.x * 0.000001);
+	Color += fWorldPos.x * 0.000001;
+#else
+	int nStart = round(fBaseOffset + 0.5);
+	int nEnd = round(fCount + 0.5);
+	for(int i = nStart; i < nEnd; ++i)
+	{
+		int u = i % 1024;
+		int v = i / 1024;
+		vec2 Coords = vec2(u / 1024.0, v / 1024.0);
+		vec2 Index = texture2D(texLightIndex, Coords);
+		int lightIndex = Index.x * 32768.0;
+		vec2 tcLight0 = vec2(lightDelta*(float(lightIndex)*2.0), 0);
+		vec2 tcLight1 = vec2(tc0.x + lightDelta, 0);
+
+
+	}
+	vec2 foo = (LightInfo.yy*32768.0) /fMaxLights;
+	Color = mix(vec3(1.0,0.0,0.0), vec3(0.0,1.0,0.0), vec3(foo, 0.0));//fScale + fWorldPos.x * 0.000001);
+	Color += fWorldPos.x * 0.000001;
+
+#endif
+#else
 	for(int i = 0; i < NumLights; i++)
 	{
 		vec2 tc0 = vec2(lightDelta*(float(i)*2.0), 0);
@@ -39,6 +75,7 @@ void main(void)
 		vec3 vDiffuse = fIntensity * fAngle * LCol;
 		Color += vDiffuse;
 	}
+#endif
 	gl_FragColor.xyz = Color;
 	gl_FragColor.w = 1.0;
 }

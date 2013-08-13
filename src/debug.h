@@ -15,6 +15,7 @@ void DebugDrawPoly(v4* pVertex, uint32 nNumVertex, uint32_t nColor);
 void DebugDrawBounds(m mObjectToWorld, v3 vSize, uint32 nColor);
 void DebugDrawBox(m rot, v3 pos, v3 size, uint32 nColor, uint32 usez);
 void DebugDrawSphere(v3 vPos, float fRadius, uint32_t nColor);
+void DebugDrawPlane(v3 vNormal, v3 pos);
 
 
 #define ZDEBUG_DRAWLINE(v0, v1, color, unused) DebugDrawLine(v0, v1, color)
@@ -22,7 +23,7 @@ void DebugDrawSphere(v3 vPos, float fRadius, uint32_t nColor);
 #define ZDEBUG_DRAWBOUNDS(mObjectToWorld, vSize, color) DebugDrawBounds(mObjectToWorld, vSize, color)
 #define ZDEBUG_DRAWBOX(mrot, pos, size, color, usez) DebugDrawBox(mrot, pos, size, color, usez)
 #define ZDEBUG_DRAWSPHERE(pos, radius, color) DebugDrawSphere(pos, radius, color)
-
+#define ZDEBUG_DRAWPLANE(normal, pos) DebugDrawPlane(normal, pos)
 
 
 void DebugDrawInit();

@@ -154,6 +154,21 @@ void WorldInit()
 		PhysicsAddObjectBox(&g_WorldState.WorldObjects[i]);
 	}
 
+#if 0
+	g_WorldState.nNumLights = 1;
+	for(int i = 0; i < g_WorldState.nNumLights; ++i)
+	{
+		m mat = mid();
+		mat.trans.y = -3.f;
+		// mat.trans.x = frandrange(-5.f, 5.f);
+		// mat.trans.y = frandrange(-2.7f, -3.f);
+		// mat.trans.z = frandrange(-5.f, 5.f);
+//		uprintf("LIGHT AT %f %f %f\n", mat.trans.x, mat.trans.y, mat.trans.z);
+		g_WorldState.Lights[i].mObjectToWorld = mat;
+		g_WorldState.Lights[i].nColor = randcolor() | 0xff000000;
+		g_WorldState.Lights[i].fRadius = 2.f;
+	}
+#else
 	g_WorldState.nNumLights = 15;
 	for(int i = 0; i < g_WorldState.nNumLights; ++i)
 	{
@@ -164,8 +179,9 @@ void WorldInit()
 //		uprintf("LIGHT AT %f %f %f\n", mat.trans.x, mat.trans.y, mat.trans.z);
 		g_WorldState.Lights[i].mObjectToWorld = mat;
 		g_WorldState.Lights[i].nColor = randcolor() | 0xff000000;
+		g_WorldState.Lights[i].fRadius = 2.f;
 	}
-
+#endif
 
 
 	g_EditorState.pSelected = 0;
@@ -302,11 +318,15 @@ void WorldRender()
 	LightPos.z = (sin(foo*10)) * 5;
 	LightPos0.x = (sin(foo*10)) * 5;
 
+#if 1
 	g_WorldState.Lights[0].mObjectToWorld.trans.z = (sin(foo*5.5)) * 5;
 	g_WorldState.Lights[1].mObjectToWorld.trans.x = (cos((foo+2)*3)) * 5;
+#endif
 
 	#define BUFFER_SIZE (512*512)
 	static v3 PointBuffer[BUFFER_SIZE];
+	static v3 DumpPlaneNormal0, DumpPlaneNormal1, DumpPlaneNormal2, DumpPlaneNormal3;
+	static v3 DumpPlanePos0, DumpPlanePos1, DumpPlanePos2, DumpPlanePos3;
 	static int nNumPoints = 0;
 	bool bDumpPoints = false;
 	if(g_KeyboardState.keys['b']&BUTTON_RELEASED)
@@ -317,45 +337,13 @@ void WorldRender()
 
 	m mprj = (g_WorldState.Camera.mprj);
 	m mprjinv = minverse(g_WorldState.Camera.mprj);
-	// //#define PP uprintf
-	// #define PP(...)
-	// for(int i=0; i < 200; ++i)
-	// {
-	// 	float foo = i - 100.f;
-	// 	v4 val = v4init(0.f,0.f,foo* g_WorldState.Camera.fNear, 1.f);
-	// 	PP("DIST %f  :: ", val.z);
-	// 	val = mtransform(mprj, val);
-	// 	val = val / val.w;
-	// 	PP(" %f %f %f\n", val.x, val.y, val.z);
-	// }
 
-	// for(int i=0; i < 20; ++i)
-	// {
-	// 	float z = (i / 19.f) * 2.f - 1.f;
-	// 	PP("inv z %f :: ", z);
-	// 	v4 val = v4init(0,0,z,1.f);
-	// 	val = mtransform(mprjinv, val);
-	// 	PP(" UNPRJ %f %f %f %f ::", val.x, val.y, val.z, val.w);
-	// 	val = val / val.w;
-	// 	PP(" PRJ %f %f %f %f\n", val.x, val.y, val.z, val.w);
-	// }
-
-
-	// v4 z = v4init(0,0,-g_WorldState.Camera.fNear,1);
-	// v4 z1 = v4init(0,0,g_WorldState.Camera.fNear,1);
-
-	// v4 l = mtransform(mprj, z);
-	// v4 l1 = mtransform(mprj, z1);
-	// l = l / l.w;
-	// l1 = l1 / l1.w;
-//	ZBREAK();
 
 
 	int nLightIndex = 0;
 
 	m mcliptoworld = mmult(g_WorldState.Camera.mviewinv, g_WorldState.Camera.mprjinv);
 	v3 veye = g_WorldState.Camera.vPosition;
-	uprintf("DISTANCE %f\n", v3distance(g_WorldState.Camera.vPosition, g_WorldState.Camera.mview.trans.tov3()));
 	int nMaxTileLights = 0;
 	for(int i = 0; i < g_LightTileWidth; ++i)
 	{
@@ -378,11 +366,11 @@ void WorldRender()
 
 			LightTileIndex& Index = g_LightTileInfo[i+j*g_LightTileWidth];
 			Index.nBase = nLightIndex;
-			Index.nCount = nLightIndex;
-			v3 vNormal0 = v3normalize(v3cross(_p0-_p1, _p1 - veye));
-			v3 vNormal1 = v3normalize(v3cross(_p1-_p2, _p2 - veye));
-			v3 vNormal2 = v3normalize(v3cross(_p2-_p3, _p3 - veye));
-			v3 vNormal3 = v3normalize(v3cross(_p3-_p0, _p0 - veye));
+			Index.nCount = 0;
+			v3 vNormal0 = -v3normalize(v3cross(_p0-_p1, _p1 - veye));
+			v3 vNormal1 = -v3normalize(v3cross(_p1-_p2, _p2 - veye));
+			v3 vNormal2 = -v3normalize(v3cross(_p2-_p3, _p3 - veye));
+			v3 vNormal3 = -v3normalize(v3cross(_p3-_p0, _p0 - veye));
 			v4 plane0 = v4makeplane(_p0, vNormal0);
 			v4 plane1 = v4makeplane(_p1, vNormal1);
 			v4 plane2 = v4makeplane(_p2, vNormal2);
@@ -390,16 +378,24 @@ void WorldRender()
 
 			for(int k = 0; k < g_WorldState.nNumLights; ++k)
 			{
-				v4 center = g_WorldState.Lights[i].mObjectToWorld.trans;
-				float radius = g_WorldState.Lights[i].fRadius;
+				v4 center = g_WorldState.Lights[k].mObjectToWorld.trans;
+				float radius = g_WorldState.Lights[k].fRadius;
 				center.w = 1.f;
 				//ZASSERT(center.w == 1.f);
-				if( v4dot(plane0, center) + radius > 0 &&
-					v4dot(plane1, center) + radius > 0 &&
-					v4dot(plane2, center) + radius > 0 &&
-					v4dot(plane3, center) + radius > 0)
+				float fDot0 = v4dot(plane0, center);
+				float fDot1 = v4dot(plane1, center);
+				float fDot2 = v4dot(plane2, center);
+				float fDot3 = v4dot(plane3, center);
+
+				
+				if( fDot0 + radius >= 0 &&
+					fDot1 + radius >= 0 &&
+					fDot2 + radius >= 0 &&
+					fDot3 + radius >= 0)
 				{
+				//	ZBREAK();
 					int idx = nLightIndex++;
+
 					g_LightIndex[idx].nIndex = k;
 					g_LightIndex[idx].nDummy = 0;
 					Index.nCount++;
@@ -407,19 +403,38 @@ void WorldRender()
 					ZASSERT(nLightIndex < MAX_LIGHT_INDEX);
 				}
 			}
+			// if(Index.nCount)
+			// 	uprintf("INDEX AT %d, %d has %d\n", i, j, Index.nCount);
 			nMaxTileLights = Max((int)Index.nCount, nMaxTileLights);
+			//Index.nCount = j % 1;
+//			Index.nBase = i % 10;
 
-			// if(bDumpPoints)
-			// {
-			// 	uprintf("DUMP %f %f %f\n", p0.x, p0.y, p0.z);
-			// 	PointBuffer[nNumPoints++] = p0.tov3();
-			// 	PointBuffer[nNumPoints++] = p1.tov3();
-			// 	PointBuffer[nNumPoints++] = p2.tov3();
-			// 	PointBuffer[nNumPoints++] = v3.tov3();
-			// 	ZASSERT(nNumPoints < BUFFER_SIZE);
-			// }
+			if(bDumpPoints)
+			{
+//				uprintf("DUMP %f %f %f\n", p0.x, p0.y, p0.z);
+				if(i == 50 && j == 50)
+				{
+
+					DumpPlaneNormal0 = vNormal0;
+					DumpPlanePos0 = _p0;
+					DumpPlaneNormal1 = vNormal1;
+					DumpPlanePos1 = _p1;
+					DumpPlaneNormal2 = vNormal2;
+					DumpPlanePos2 = _p2;
+					DumpPlaneNormal3 = vNormal3;
+					DumpPlanePos3 = _p3;
+					//ZBREAK();
+
+				}
+				PointBuffer[nNumPoints++] = p0.tov3();
+				PointBuffer[nNumPoints++] = p1.tov3();
+				PointBuffer[nNumPoints++] = p2.tov3();
+				PointBuffer[nNumPoints++] = p3.tov3();
+				ZASSERT(nNumPoints < BUFFER_SIZE);
+			}
 		}
 	}
+	uprintf("MAX LIGHTS %d\n", nMaxTileLights);
 	if(nNumPoints)
 	{
 		ZASSERT(nNumPoints == 4 * g_LightTileWidth * g_LightTileHeight);
@@ -428,10 +443,15 @@ void WorldRender()
 			ZDEBUG_DRAWLINE(PointBuffer[i], PointBuffer[i+1], -1, 0);
 			ZDEBUG_DRAWLINE(PointBuffer[i+3], PointBuffer[i], -1, 0);
 		}
+
+		ZDEBUG_DRAWPLANE(DumpPlaneNormal0, DumpPlanePos0);
+		ZDEBUG_DRAWPLANE(DumpPlaneNormal1, DumpPlanePos1);
+		ZDEBUG_DRAWPLANE(DumpPlaneNormal2, DumpPlanePos2);
+		ZDEBUG_DRAWPLANE(DumpPlaneNormal3, DumpPlanePos3);
 	}
 	for(int i = 0; i < g_WorldState.nNumLights; ++ i)
 	{
-		ZDEBUG_DRAWSPHERE(g_WorldState.Lights[i].mObjectToWorld.trans.tov3(), 2.f, g_WorldState.Lights[i].nColor);
+		//ZDEBUG_DRAWSPHERE(g_WorldState.Lights[i].mObjectToWorld.trans.tov3(), 2.f, g_WorldState.Lights[i].nColor);
 		g_LightBuffer[i].Pos[0] = g_WorldState.Lights[i].mObjectToWorld.trans.x;
 		g_LightBuffer[i].Pos[1] = g_WorldState.Lights[i].mObjectToWorld.trans.y;
 		g_LightBuffer[i].Pos[2] = g_WorldState.Lights[i].mObjectToWorld.trans.z;
@@ -439,6 +459,7 @@ void WorldRender()
 		g_LightBuffer[i].Color[0] = col.x;
 		g_LightBuffer[i].Color[1] = col.y;
 		g_LightBuffer[i].Color[2] = col.z;
+		g_LightBuffer[i].Color[3] = g_WorldState.Lights[i].fRadius;
 	}
 	int nNumLights = g_WorldState.nNumLights;
 	{
@@ -479,7 +500,21 @@ void WorldRender()
 	SHADER_SET("NumLights", nNumLights);
 	SHADER_SET("lightDelta", 1.f / (2*MAX_NUM_LIGHTS));
 	SHADER_SET("MaxTileLights", nMaxTileLights);
+	SHADER_SET("ScreenSize", v2init(g_Width, g_Height));
+	v3 vTileSize = v3init(g_LightTileWidth, g_LightTileHeight, TILE_SIZE);
+	SHADER_SET("TileSize", vTileSize);
+	// v2 vScreen = v2init(400,400);
+	// uprintf("screen init %f %f\n", vScreen.x, vScreen.y);
+	// vScreen = vScreen / vTileSize.z;
+	// uprintf("screen div %f %f\n", vScreen.x, vScreen.y);
+	// vScreen.x = floor(vScreen.x);
+	// vScreen.y = floor(vScreen.y);
+	// uprintf("screen clmp %f %f\n", vScreen.x, vScreen.y);
+	// vScreen.x = vScreen.x / vTileSize.x;
+	// vScreen.y = vScreen.y / vTileSize.y;
+	// uprintf("screen final %f %f\n", vScreen.x, vScreen.y);
 
+	//ZBREAK();
 	for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
 	{
 		glPushMatrix();

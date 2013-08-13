@@ -144,15 +144,21 @@ void ShaderUse(EShaderVS vs, EShaderPS ps)
 	CheckGLError();
 
 }
+
+void ShaderSetUniform(int loc, v2 v)
+{
+	glUniform2fv(loc, 1, &v.x);
+}
+
+
+
 void ShaderSetUniform(int loc, v3 v)
 {
-	//GLuint loc = glGetUniformLocation(g_ShaderState.LinkedPrograms[0], "Size");
 	glUniform3fv(loc, 1, &v.x);
 }
 
 void ShaderSetUniform(int loc, v4 v)
 {
-	//GLuint loc = glGetUniformLocation(g_ShaderState.LinkedPrograms[0], "Size");
 	glUniform4fv(loc, 1, &v.x);
 }
 
