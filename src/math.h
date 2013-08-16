@@ -288,6 +288,7 @@ m mtranslate(v3 trans);
 m mviewport(float x, float y, float w, float h);
 m mperspective(float fFovY, float fAspect, float fNear, float fFar);
 m mortho(float fXWidth, float fYWidth, float fZRange);
+m morthogl(float left, float right, float top, float bottom, float near, float far);
 
 v3 mtransform(m mat, v3 point);
 v4 mtransform(m mat, v4 vector);

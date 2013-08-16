@@ -1229,8 +1229,21 @@ m mortho(float fX, float fY, float fZRange)
 	r.y.y = 2.f / fY;
 	r.z.z = 1.f / fZRange;
 	return r;
-
 }
+
+m morthogl(float left, float right, float top, float bottom, float near, float far)
+{
+	m mat = mid();
+	mat.x.x = 2.0 / (right - left);
+	mat.y.y = 2.0 / (top - bottom);
+	mat.z.z = -2.0 / (far - near);
+	mat.trans.x = - (right + left) / (right - left);
+	mat.trans.y = - (top + bottom) / (top - bottom);
+	mat.trans.z = - (far + near) / (far - near);
+
+	return mat;
+}
+
 
 void msetxaxis(m& mat, v3 axis)
 {

@@ -3,7 +3,7 @@
 #include "glinc.h"
 #include "mesh.h"
 #include "shader.h"
-
+#define NOIMMEDIATE
 
 struct SDebugDrawLine
 {
@@ -200,6 +200,7 @@ namespace
 {
 	void DebugDrawBox(const SDebugDrawBounds& Box)
 	{
+#ifndef NOIMMEDIATE
 		glPushMatrix();
 		glMultMatrixf(&Box.mat.x.x);
 		//glTranslatef(Box.mat.trans.x, Box.mat.trans.y, Box.mat.trans.z);
@@ -249,9 +250,13 @@ namespace
 		glEnd();
 
 		glPopMatrix();
+	#endif
 	}
 	void DebugDrawBounds(const SDebugDrawBounds& Bounds)
-	{			glPushMatrix();
+	{			
+#ifndef IMMEDIATE
+
+		glPushMatrix();
 			glMultMatrixf(&Bounds.mat.x.x);
 			v3 vScale = Bounds.vSize;
 			vScale = v3max(vScale, 0.1f) * 1.07f;
@@ -328,6 +333,7 @@ namespace
 
 
 			glPopMatrix();
+#endif
 	}
 }
 
@@ -384,10 +390,11 @@ void DebugDrawFlush()
 		}
 
 
-
+#ifndef NOIMMEDIATE
 		v4* pVert = g_DebugDrawState.PolyVert.Ptr();
 		for(uint32 i = 0; i < g_DebugDrawState.Poly.Size(); ++i)
 		{
+
 			glBegin(GL_POLYGON);
 			uint32_t nColor = g_DebugDrawState.Poly[i].nColor;
 			uint32 nVertices = g_DebugDrawState.Poly[i].nVertices;
@@ -445,6 +452,7 @@ void DebugDrawFlush()
 			DebugDrawPlane(Plane);
 
 		}
+#endif
 
 
 

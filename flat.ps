@@ -1,9 +1,13 @@
+
+#version 150
+
 uniform sampler2D tex1; 
 
-varying vec3 COL;
+in vec3 COL;
+out vec4 Out0;
 
 void main(void)  
 {  
-	gl_FragColor.xyz = COL;
-	gl_FragColor.w = 1.0;
+	Out0.xyz = COL;
+	Out0.w = 1.0;
 }

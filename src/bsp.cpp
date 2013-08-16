@@ -146,18 +146,18 @@ void BspDestroy(SOccluderBsp* pBsp)
 void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders, SWorldObject* pWorldObjects, uint32 nNumWorldObjects, const SOccluderBspViewDesc& Desc)
 {
 	g_pBsp = pBsp;
-MICROPROFILE_SCOPEIC("BSP", "Build");
-	if(g_KeyboardState.keys[SDLK_F3]&BUTTON_RELEASED)
+	MICROPROFILE_SCOPEIC("BSP", "Build");
+	if(g_KeyboardState.keys[SDL_SCANCODE_F3]&BUTTON_RELEASED)
 	{
 		g_nBspOccluderDrawOccluders = (g_nBspOccluderDrawOccluders+1)%2;
 	}
 
-	if(g_KeyboardState.keys[SDLK_F4]&BUTTON_RELEASED)
+	if(g_KeyboardState.keys[SDL_SCANCODE_F4]&BUTTON_RELEASED)
 	{
 		g_nBspOccluderDebugDrawClipResult = (g_nBspOccluderDebugDrawClipResult+1)%2;
 	}
 
-	if(g_KeyboardState.keys[SDLK_F5]&BUTTON_RELEASED)
+	if(g_KeyboardState.keys[SDL_SCANCODE_F5]&BUTTON_RELEASED)
 	{
 		g_nBspOccluderDrawEdges = (g_nBspOccluderDrawEdges+1)%4;
 	}
@@ -166,9 +166,9 @@ MICROPROFILE_SCOPEIC("BSP", "Build");
 	g_nBspDebugPlaneCounter = 0;
 
 	uplotfnxt("OCCLUDER Occluders:(f3)%d Clipresult:(f4)%d Edges:(f5)%d", g_nBspOccluderDrawOccluders, g_nBspOccluderDebugDrawClipResult, g_nBspOccluderDrawEdges);
-	if(g_KeyboardState.keys[SDLK_F8] & BUTTON_RELEASED)
+	if(g_KeyboardState.keys[SDL_SCANCODE_F8] & BUTTON_RELEASED)
 		g_nBspDebugPlane ++;
-	if(g_KeyboardState.keys[SDLK_F7] & BUTTON_RELEASED)
+	if(g_KeyboardState.keys[SDL_SCANCODE_F7] & BUTTON_RELEASED)
 		g_nBspDebugPlane--;
 	uplotfnxt("BSP DEBUG PLANE %d", g_nBspDebugPlane);
 
@@ -409,7 +409,7 @@ MICROPROFILE_SCOPEIC("BSP", "Build");
 //	ZASSERT(nOccluderIndex <= pBsp->Occluders.Size());
 
 	g_nCheck = 1;
-	if(g_KeyboardState.keys[SDLK_F10] & BUTTON_RELEASED)
+	if(g_KeyboardState.keys[SDL_SCANCODE_F10] & BUTTON_RELEASED)
 	{
 		BspDump(pBsp, 0, 0);
 	}

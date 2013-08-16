@@ -326,6 +326,7 @@ void MeshCreateBuffers(Mesh* pMesh)
 	ZASSERT(pMesh);
 	glGenBuffers(1, &pMesh->VertexBuffer);
 	glGenBuffers(1, &pMesh->IndexBuffer);
+	glGenVertexArrays(1, &pMesh->VAO);
 
 	glBindBuffer(GL_ARRAY_BUFFER, pMesh->VertexBuffer);
 	glBufferData(GL_ARRAY_BUFFER, pMesh->nVertices * sizeof(Vertex), pMesh->pVertices, GL_STATIC_DRAW);
@@ -346,37 +347,53 @@ void MeshDestroyBuffers(Mesh* pMesh)
 
 void MeshDraw(const Mesh* pMesh)
 {
+	CheckGLError();
 
 	glBindBuffer(GL_ARRAY_BUFFER, pMesh->VertexBuffer);
+	
+	const ShaderBindInfo* pBindInfo = ShaderGetCurrentBindInfo();
+	// CheckGLError();
+	// glEnableVertexAttribArray(0);
+	// CheckGLError();
+	// glEnableVertexAttribArray(0);
+	CheckGLError();
+	glBindVertexArray(pMesh->VAO);
+	if(pBindInfo->VertexIn>=0)
+	{
+		glEnableVertexAttribArray(pBindInfo->VertexIn);
+		glVertexAttribPointer(pBindInfo->VertexIn, 3, GL_FLOAT,0, sizeof(Vertex), 0);
+	}
+	CheckGLError();
+	if(pBindInfo->NormalIn>=0)
+	{
+		glEnableVertexAttribArray(pBindInfo->NormalIn);
+		glVertexAttribPointer(pBindInfo->NormalIn, 3, GL_FLOAT, 0, sizeof(Vertex), (const void*)offsetof(Vertex, Normal));
+	}
+	CheckGLError();
+	if(pBindInfo->ColorIn>=0)
+	{
+		glEnableVertexAttribArray(pBindInfo->ColorIn);
+		glVertexAttribPointer(pBindInfo->ColorIn, 4, GL_UNSIGNED_BYTE, 1, sizeof(Vertex), (const void*)offsetof(Vertex, Color));
+	}
+	CheckGLError();
+
+
+
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, pMesh->IndexBuffer);
-
-	glVertexPointer(3, GL_FLOAT, sizeof(Vertex), 0);
-	glNormalPointer(GL_FLOAT, sizeof(Vertex), (const void*)offsetof(Vertex, Normal));
-	glColorPointer(3, GL_UNSIGNED_BYTE, sizeof(Vertex), (const void*)offsetof(Vertex,Color));
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_NORMAL_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
-
-	CheckGLError();
-
-
-//	SHADER_SET("Size", vSize);
-	// int loc = ShaderGetLocation("Size");
-	// if(loc > -1)
-	// 	ShaderSetUniform(loc, vSize);
-	CheckGLError();
-
-
 
 	glDrawElements(GL_TRIANGLES, pMesh->nIndices, GL_UNSIGNED_SHORT, (const void*)0);
 
 
-	glDisableClientState(GL_VERTEX_ARRAY);
-	glDisableClientState(GL_NORMAL_ARRAY);
-	glDisableClientState(GL_COLOR_ARRAY);
-	
+	if(pBindInfo->VertexIn >= 0)
+		glDisableVertexAttribArray(pBindInfo->VertexIn);
+	if(pBindInfo->NormalIn >= 0)
+		glDisableVertexAttribArray(pBindInfo->NormalIn);
+	if(pBindInfo->ColorIn >= 0)
+		glDisableVertexAttribArray(pBindInfo->ColorIn);
+
 	CheckGLError();
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	CheckGLError();
+	glBindVertexArray(0);
 }

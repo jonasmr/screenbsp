@@ -45,7 +45,7 @@ void usleep(__int64 usec)
 }
 #endif
 
-SDL_Surface* g_Surface;
+//SDL_Surface* g_Surface;
 #ifdef _WIN32123
 #define START_WIDTH 1280
 #define START_HEIGHT 1024
@@ -285,6 +285,7 @@ void HandleEvent(SDL_Event* pEvt)
 				g_MouseState.button[pEvt->button.button] = BUTTON_DOWN|BUTTON_PUSHED;
 			}
 		}
+		#if 0 
 		if(pEvt->button.button == SDL_BUTTON_WHEELUP)
 		{
 			g_MicroProfileMouseDelta--;
@@ -293,6 +294,8 @@ void HandleEvent(SDL_Event* pEvt)
 		{
 			g_MicroProfileMouseDelta++;
 		}
+
+		#endif
 	// 	}
 	// 	break;
 	// case SDL_JOYAXISMOTION:
@@ -351,16 +354,16 @@ void ProgramInit();
 
 void MicroProfileQueryInitGL();
 void MicroProfileDrawInit();
-void MicroProfileBeginDraw(uint32_t nWidth, uint32_t nHeight);
+void MicroProfileBeginDraw(uint32_t nWidth, uint32_t nHeight, float* prj);
 void MicroProfileEndDraw();
 
-extern "C" 
-int SDL_main(int argc, char* argv[])
+//extern "C" 
+int main(int argc, char* argv[])
 {
 
 	MicroProfileOnThreadCreate("Main");
 
-	if(SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER) < 0) {
+	if(SDL_Init(SDL_INIT_VIDEO) < 0) {
 		return 1;
 	}
 	SDL_GL_SetAttribute(SDL_GL_RED_SIZE,    	    8);
@@ -370,18 +373,19 @@ int SDL_main(int argc, char* argv[])
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,  	    24);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE,  	    8);	
 	SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE,		    32);	
-	// SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	// SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-
-
-	if((g_Surface = SDL_SetVideoMode(g_BaseWidth, g_BaseHeight, 32, SDL_HWSURFACE | SDL_GL_DOUBLEBUFFER | SDL_OPENGL  )) == NULL) 
-	{
+	SDL_Window * pWindow = SDL_CreateWindow("ScreenBsp", 10, 10, g_BaseWidth, g_BaseHeight, SDL_WINDOW_OPENGL);
+	if(!pWindow)
 		return 1;
-	}
 
+	SDL_GLContext glcontext = SDL_GL_CreateContext(pWindow);
 	glewExperimental=1;
 	GLenum err=glewInit();
+	glGetError();
+	CheckGLError();
 	if(err!=GLEW_OK)
 	{
 		ZBREAK();
@@ -390,11 +394,18 @@ int SDL_main(int argc, char* argv[])
 	{
 		ZBREAK();
 	}
+	CheckGLError();
 
+
+
+	uprintf("GL VERSION '%s'\n", glGetString(GL_VERSION));
 
 #if MICROPROFILE_ENABLED
+	CheckGLError();
 	MicroProfileQueryInitGL();
+	CheckGLError();
 	MicroProfileDrawInit();
+	CheckGLError();
 #endif
 
 
@@ -410,10 +421,13 @@ int SDL_main(int argc, char* argv[])
 	//std::thread t44(WorkerThread, 44);
 	//std::thread t45(WorkerThread, 45);
 
-
+	CheckGLError();
 	InputInit();
+	CheckGLError();
 	TextInit();
+	CheckGLError();
 	MeshInit();
+	CheckGLError();
 	ShaderInit();
 
 	PhysicsInit();
@@ -443,17 +457,21 @@ int SDL_main(int argc, char* argv[])
 			}
 
 		}
-
+		CheckGLError();
 		{
 			srand(0);
 			MICROPROFILE_SCOPEI("MAIN", "DebugRender", 0x00eeee);
 			{
 				MICROPROFILE_SCOPEGPUI("GPU", "Render Debug", 0x88dd44);
 				DebugDrawFlush();
+				CheckGLError();
 			}
+
+
 			{
 				MICROPROFILE_SCOPEGPUI("GPU", "Render Text", 0x88dd44);
 				TextFlush();
+				CheckGLError();
 			}
 			MICROPROFILE_SCOPEI("MAIN", "DUMMY", randcolor());
 
@@ -482,26 +500,30 @@ int SDL_main(int argc, char* argv[])
 		MicroProfileMouseButton(g_MouseState.button[1] & BUTTON_DOWN ? 1 : 0, g_MouseState.button[3] & BUTTON_DOWN ? 1 : 0);
 		MicroProfileMousePosition(g_MicroProfileMouseX, g_MicroProfileMouseY, g_MicroProfileMouseDelta);
 		g_MicroProfileMouseDelta = 0;
-
+		CheckGLError();
 		MicroProfileFlip();
 		{
 			MICROPROFILE_SCOPEGPUI("GPU", "MicroProfileDraw", 0x88dd44);
 
-			CheckGLError();
-			glMatrixMode(GL_PROJECTION);
-			glLoadIdentity();
-			CheckGLError();
-			glOrtho(0.0, g_Width, g_Height, 0, -1.0, 1.0);
-			CheckGLError();
-			glMatrixMode(GL_MODELVIEW);
-			glLoadIdentity();
+			// CheckGLError();
+			// glMatrixMode(GL_PROJECTION);
+			// glLoadIdentity();
+			// CheckGLError();
+			// glOrtho(0.0, g_Width, g_Height, 0, -1.0, 1.0);
+			// CheckGLError();
+			// glMatrixMode(GL_MODELVIEW);
+			// glLoadIdentity();
+			m prj = morthogl(0.0, g_Width, g_Height, 0, -1.0, 1.0);
 			glDisable(GL_DEPTH_TEST);
 			glDisable(GL_CULL_FACE);
 			CheckGLError();
 
-			MicroProfileBeginDraw(g_Width, g_Height);
+			CheckGLError();
+			MicroProfileBeginDraw(g_Width, g_Height, (float*)&prj);
 			MicroProfileDraw(g_Width, g_Height);
+			CheckGLError();
 			MicroProfileEndDraw();
+			CheckGLError();
 		}
 		
 
@@ -511,7 +533,7 @@ int SDL_main(int argc, char* argv[])
 		{
 			MicroProfileToggleDisplayMode();
 		}
-		if(g_KeyboardState.keys[SDLK_RSHIFT] & BUTTON_RELEASED)
+		if(g_KeyboardState.keys[SDL_SCANCODE_S] & BUTTON_RELEASED)
 		{
 			MicroProfileTogglePause();
 		}
@@ -533,8 +555,10 @@ int SDL_main(int argc, char* argv[])
 
 
 		MICROPROFILE_SCOPEI("MAIN", "Flip", 0xffee00);
-		SDL_GL_SwapBuffers();
+		//SDL_GL_SwapBuffers();
 
+
+		SDL_GL_SwapWindow(pWindow); 
 
 
 	}
@@ -548,6 +572,14 @@ int SDL_main(int argc, char* argv[])
 	//t43.join();
 	//t44.join();
 	//t45.join();
+
+
+
+  	SDL_GL_DeleteContext(glcontext);  
+  
+ 	SDL_DestroyWindow(pWindow);
+ 	SDL_Quit();
+
 	return 0;
 }
 
