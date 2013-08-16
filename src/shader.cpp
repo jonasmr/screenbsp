@@ -9,6 +9,7 @@ struct
 	GLuint VS[VS_SIZE];
 	GLuint PS[PS_SIZE];
 	GLuint LinkedPrograms[VS_SIZE * PS_SIZE];
+	ShaderBindInfo  LinkInfo[VS_SIZE * PS_SIZE];
 	int nCurrentIndex;
 
 } g_ShaderState;
@@ -64,6 +65,7 @@ static void DumpGlLog(GLuint handle)
 
 GLuint CreateProgram(int nType, const char* pFile)
 {
+	CheckGLError();
 	uprintf("COMPILING %s as %s\n", pFile, nType == GL_FRAGMENT_SHADER_ARB ? "FRAGMENT SHADER" : "VERTEX SHADER");
 	char* pBuffer = ReadTextFile(pFile);
 	GLuint handle = glCreateShaderObjectARB(nType);
@@ -93,11 +95,12 @@ GLuint CreateProgram(int nType, const char* pFile)
 void ShaderInit()
 {
 	memset(&g_ShaderState, 0, sizeof(g_ShaderState));
+	memset(&g_ShaderState.LinkInfo, 0xff, sizeof(g_ShaderState.LinkInfo));
 	g_ShaderState.PS[PS_FLAT_LIT] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "flat.ps");
 	g_ShaderState.VS[VS_DEFAULT] = CreateProgram(GL_VERTEX_SHADER_ARB, "default.vs");
 
-	g_ShaderState.PS[PS_MICROPROFILE] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "microprofile.ps");
-	g_ShaderState.VS[VS_MICROPROFILE] = CreateProgram(GL_VERTEX_SHADER_ARB, "microprofile.vs");
+	// g_ShaderState.PS[PS_MICROPROFILE] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "microprofile.ps");
+	// g_ShaderState.VS[VS_MICROPROFILE] = CreateProgram(GL_VERTEX_SHADER_ARB, "microprofile.vs");
 
 	g_ShaderState.PS[PS_LIGHTING] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "lighting.ps");
 	g_ShaderState.VS[VS_LIGHTING] = CreateProgram(GL_VERTEX_SHADER_ARB, "lighting.vs");
@@ -128,13 +131,22 @@ void ShaderUse(EShaderVS vs, EShaderPS ps)
 
 		glAttachObjectARB(prg, g_ShaderState.PS[ps]);
 		glAttachObjectARB(prg, g_ShaderState.VS[vs]);
+
+		glBindFragDataLocation(prg, 0, "Out0");
 		glLinkProgramARB(prg);
 		g_ShaderState.LinkedPrograms[nIndex] = prg;
+
+		g_ShaderState.LinkInfo[nIndex].VertexIn = glGetAttribLocation(prg, "VertexIn");
+		g_ShaderState.LinkInfo[nIndex].ColorIn = glGetAttribLocation(prg, "ColorIn");
+		g_ShaderState.LinkInfo[nIndex].TC0In = glGetAttribLocation(prg, "TC0In");
+		g_ShaderState.LinkInfo[nIndex].NormalIn = glGetAttribLocation(prg, "NormalIn");
+
 		
 		CheckGLError();
 		DumpGlLog(prg);
 		DumpGlLog(g_ShaderState.PS[ps]);
 		DumpGlLog(g_ShaderState.VS[vs]);
+		CheckGLError();
 	}
 	//use
 	CheckGLError();
@@ -161,6 +173,10 @@ void ShaderSetUniform(int loc, v4 v)
 {
 	glUniform4fv(loc, 1, &v.x);
 }
+void ShaderSetUniform(int loc, const m& mat)
+{
+	glUniformMatrix4fv(loc, 1, false, &mat.x.x);
+}
 
 int ShaderGetLocation(const char* pVar)
 {
@@ -179,4 +195,9 @@ void ShaderSetUniform(int location, float value)
 {
 	glUniform1f(location, value);
 	CheckGLError();
+}
+
+const ShaderBindInfo* ShaderGetCurrentBindInfo()
+{
+	return &g_ShaderState.LinkInfo[g_ShaderState.nCurrentIndex];
 }

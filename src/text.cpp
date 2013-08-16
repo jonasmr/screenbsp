@@ -100,7 +100,6 @@ void TextInit()
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);     
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_FALSE);
     }
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, &p4[0]);
@@ -118,54 +117,72 @@ void TextFlush()
 {
 	if(g_lShowDebug && g_lShowDebugText)
 	{
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
+		m modelview = mid();
+		m prj; 
 		if(g_nTextX2)
-			glOrtho(0, g_Width/2,g_Height/2, 0, 1, -1);
+			prj = morthogl(0, g_Width/2,g_Height/2, 0, 1, -1);
 		else
-			glOrtho(0, g_Width,g_Height, 0, 1, -1);
+		 	prj = morthogl(0, g_Width,g_Height, 0, 1, -1);
+	
+
+		CheckGLError();
+
+
+		// glMatrixMode(GL_MODELVIEW);
+		// glLoadIdentity();
+		// glMatrixMode(GL_PROJECTION);
+		// glLoadIdentity();
+		// if(g_nTextX2)
+		// 	glOrtho(0, g_Width/2,g_Height/2, 0, 1, -1);
+		// else
+		// 	glOrtho(0, g_Width,g_Height, 0, 1, -1);
 				
-		glEnable(GL_TEXTURE_2D);
+		CheckGLError();
+		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, g_FontDescription.nTextureId);
+		CheckGLError();
+		//glEnable(GL_TEXTURE_2D);
 		
 		const float fEndV = 9.f / 16.f;
 		const float fOffsetU = 5.f / 1024.f;
-
-		glEnable(GL_ALPHA_TEST);
-		glAlphaFunc(GL_GREATER, 0.5f);
-
-		glBegin(GL_QUADS);
-		glColor3f(1.f,1.f,1.f);
-		for(uint32_t i = 0; i < g_TextRenderState.Plots.Size(); ++i)
-		{
-			int nX = g_TextRenderState.Plots[i].nX;
-			int nY = g_TextRenderState.Plots[i].nY;
-			int nLen = g_TextRenderState.Plots[i].nCount;
-			const unsigned char* pStr = (unsigned char*)&g_TextRenderState.Lines[nY].c[nX];
-			float fX = nX*TEXT_CHAR_WIDTH;
-			float fY = nY*(TEXT_CHAR_HEIGHT+1);
-			float fY2 = fY + (TEXT_CHAR_HEIGHT+1);
-			for(uint32_t j = 0; j < nLen; ++j)
-			{
-				int16_t nOffset = g_FontDescription.nCharOffsets[*pStr++];
-				float fOffset = nOffset / 1024.f;
-				glTexCoord2f(fOffset, 0.f);
-				glVertex2f(fX, fY);
-				glTexCoord2f(fOffset+fOffsetU, 0.f);
-				glVertex2f(fX+TEXT_CHAR_WIDTH, fY);
-				glTexCoord2f(fOffset+fOffsetU, 1.f);
-				glVertex2f(fX+TEXT_CHAR_WIDTH, fY2);
-				glTexCoord2f(fOffset, 1.f);
-				glVertex2f(fX, fY2);
-				fX += TEXT_CHAR_WIDTH+1;
-			}
+		CheckGLError();
+		// glEnable(GL_ALPHA_TEST);
+		// CheckGLError();
+		// glAlphaFunc(GL_GREATER, 0.5f);
+		// CheckGLError();
+		// glBegin(GL_QUADS);
+		// glColor3f(1.f,1.f,1.f);
+		// for(uint32_t i = 0; i < g_TextRenderState.Plots.Size(); ++i)
+		// {
+		// 	int nX = g_TextRenderState.Plots[i].nX;
+		// 	int nY = g_TextRenderState.Plots[i].nY;
+		// 	int nLen = g_TextRenderState.Plots[i].nCount;
+		// 	const unsigned char* pStr = (unsigned char*)&g_TextRenderState.Lines[nY].c[nX];
+		// 	float fX = nX*TEXT_CHAR_WIDTH;
+		// 	float fY = nY*(TEXT_CHAR_HEIGHT+1);
+		// 	float fY2 = fY + (TEXT_CHAR_HEIGHT+1);
+		// 	for(uint32_t j = 0; j < nLen; ++j)
+		// 	{
+		// 		int16_t nOffset = g_FontDescription.nCharOffsets[*pStr++];
+		// 		float fOffset = nOffset / 1024.f;
+		// 		glTexCoord2f(fOffset, 0.f);
+		// 		glVertex2f(fX, fY);
+		// 		glTexCoord2f(fOffset+fOffsetU, 0.f);
+		// 		glVertex2f(fX+TEXT_CHAR_WIDTH, fY);
+		// 		glTexCoord2f(fOffset+fOffsetU, 1.f);
+		// 		glVertex2f(fX+TEXT_CHAR_WIDTH, fY2);
+		// 		glTexCoord2f(fOffset, 1.f);
+		// 		glVertex2f(fX, fY2);
+		// 		fX += TEXT_CHAR_WIDTH+1;
+		// 	}
 			
-		}
-		glEnd();
-		glDisable(GL_TEXTURE_2D);
+		// }
+		// glEnd();
+		CheckGLError();
+//		glDisable(GL_TEXTURE_2D);
+		CheckGLError();
 		glDisable(GL_BLEND);
+		CheckGLError();
 	}
 	g_TextRenderState.Plots.Clear();
 	g_TextRenderState.nFnxtPos = UPLOTF_START;

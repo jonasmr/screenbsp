@@ -21,6 +21,14 @@ enum EShaderPS
 	PS_SIZE,
 };
 
+struct ShaderBindInfo
+{
+	int VertexIn;
+	int ColorIn;
+	int TC0In;
+	int NormalIn;
+};
+
 void ShaderInit();
 void ShaderUse(EShaderVS vs, EShaderPS ps);
 void ShaderSetSize(v3 vSize);
@@ -30,6 +38,8 @@ void ShaderSetUniform(int location, float value);
 void ShaderSetUniform(int location, v2 v);
 void ShaderSetUniform(int location, v3 v);
 void ShaderSetUniform(int location, v4 v);
+void ShaderSetUniform(int location, const m& mat);
+const ShaderBindInfo* ShaderGetCurrentBindInfo();
 #define SHADER_SET(name, v)do{ int i = ShaderGetLocation(name); ShaderSetUniform(i, v);} while(0)
 #define ShaderDisable() ShaderUse(VS_SIZE,PS_SIZE)
 

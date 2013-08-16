@@ -45,6 +45,7 @@ struct Mesh
 
 	uint32 IndexBuffer;
 	uint32 VertexBuffer;
+	uint32 VAO;
 };
 
 void MeshInit();

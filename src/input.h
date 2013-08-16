@@ -62,7 +62,7 @@ struct SMouseState
 
 enum
 {
-	KEYBOARD_MAX_KEYS = SDLK_LAST,
+	KEYBOARD_MAX_KEYS = 256,
 };
 
 struct SKeyboardState

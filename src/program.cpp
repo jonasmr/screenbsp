@@ -75,18 +75,6 @@ void DebugRender()
 		ZDEBUG_DRAWBOUNDS(g_EditorState.pSelected->mObjectToWorld, g_EditorState.pSelected->vSize, g_EditorState.bLockSelection ? (0xffffff00) : -1);
 
 	}
-	glBegin(GL_LINES);
-	glColor3f(1,0,0);
-	glVertex3f(0, 0, 0.f);
-	glVertex3f(1.f, 0, 0.f);
-	glColor3f(0,1,0);
-	glVertex3f(0, 0, 0.f);
-	glVertex3f(0.f, 1.f, 0.f);
-	glColor3f(0,0,1);
-	glVertex3f(0, 0, 0.f);
-	glVertex3f(0.f, 0, 1.f);
-	glEnd();
-
 
 	DebugDrawFlush();
 }
@@ -199,7 +187,6 @@ void WorldInit()
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);     
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_FALSE);
     }
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, MAX_NUM_LIGHTS*2, 1, 0, GL_RGBA, GL_FLOAT, &g_LightBuffer);
 
@@ -210,7 +197,6 @@ void WorldInit()
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);     
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_FALSE);
     }
     g_LightTileWidth = g_Width / TILE_SIZE;
     g_LightTileHeight = g_Height / TILE_SIZE;
@@ -227,7 +213,6 @@ void WorldInit()
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);     
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_FALSE);
     }
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16, LIGHT_INDEX_SIZE, LIGHT_INDEX_SIZE, 0, GL_RGBA, GL_SHORT, 0);
     CheckGLError();
@@ -245,7 +230,7 @@ int g_nSimulate = 0;
 void WorldRender()
 {
 	MICROPROFILE_SCOPEI("MAIN", "WorldRender", 0xff44dddd);
-	if(g_KeyboardState.keys[SDLK_F1] & BUTTON_RELEASED)
+	if(g_KeyboardState.keys[SDL_SCANCODE_F1] & BUTTON_RELEASED)
 	{
 		g_nSimulate = !g_nSimulate;
 	}
@@ -515,20 +500,20 @@ void WorldRender()
 	// uprintf("screen final %f %f\n", vScreen.x, vScreen.y);
 
 	//ZBREAK();
+	CheckGLError();
 	for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
 	{
-		glPushMatrix();
-		glMultMatrixf(&g_WorldState.WorldObjects[i].mObjectToWorld.x.x);
+
+		// glPushMatrix();
+		// glMultMatrixf(&g_WorldState.WorldObjects[i].mObjectToWorld.x.x);
 		if(bCulled[i])
 		{
 			ZDEBUG_DRAWBOX(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].mObjectToWorld.w.tov3(), g_WorldState.WorldObjects[i].vSize, 0xffff0000, 0);
 		}
 		else
 		{
-//			uplotfnxt("NOT CULLED %d", i);
-			
-			//ShaderUse(VS_DEFAULT, PS_FLAT_LIT);
 			SHADER_SET("Size", g_WorldState.WorldObjects[i].vSize);
+			SHADER_SET("ModelViewMatrix", g_WorldState.WorldObjects[i].mObjectToWorld);
 			glEnable(GL_CULL_FACE);
 			MeshDraw(GetBaseMesh(MESH_BOX_FLAT));
 			glDisable(GL_CULL_FACE);
@@ -537,7 +522,7 @@ void WorldRender()
 
 		}
 
-		glPopMatrix();
+		// glPopMatrix();
 	}
 	ShaderDisable();
 
@@ -733,11 +718,11 @@ void UpdatePicking()
 void UpdateCamera()
 {
 	v3 vDir = v3init(0,0,0);
-	if(g_MouseState.button[SDL_BUTTON_WHEELUP] & BUTTON_RELEASED)
-		g_fOrthoScale *= 0.96;
-	if(g_MouseState.button[SDL_BUTTON_WHEELDOWN] & BUTTON_RELEASED)
-		g_fOrthoScale /= 0.96;
-	//uplotfnxt("ORTHO SCALE %f\n", g_fOrthoScale);
+
+	// if(g_MouseState.button[SDL_BUTTON_WHEELUP] & BUTTON_RELEASED)
+	// 	g_fOrthoScale *= 0.96;
+	// if(g_MouseState.button[SDL_BUTTON_WHEELDOWN] & BUTTON_RELEASED)
+	// 	g_fOrthoScale /= 0.96;
 
 
 
@@ -759,7 +744,7 @@ void UpdateCamera()
 		vDir.z = -1.f;
 	}
 	float fSpeed = 0.1f;
-	if((g_KeyboardState.keys[SDLK_RSHIFT]|g_KeyboardState.keys[SDLK_LSHIFT]) & BUTTON_DOWN)
+	if((g_KeyboardState.keys[SDL_SCANCODE_RSHIFT]|g_KeyboardState.keys[SDL_SCANCODE_LSHIFT]) & BUTTON_DOWN)
 		fSpeed *= 0.2f;
 	g_WorldState.Camera.vPosition += g_WorldState.Camera.vDir * vDir.z * fSpeed;
 	g_WorldState.Camera.vPosition += g_WorldState.Camera.vRight * vDir.x * fSpeed;
@@ -798,7 +783,7 @@ void UpdateCamera()
 
 
 	g_WorldState.Camera.mview = mcreate(g_WorldState.Camera.vDir, g_WorldState.Camera.vRight, g_WorldState.Camera.vPosition);
-	if(g_KeyboardState.keys[SDLK_F2] & BUTTON_RELEASED)
+	if(g_KeyboardState.keys[SDL_SCANCODE_F2] & BUTTON_RELEASED)
 		g_nUseOrtho = !g_nUseOrtho;
 
 	float fAspect = (float)g_Width / (float)g_Height;
@@ -872,27 +857,29 @@ int ProgramMain()
 	glEnable(GL_DEPTH_TEST);
 	glDepthMask(GL_TRUE);
 	glDepthFunc(GL_LEQUAL);
+	CheckGLError();
 
-	glMatrixMode(GL_PROJECTION);
-	glLoadMatrixf(&g_WorldState.Camera.mprj.x.x);
-	glMultMatrixf(&g_WorldState.Camera.mview.x.x);
+	// glMatrixMode(GL_PROJECTION);
+	// glLoadMatrixf(&g_WorldState.Camera.mprj.x.x);
+	// glMultMatrixf(&g_WorldState.Camera.mview.x.x);
 
-	glMatrixMode(GL_MODELVIEW);
-	glPushMatrix();
-	glLoadIdentity();
-	//glLoadMatrixf(&g_WorldState.Camera.mview.x.x);
+	// glMatrixMode(GL_MODELVIEW);
+	// glPushMatrix();
+	// glLoadIdentity();
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	CheckGLError();
 	{
 		MICROPROFILE_SCOPEGPUI("GPU", "Render World", 0x88dd44);
 		WorldRender();
 	}
+	CheckGLError();
 	{
 		DebugRender();
 	}
+	CheckGLError();
 
-
-	glPopMatrix();
+	//glPopMatrix();
 
 	return 0;
 }

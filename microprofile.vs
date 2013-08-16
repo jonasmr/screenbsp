@@ -1,7 +1,18 @@
 
+#version 150
+
+uniform mat4 ProjectionMatrix;
+
+in vec3 VertexIn;
+in vec4 ColorIn;
+in vec2 TC0In;
+
+out vec2 TC0;
+out vec4 Color;
+
 void main(void)  
 {
-	gl_FrontColor = gl_Color;
-	gl_TexCoord[0] = gl_MultiTexCoord0;
-	gl_Position = gl_ProjectionMatrix * gl_ModelViewMatrix * gl_Vertex;
+	Color = ColorIn;
+	TC0 = TC0In;
+	gl_Position = ProjectionMatrix * ModelViewMatrix * vec4(VertexIn, 1.0);
 }  

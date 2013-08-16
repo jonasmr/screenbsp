@@ -1,6 +1,6 @@
 
-LDFLAGS=-framework OpenGL `/usr/local/bin/sdl-config --static-libs` -lBulletDynamics -lBulletCollision -lLinearMath -lpthread
-CFLAGS=`/usr/local/bin/sdl-config --cflags` -I../glew/glew-1.9.0/include -DGLEW_STATIC -Wno-c++11-extensions -I/usr/local/include/bullet
+LDFLAGS=-framework OpenGL `sdl2-config --static-libs` -lBulletDynamics -lBulletCollision -lLinearMath -lpthread
+CFLAGS=`sdl2-config --cflags` -I../glew -DGLEW_STATIC -Wno-c++11-extensions -I/usr/local/include/bullet
 CFLAGS+=-g -O0 -Wno-invalid-offsetof
 CPPFLAGS=$(CFLAGS)
 CPPFLAGS+=-Wno-lambda-extensions -stdlib=libc++ -std=c++11
@@ -8,6 +8,7 @@ CPPFLAGS+=-Wno-lambda-extensions -stdlib=libc++ -std=c++11
 CPP_SOURCES = main.cpp math.cpp text.cpp input.cpp program.cpp bsp.cpp debug.cpp manipulator.cpp mesh.cpp shader.cpp \
 		microprofile.cpp physics.cpp
 C_SOURCES = stb_image.c glew.c
+
 TARGET=../bsp
 CC=clang
 CPP=clang++
