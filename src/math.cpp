@@ -1231,7 +1231,7 @@ m mortho(float fX, float fY, float fZRange)
 	return r;
 }
 
-m morthogl(float left, float right, float top, float bottom, float near, float far)
+m morthogl(float left, float right, float bottom, float top, float near, float far)
 {
 	m mat = mid();
 	mat.x.x = 2.0 / (right - left);

@@ -239,10 +239,10 @@ void HandleEvent(SDL_Event* pEvt)
 		g_nQuit = true;
 		break;
 	case SDL_KEYDOWN:
-		g_KeyboardState.keys[(int)pEvt->key.keysym.sym] = BUTTON_DOWN|BUTTON_PUSHED;
+		g_KeyboardState.keys[(int)pEvt->key.keysym.scancode] = BUTTON_DOWN|BUTTON_PUSHED;
 		break;
 	case SDL_KEYUP:
-		g_KeyboardState.keys[(int)pEvt->key.keysym.sym] = BUTTON_UP|BUTTON_RELEASED;
+		g_KeyboardState.keys[(int)pEvt->key.keysym.scancode] = BUTTON_UP|BUTTON_RELEASED;
 		break;
 	case SDL_MOUSEMOTION:
 		g_MouseState.position[0] = pEvt->motion.x;
@@ -529,11 +529,11 @@ int main(int argc, char* argv[])
 
 
 
-		if(g_KeyboardState.keys['z']&BUTTON_RELEASED)
+		if(g_KeyboardState.keys[SDL_SCANCODE_Z]&BUTTON_RELEASED)
 		{
 			MicroProfileToggleDisplayMode();
 		}
-		if(g_KeyboardState.keys[SDL_SCANCODE_S] & BUTTON_RELEASED)
+		if(g_KeyboardState.keys[SDL_SCANCODE_RSHIFT] & BUTTON_RELEASED)
 		{
 			MicroProfileTogglePause();
 		}
