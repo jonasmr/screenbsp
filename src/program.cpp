@@ -549,11 +549,11 @@ void UpdateEditorState()
 		}
 	}
 	uplotfnxt("mode is %d", g_EditorState.Mode);
-	if(g_KeyboardState.keys[SDLK_ESCAPE] & BUTTON_RELEASED)
+	if(g_KeyboardState.keys[SDL_SCANCODE_ESCAPE] & BUTTON_RELEASED)
 	{
 		g_EditorState.pSelected = 0;
 	}
-	if(g_KeyboardState.keys[SDLK_SPACE] & BUTTON_RELEASED)
+	if(g_KeyboardState.keys[SDL_SCANCODE_SPACE] & BUTTON_RELEASED)
 	{
 		if(g_EditorState.pSelected)
 		{
@@ -578,7 +578,7 @@ void UpdateEditorState()
 		v2 vPos = v2init(g_MouseState.position[0], g_MouseState.position[1]);
 		if(!g_EditorState.pSelected || !g_EditorState.Manipulators[g_EditorState.Mode] || !g_EditorState.Manipulators[g_EditorState.Mode]->DragBegin(vPos, vPos, g_EditorState.pSelected))
 
-			// ((g_KeyboardState.keys[SDLK_LCTRL]|g_KeyboardState.keys[SDLK_RCTRL]) & BUTTON_DOWN)|| g_EditorState.pSelected == 0)
+			// ((g_KeyboardState.keys[SDL_SCANCODE_LCTRL]|g_KeyboardState.keys[SDL_SCANCODE_RCTRL]) & BUTTON_DOWN)|| g_EditorState.pSelected == 0)
 		{
 			g_EditorState.DragTarget = DRAGTARGET_CAMERA;
 			uprintf("Drag begin CAMERA\n");
@@ -836,10 +836,10 @@ void ProgramInit()
 int ProgramMain()
 {
 
-	if(g_KeyboardState.keys[SDLK_ESCAPE] & BUTTON_RELEASED)
+	if(g_KeyboardState.keys[SDL_SCANCODE_ESCAPE] & BUTTON_RELEASED)
 		return 1;
 
-	if(g_KeyboardState.keys[SDLK_SPACE] & BUTTON_RELEASED)
+	if(g_KeyboardState.keys[SDL_SCANCODE_SPACE] & BUTTON_RELEASED)
 	{
 		g_nUseDebugCameraPos = (g_nUseDebugCameraPos+1)%3;
 	}

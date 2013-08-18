@@ -203,26 +203,18 @@ void MicroProfileDrawInit()
 	glAttachObjectARB(g_Program, g_PixelShader);
 	glAttachObjectARB(g_Program, g_VertexShader);
 
+	g_LocVertexIn = 1;
+	g_LocColorIn = 2;
+	g_LocTC0In = 3;
+
+	glBindAttribLocation(g_Program, g_LocColorIn, "ColorIn");
+	glBindAttribLocation(g_Program, g_LocVertexIn, "VertexIn");
+	glBindAttribLocation(g_Program, g_LocTC0In, "TC0In");
 	glLinkProgramARB(g_Program);
 	DumpGlLog(g_Program);
 
-	CheckGLError();
-	g_LocVertexIn = glGetAttribLocation(g_Program, "VertexIn");
-	CheckGLError();
-
-	g_LocColorIn = glGetAttribLocation(g_Program, "ColorIn");
-		CheckGLError();
-
-	g_LocTC0In = glGetAttribLocation(g_Program, "TC0In");
-		CheckGLError();
-
 	g_LocTex = glGetUniformLocation(g_Program, "tex");
-		CheckGLError();
-
 	g_LocProjectionMatrix = glGetUniformLocation(g_Program, "ProjectionMatrix");
-		CheckGLError();
-
-
 
 	CheckGLError();
 	for(uint32_t i = 0; i < MAX_FONT_CHARS; ++i)
@@ -517,24 +509,16 @@ void MicroProfileQueryInitGL()
 uint32_t MicroProfileGpuInsertTimeStamp()
 {
 	uint32_t nIndex = (g_GlTimerPos+1)%MICROPROFILE_NUM_QUERIES;
-	CHECKGL();
-#ifndef __APPLE__
 	glQueryCounter(g_GlTimers[nIndex], GL_TIMESTAMP);
-#endif
 	g_GlTimerPos = nIndex;
-	CHECKGL();
 	return nIndex;
 }
 uint64_t MicroProfileGpuGetTimeStamp(uint32_t nKey)
 {
-#ifndef __APPLE__
 	uint64_t result;
 	glGetQueryObjectui64v(g_GlTimers[nKey], GL_QUERY_RESULT, &result);
 	CHECKGL();
 	return result;
-#else
-	return 1;
-#endif
 }
 
 uint64_t MicroProfileTicksPerSecondGpu()
