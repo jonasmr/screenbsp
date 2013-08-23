@@ -5,7 +5,6 @@
 #include "shader.h"
 #include "buffer.h"
 #include "microprofile.h"
-#define NOIMMEDIATE
 
 
 namespace
@@ -135,21 +134,6 @@ void DebugDrawPoly(v4* pVertex, uint32 nNumVertex, uint32_t nColor)
 
 }
 
-// void DebugDrawBounds(v3 vmin, v3 vmax, uint32_t nColor)
-// {
-// 	ZBREAK();
-// 	v3 p0 = vmin;
-// 	v3 p1 = vmin;
-// 	v3 p2 = vmin;
-// 	v3 p3 = vmax;
-// 	p1.x += vmax.x - vmin.x;
-// 	p2.y += vmax.y - vmin.y;
-// 	DebugDrawLine(p0, p1, nColor);
-// 	DebugDrawLine(p1, p3, nColor);
-// 	DebugDrawLine(p3, p2, nColor);
-// 	DebugDrawLine(p2, p0, nColor);
-// }
-
 
 #define PLANE_DEBUG_TESSELATION 20
 #define PLANE_DEBUG_SIZE 5
@@ -202,16 +186,6 @@ void DebugDrawPlane(SDebugDrawPlane& Plane)
 			*pLines++ = Vertex0{p3.x, p3.y, p3.z, c0, 0.f, 0.f};
 			*pLines++ = Vertex0{p4.x, p4.y, p4.z, c1, 0.f, 0.f};
 			*pLines++ = Vertex0{p5.x, p5.y, p5.z, c1, 0.f, 0.f};
-
-			// glColor3f(1.f, 0.f, 0.f);
-			// glVertex3fv((float*)&vPoints[i*PLANE_DEBUG_TESSELATION+j]);
-			// glVertex3fv((float*)&vPoints[i*PLANE_DEBUG_TESSELATION+j+1]);
-			// glVertex3fv((float*)&vPoints[(1+i)*PLANE_DEBUG_TESSELATION+j]);
-			// glVertex3fv((float*)&vPoints[i*PLANE_DEBUG_TESSELATION+j]); 
-			// glColor3f(0.f, 1.f, 0.f);
-			// v3 vPointOffset = vPoints[i*PLANE_DEBUG_TESSELATION+j] + vNormal * 0.03;
-			// glVertex3fv((float*)&vPoints[i*PLANE_DEBUG_TESSELATION+j]);
-			// glVertex3fv((float*)&vPointOffset);
 			nCount -= 6;
 		}
 	}
@@ -270,7 +244,7 @@ namespace
 		
 		*pLines++ = Vertex0{f,  f, -f, nColor, 0.f, 0.f};
 		*pLines++ = Vertex0{-f, f, -f, nColor, 0.f, 0.f};
-		VertexBufferPushFlush(pPushBuffer);
+		//VertexBufferPushFlush(pPushBuffer);
 	}
 	void DebugDrawBounds(const SDebugDrawBounds& Bounds)
 	{			
@@ -339,7 +313,7 @@ namespace
 		*pLines++ = Vertex0{-f,-z, -f, nColor, 0.f, 0.f};
 		*pLines++ = Vertex0{-f,-f, -f, nColor, 0.f, 0.f};
 		*pLines++ = Vertex0{-f,-f, -z, nColor, 0.f, 0.f};
-		VertexBufferPushFlush(pPushBuffer);
+		//VertexBufferPushFlush(pPushBuffer);
 
 	}
 }
@@ -378,24 +352,7 @@ void DebugDrawFlush(m mprj)
 				DebugDrawBox(Box);
 			}
 		}
-
-		// v4* pVert = g_DebugDrawState.PolyVert.Ptr();
-		// for(uint32 i = 0; i < g_DebugDrawState.Poly.Size(); ++i)
-		// {
-		// 	glBegin(GL_POLYGON);
-		// 	uint32_t nColor = g_DebugDrawState.Poly[i].nColor;
-		// 	uint32 nVertices = g_DebugDrawState.Poly[i].nVertices;
-		// 	uint32 nStart = g_DebugDrawState.Poly[i].nStart;
-		// 	glColor4ub(nColor >> 16, nColor >> 8, nColor, nColor>>24);
-		// 	for(uint32 j = 0; j < nVertices; ++j)
-		// 	{
-		// 		v4 v = pVert[nStart+j];
-		// 		glVertex3fv(&v.x);
-		// 	}
-
-		// 	glEnd();
-		// }
-
+		VertexBufferPushFlush(pPushBuffer);
 
 		glDisable(GL_DEPTH_TEST);
 		glDepthMask(0);
@@ -405,14 +362,17 @@ void DebugDrawFlush(m mprj)
 			if(!Box.nUseZ)
 			{
 				DebugDrawBox(Box);
+
+				VertexBufferPushFlush(pPushBuffer);
+
 			}
 		}
+		VertexBufferPushFlush(pPushBuffer);
 		
 
 		for(SDebugDrawBounds& Bounds : g_DebugDrawState.Bounds)
 		{
 			DebugDrawBounds(Bounds);
-
 		}
 
 
@@ -426,7 +386,6 @@ void DebugDrawFlush(m mprj)
 			SHADER_SET("Size", v3init(1,1,1));
 
 			Vertex0* pLines = (Vertex0*)VertexBufferPushVertices(pPushBuffer, g_DebugDrawState.Lines.Size() * 2, EDM_LINES);
-			// glBegin(GL_LINES);
 			for(uint32_t i = 0; i < g_DebugDrawState.Lines.Size(); ++i)
 			{
 				uint32_t nColor = g_DebugDrawState.Lines[i].nColor;
@@ -458,45 +417,27 @@ void DebugDrawFlush(m mprj)
 				*pVertices++ = Vertex0{v1.x, v1.y, v1.z, nColor, 0.f, 0.f};
 				*pVertices++ = Vertex0{v2.x, v2.y, v2.z, nColor, 0.f, 0.f};
 			}
-			VertexBufferPushFlush(pPushBuffer);
-
 		}
+		VertexBufferPushFlush(pPushBuffer);
 		CheckGLError();
-
-
-		// glBegin(GL_LINES);
-		// for(uint32_t i = 0; i < g_DebugDrawState.Lines.Size(); ++i)
-		// {
-		// 	uint32_t nColor = g_DebugDrawState.Lines[i].nColor;
-		// 	glColor3ub(nColor >> 16, nColor >> 8, nColor);
-		// 	glVertex3fv((float*)&g_DebugDrawState.Lines[i].start);
-		// 	glVertex3fv((float*)&g_DebugDrawState.Lines[i].end);
-		// }
-		// glEnd();
 		{
 			glDisable(GL_DEPTH_TEST);
 			ShaderUse(VS_DEBUG, PS_DEBUG);
 			int nSizeLoc = ShaderGetLocation("Size");
 			int nColorLoc = ShaderGetLocation("Color");
-			// ZASSERT(-1 != nSizeLoc);
-			// ZASSERT(-1 != nColorLoc);
 			SHADER_SET("UseVertexColor", 0.f);
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-//			glMatrixMode(GL_MODELVIEW);
 			for(uint32_t i = 0; i < g_DebugDrawState.Spheres.Size(); ++i)
 			{
 				SDebugDrawSphere& Sphere = g_DebugDrawState.Spheres[i];
-//				glPushMatrix();
 				m m0 = mid();
 				v3 vPos = Sphere.vCenter;
 				m0.trans = v4init(vPos, 1.f);
-				//glLoadMatrixf(&m0.x.x);
 				ShaderSetUniform(nSizeLoc, v3rep(Sphere.fRadius));
 				ShaderSetUniform(nColorLoc, v4fromcolor(Sphere.nColor));
 				SHADER_SET("ModelViewMatrix", m0);
 				SHADER_SET("ConstantColor", v4fromcolor(Sphere.nColor));
 				MeshDraw(GetBaseMesh(MESH_SPHERE_1));
-				//glPopMatrix();
 
 			}
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -516,9 +457,8 @@ void DebugDrawFlush(m mprj)
 			DebugDrawPlane(Plane);
 
 		}
-
 		VertexBufferPushFlush(pPushBuffer);
-		CheckGLError();
+
 
 
 	}
@@ -532,5 +472,5 @@ void DebugDrawFlush(m mprj)
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthMask(1);
-
+	CheckGLError();
 }
