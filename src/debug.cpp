@@ -4,6 +4,7 @@
 #include "mesh.h"
 #include "shader.h"
 #include "buffer.h"
+#include "microprofile.h"
 #define NOIMMEDIATE
 
 
@@ -179,24 +180,42 @@ void DebugDrawPlane(SDebugDrawPlane& Plane)
 		}
 	}
 
-	glBegin(GL_LINES);
+
+	int nCount = 6 * (PLANE_DEBUG_TESSELATION-1) * (PLANE_DEBUG_TESSELATION-1);
+	Vertex0* pLines = (Vertex0*)VertexBufferPushVertices(pPushBuffer, 
+		nCount, EDM_LINES);
+	uint32_t c0 = 0xffff0000;
+	uint32_t c1 = 0xff00ff00;
 	for(int i = 0; i < PLANE_DEBUG_TESSELATION-1; ++i)
 	{
 		for(int j = 0; j < PLANE_DEBUG_TESSELATION-1; ++j)
 		{
+			v3 p0 = vPoints[i*PLANE_DEBUG_TESSELATION+j];
+			v3 p1 = vPoints[i*PLANE_DEBUG_TESSELATION+j+1];
+			v3 p2 = vPoints[(1+i)*PLANE_DEBUG_TESSELATION+j];
+			v3 p3 = vPoints[i*PLANE_DEBUG_TESSELATION+j];
+			v3 p4 = vPoints[i*PLANE_DEBUG_TESSELATION+j];
+			v3 p5 = vPoints[i*PLANE_DEBUG_TESSELATION+j] + vNormal * 0.03;
+			*pLines++ = Vertex0{p0.x, p0.y, p0.z, c0, 0.f, 0.f};
+			*pLines++ = Vertex0{p1.x, p1.y, p1.z, c0, 0.f, 0.f};
+			*pLines++ = Vertex0{p2.x, p2.y, p2.z, c0, 0.f, 0.f};
+			*pLines++ = Vertex0{p3.x, p3.y, p3.z, c0, 0.f, 0.f};
+			*pLines++ = Vertex0{p4.x, p4.y, p4.z, c1, 0.f, 0.f};
+			*pLines++ = Vertex0{p5.x, p5.y, p5.z, c1, 0.f, 0.f};
 
-			glColor3f(1.f, 0.f, 0.f);
-			glVertex3fv((float*)&vPoints[i*PLANE_DEBUG_TESSELATION+j]);
-			glVertex3fv((float*)&vPoints[i*PLANE_DEBUG_TESSELATION+j+1]);
-			glVertex3fv((float*)&vPoints[(1+i)*PLANE_DEBUG_TESSELATION+j]);
-			glVertex3fv((float*)&vPoints[i*PLANE_DEBUG_TESSELATION+j]); 
-			glColor3f(0.f, 1.f, 0.f);
-			v3 vPointOffset = vPoints[i*PLANE_DEBUG_TESSELATION+j] + vNormal * 0.03;
-			glVertex3fv((float*)&vPoints[i*PLANE_DEBUG_TESSELATION+j]);
-			glVertex3fv((float*)&vPointOffset);
+			// glColor3f(1.f, 0.f, 0.f);
+			// glVertex3fv((float*)&vPoints[i*PLANE_DEBUG_TESSELATION+j]);
+			// glVertex3fv((float*)&vPoints[i*PLANE_DEBUG_TESSELATION+j+1]);
+			// glVertex3fv((float*)&vPoints[(1+i)*PLANE_DEBUG_TESSELATION+j]);
+			// glVertex3fv((float*)&vPoints[i*PLANE_DEBUG_TESSELATION+j]); 
+			// glColor3f(0.f, 1.f, 0.f);
+			// v3 vPointOffset = vPoints[i*PLANE_DEBUG_TESSELATION+j] + vNormal * 0.03;
+			// glVertex3fv((float*)&vPoints[i*PLANE_DEBUG_TESSELATION+j]);
+			// glVertex3fv((float*)&vPointOffset);
+			nCount -= 6;
 		}
 	}
-	glEnd();
+	ZASSERT(0 == nCount);
 
 
 }
@@ -330,10 +349,12 @@ void DebugDrawFlush(m mprj)
 {
 	if(g_lShowDebug)
 	{
+		MICROPROFILE_SCOPEI("Debug", "DebugDrawFlush", 0xff00ff00);
+		MICROPROFILE_SCOPEGPUI("GPU", "DebugDrawFlush", 0x44bb44);
 
 		if(!pPushBuffer)
 		{
-			pPushBuffer = VertexBufferCreatePush(EVF_FORMAT0, 10 << 10);
+			pPushBuffer = VertexBufferCreatePush(EVF_FORMAT0, 64 << 10);
 			CheckGLError();
 		}
 		glDisable(GL_CULL_FACE);
@@ -480,15 +501,24 @@ void DebugDrawFlush(m mprj)
 			}
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		}
-#ifndef NOIMMEDIATE
 		
+
+
+		SHADER_SET("Color", v4init(1,0,0,0));
+		SHADER_SET("ProjectionMatrix", mprj);
+		SHADER_SET("ModelViewMatrix", mid());
+		SHADER_SET("UseVertexColor", 1.f);
+		SHADER_SET("Size", v3init(1,1,1));
+
+
 		for(SDebugDrawPlane& Plane : g_DebugDrawState.Planes)
 		{
 			DebugDrawPlane(Plane);
 
 		}
-#endif
 
+		VertexBufferPushFlush(pPushBuffer);
+		CheckGLError();
 
 
 	}
