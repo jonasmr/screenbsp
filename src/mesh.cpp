@@ -1,7 +1,7 @@
 #include "mesh.h"
 #include "glinc.h"
 #include "shader.h"
-
+#include "buffer.h"
 
 void MeshCreateBuffers(Mesh* pMesh);
 void MeshDestroyBuffers(Mesh* pMesh);
@@ -328,6 +328,9 @@ void MeshCreateBuffers(Mesh* pMesh)
 	glGenBuffers(1, &pMesh->IndexBuffer);
 	glGenVertexArrays(1, &pMesh->VAO);
 
+	glBindVertexArray(pMesh->VAO);
+
+
 	glBindBuffer(GL_ARRAY_BUFFER, pMesh->VertexBuffer);
 	glBufferData(GL_ARRAY_BUFFER, pMesh->nVertices * sizeof(Vertex), pMesh->pVertices, GL_STATIC_DRAW);
 	
@@ -336,6 +339,8 @@ void MeshCreateBuffers(Mesh* pMesh)
  
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+	glBindVertexArray(0);
 }
 
 void MeshDestroyBuffers(Mesh* pMesh)
@@ -349,31 +354,31 @@ void MeshDraw(const Mesh* pMesh)
 {
 	CheckGLError();
 
-	glBindBuffer(GL_ARRAY_BUFFER, pMesh->VertexBuffer);
 	
-	const ShaderBindInfo* pBindInfo = ShaderGetCurrentBindInfo();
 	// CheckGLError();
 	// glEnableVertexAttribArray(0);
 	// CheckGLError();
 	// glEnableVertexAttribArray(0);
 	CheckGLError();
 	glBindVertexArray(pMesh->VAO);
-	if(pBindInfo->VertexIn>=0)
+	glBindBuffer(GL_ARRAY_BUFFER, pMesh->VertexBuffer);
+
+	// if(pBindInfo->VertexIn>=0)
 	{
-		glEnableVertexAttribArray(pBindInfo->VertexIn);
-		glVertexAttribPointer(pBindInfo->VertexIn, 3, GL_FLOAT,0, sizeof(Vertex), 0);
+		glEnableVertexAttribArray(LOC_POSITION);
+		glVertexAttribPointer(LOC_POSITION, 3, GL_FLOAT,0, sizeof(Vertex), 0);
 	}
 	CheckGLError();
-	if(pBindInfo->NormalIn>=0)
+	//if(pBindInfo->NormalIn>=0)
 	{
-		glEnableVertexAttribArray(pBindInfo->NormalIn);
-		glVertexAttribPointer(pBindInfo->NormalIn, 3, GL_FLOAT, 0, sizeof(Vertex), (const void*)offsetof(Vertex, Normal));
+		glEnableVertexAttribArray(LOC_NORMAL);
+		glVertexAttribPointer(LOC_NORMAL, 3, GL_FLOAT, 0, sizeof(Vertex), (const void*)offsetof(Vertex, Normal));
 	}
 	CheckGLError();
-	if(pBindInfo->ColorIn>=0)
+	//if(pBindInfo->ColorIn>=0)
 	{
-		glEnableVertexAttribArray(pBindInfo->ColorIn);
-		glVertexAttribPointer(pBindInfo->ColorIn, 4, GL_UNSIGNED_BYTE, 1, sizeof(Vertex), (const void*)offsetof(Vertex, Color));
+		glEnableVertexAttribArray(LOC_COLOR);
+		glVertexAttribPointer(LOC_COLOR, 4, GL_UNSIGNED_BYTE, 1, sizeof(Vertex), (const void*)offsetof(Vertex, Color));
 	}
 	CheckGLError();
 
@@ -383,13 +388,6 @@ void MeshDraw(const Mesh* pMesh)
 
 	glDrawElements(GL_TRIANGLES, pMesh->nIndices, GL_UNSIGNED_SHORT, (const void*)0);
 
-
-	if(pBindInfo->VertexIn >= 0)
-		glDisableVertexAttribArray(pBindInfo->VertexIn);
-	if(pBindInfo->NormalIn >= 0)
-		glDisableVertexAttribArray(pBindInfo->NormalIn);
-	if(pBindInfo->ColorIn >= 0)
-		glDisableVertexAttribArray(pBindInfo->ColorIn);
 
 	CheckGLError();
 	glBindBuffer(GL_ARRAY_BUFFER, 0);

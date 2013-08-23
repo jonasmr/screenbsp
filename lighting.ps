@@ -25,6 +25,11 @@ void main(void)
 	Color += vec3(0.4, 0.4, 0.4);
 	vec3 Normal = normalize(fNormal);
 	const float fAttenLength = 2.0;
+	#if 1
+	Out0.xyz = vec3(1,1,1) + fWorldPos * 0.0000001 + fNormal* 0.000001;
+	Out0.w = 1.0;
+
+	#else
 #if 1
 	vec2 Tile = floor(gl_FragCoord.xy / TileSize.z);
 	vec2 TileCoord = Tile / TileSize.xy;
@@ -79,5 +84,6 @@ void main(void)
 #endif
 	Out0.xyz = Color;
 	Out0.w = 1.0;
+	#endif
 }
 

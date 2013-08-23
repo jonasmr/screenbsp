@@ -30,4 +30,5 @@ void main(void)
 	fWorldPos = vWorldPos4.xyz / vWorldPos4.w;
 	//gl_FrontColor = vec4(1,1,1,1);
 	gl_Position = ProjectionMatrix * vWorldPos4;
+	gl_Position = ProjectionMatrix * ModelViewMatrix * pos;
 }  
