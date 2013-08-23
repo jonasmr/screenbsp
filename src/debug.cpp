@@ -420,9 +420,6 @@ void DebugDrawFlush(m mprj)
 			}
 			VertexBufferPushFlush(pPushBuffer);
 		}
-		//glEnd();
-
-
 
 		v4* pVert = g_DebugDrawState.PolyVert.Ptr();
 		for(uint32 i = 0; i < g_DebugDrawState.Poly.Size(); ++i)
@@ -431,8 +428,6 @@ void DebugDrawFlush(m mprj)
 			uint32 nVertices = g_DebugDrawState.Poly[i].nVertices;
 			uint32 nStart = g_DebugDrawState.Poly[i].nStart;
 			Vertex0* pVertices = (Vertex0*)VertexBufferPushVertices(pPushBuffer, 3 *(nVertices-2), EDM_TRIANGLES);
-
-//			glColor4ub(nColor >> 16, nColor >> 8, nColor, nColor>>24);
 			for(uint32 j = 1; j < nVertices-1; ++j)
 			{
 				v4 v0 = pVert[nStart];
@@ -442,12 +437,10 @@ void DebugDrawFlush(m mprj)
 				*pVertices++ = Vertex0{v1.x, v1.y, v1.z, nColor, 0.f, 0.f};
 				*pVertices++ = Vertex0{v2.x, v2.y, v2.z, nColor, 0.f, 0.f};
 			}
-
 			VertexBufferPushFlush(pPushBuffer);
 
 		}
 		CheckGLError();
-#ifndef NOIMMEDIATE
 
 
 		// glBegin(GL_LINES);
@@ -464,28 +457,30 @@ void DebugDrawFlush(m mprj)
 			ShaderUse(VS_DEBUG, PS_DEBUG);
 			int nSizeLoc = ShaderGetLocation("Size");
 			int nColorLoc = ShaderGetLocation("Color");
-			ZASSERT(-1 != nSizeLoc);
-			ZASSERT(-1 != nColorLoc);
-
+			// ZASSERT(-1 != nSizeLoc);
+			// ZASSERT(-1 != nColorLoc);
+			SHADER_SET("UseVertexColor", 0.f);
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-			glMatrixMode(GL_MODELVIEW);
+//			glMatrixMode(GL_MODELVIEW);
 			for(uint32_t i = 0; i < g_DebugDrawState.Spheres.Size(); ++i)
 			{
 				SDebugDrawSphere& Sphere = g_DebugDrawState.Spheres[i];
-				glPushMatrix();
+//				glPushMatrix();
 				m m0 = mid();
 				v3 vPos = Sphere.vCenter;
 				m0.trans = v4init(vPos, 1.f);
-				glLoadMatrixf(&m0.x.x);
+				//glLoadMatrixf(&m0.x.x);
 				ShaderSetUniform(nSizeLoc, v3rep(Sphere.fRadius));
 				ShaderSetUniform(nColorLoc, v4fromcolor(Sphere.nColor));
+				SHADER_SET("ModelViewMatrix", m0);
+				SHADER_SET("ConstantColor", v4fromcolor(Sphere.nColor));
 				MeshDraw(GetBaseMesh(MESH_SPHERE_1));
-				glPopMatrix();
+				//glPopMatrix();
 
 			}
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-			ShaderDisable();
 		}
+#ifndef NOIMMEDIATE
 		
 		for(SDebugDrawPlane& Plane : g_DebugDrawState.Planes)
 		{

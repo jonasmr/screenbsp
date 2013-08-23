@@ -437,7 +437,7 @@ void WorldRender()
 	}
 	for(int i = 0; i < g_WorldState.nNumLights; ++ i)
 	{
-		//ZDEBUG_DRAWSPHERE(g_WorldState.Lights[i].mObjectToWorld.trans.tov3(), 2.f, g_WorldState.Lights[i].nColor);
+		ZDEBUG_DRAWSPHERE(g_WorldState.Lights[i].mObjectToWorld.trans.tov3(), 2.f, g_WorldState.Lights[i].nColor);
 		g_LightBuffer[i].Pos[0] = g_WorldState.Lights[i].mObjectToWorld.trans.x;
 		g_LightBuffer[i].Pos[1] = g_WorldState.Lights[i].mObjectToWorld.trans.y;
 		g_LightBuffer[i].Pos[2] = g_WorldState.Lights[i].mObjectToWorld.trans.z;
@@ -515,16 +515,6 @@ void WorldRender()
 	ZDEBUG_DRAWLINE(v3init(-3, fX, fY), v3init(-3, -fX, -fY), (uint32_t)-1, 0);
 	ZDEBUG_DRAWLINE(v3init(fX, fY, 3), v3init(-fX, -fY, 3), (uint32_t)-1, 0);
 	ZDEBUG_DRAWLINE(v3init(fX, fY, -3), v3init(-fX, -fY, -3), (uint32_t)-1, 0);
-	v3 lala[4] = 
-	{
-		v3init(fX, 0, fY),
-		v3init(fX, 0, -fY),
-		v3init(-fX, 0, -fY),
-		v3init(-fX, 0, fY)
-	};
-//	ZDEBUG_DRAW
-		ZDEBUG_DRAWPOLY(&lala[0], 4, 0xffff0000);
-
 	//ZBREAK();
 	CheckGLError();
 	for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
