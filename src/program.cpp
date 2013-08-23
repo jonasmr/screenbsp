@@ -314,7 +314,7 @@ void WorldRender()
 	static v3 DumpPlanePos0, DumpPlanePos1, DumpPlanePos2, DumpPlanePos3;
 	static int nNumPoints = 0;
 	bool bDumpPoints = false;
-	if(g_KeyboardState.keys['b']&BUTTON_RELEASED)
+	if(g_KeyboardState.keys[SDL_SCANCODE_B]&BUTTON_RELEASED)
 	{
 		bDumpPoints = true;
 		nNumPoints = 0;
