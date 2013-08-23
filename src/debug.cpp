@@ -3,7 +3,14 @@
 #include "glinc.h"
 #include "mesh.h"
 #include "shader.h"
+#include "buffer.h"
 #define NOIMMEDIATE
+
+
+namespace
+{
+	SVertexBufferDynamic* pPushBuffer = 0;
+}
 
 struct SDebugDrawLine
 {
@@ -127,20 +134,20 @@ void DebugDrawPoly(v4* pVertex, uint32 nNumVertex, uint32_t nColor)
 
 }
 
-void DebugDrawBounds(v3 vmin, v3 vmax, uint32_t nColor)
-{
-	ZBREAK();
-	v3 p0 = vmin;
-	v3 p1 = vmin;
-	v3 p2 = vmin;
-	v3 p3 = vmax;
-	p1.x += vmax.x - vmin.x;
-	p2.y += vmax.y - vmin.y;
-	DebugDrawLine(p0, p1, nColor);
-	DebugDrawLine(p1, p3, nColor);
-	DebugDrawLine(p3, p2, nColor);
-	DebugDrawLine(p2, p0, nColor);
-}
+// void DebugDrawBounds(v3 vmin, v3 vmax, uint32_t nColor)
+// {
+// 	ZBREAK();
+// 	v3 p0 = vmin;
+// 	v3 p1 = vmin;
+// 	v3 p2 = vmin;
+// 	v3 p3 = vmax;
+// 	p1.x += vmax.x - vmin.x;
+// 	p2.y += vmax.y - vmin.y;
+// 	DebugDrawLine(p0, p1, nColor);
+// 	DebugDrawLine(p1, p3, nColor);
+// 	DebugDrawLine(p3, p2, nColor);
+// 	DebugDrawLine(p2, p0, nColor);
+// }
 
 
 #define PLANE_DEBUG_TESSELATION 20
@@ -200,152 +207,148 @@ namespace
 {
 	void DebugDrawBox(const SDebugDrawBounds& Box)
 	{
-#ifndef NOIMMEDIATE
-		glPushMatrix();
-		glMultMatrixf(&Box.mat.x.x);
-		//glTranslatef(Box.mat.trans.x, Box.mat.trans.y, Box.mat.trans.z);
-		v3 vScale = Box.vSize;
-		glScalef(vScale.x, vScale.y, vScale.z);
-		glBegin(GL_LINES);
-		glColor3ub(Box.nColor>>16, Box.nColor>>8, Box.nColor);
+
+		SHADER_SET("ModelViewMatrix", Box.mat);
+		SHADER_SET("UseVertexColor", 1.f);
+		SHADER_SET("Size", Box.vSize);
+		uint32_t nColor = Box.nColor;
+		Vertex0* pLines = (Vertex0*)VertexBufferPushVertices(pPushBuffer, 8 * 3, EDM_LINES);
 		float f = 1.0f;
-		glVertex3f(f, f, f);
-		glVertex3f(f, f, -f);
+		*pLines++ = Vertex0{f, f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{f, f, -f, nColor, 0.f, 0.f};
 		
-		glVertex3f(-f, f, f);
-		glVertex3f(-f, f, -f);
+		*pLines++ = Vertex0{-f, f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-f, f, -f, nColor, 0.f, 0.f};
 
-		glVertex3f(-f, -f, f);
-		glVertex3f(-f, -f, -f);
+		*pLines++ = Vertex0{-f, -f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-f, -f, -f, nColor, 0.f, 0.f};
 		
-		glVertex3f(f, -f, f);
-		glVertex3f(f, -f, -f);
+		*pLines++ = Vertex0{f, -f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{f, -f, -f, nColor, 0.f, 0.f};
 
-		glVertex3f(f, f, f);
-		glVertex3f(f, -f, f);
+
+		*pLines++ = Vertex0{f, f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{f, -f, f, nColor, 0.f, 0.f};
 		
-		glVertex3f(-f, f, f);
-		glVertex3f(-f, -f, f);
+		*pLines++ = Vertex0{-f, f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-f, -f, f, nColor, 0.f, 0.f};
 
-		glVertex3f(-f, f, -f);
-		glVertex3f(-f, -f, -f);
+		*pLines++ = Vertex0{-f, f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-f, -f, -f, nColor, 0.f, 0.f};
 		
-		glVertex3f(f, f, -f);
-		glVertex3f(f, -f, -f);
+		*pLines++ = Vertex0{f, f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{f, -f, -f, nColor, 0.f, 0.f};
 
 
-		glVertex3f(f,  f, f);
-		glVertex3f(-f, f, f);
+		*pLines++ = Vertex0{f,  f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-f, f, f, nColor, 0.f, 0.f};
 		
-		glVertex3f(f,  -f, f);
-		glVertex3f(-f, -f, f);
+		*pLines++ = Vertex0{f,  -f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-f, -f, f, nColor, 0.f, 0.f};
 
-		glVertex3f(f,  -f, -f);
-		glVertex3f(-f, -f, -f);
+		*pLines++ = Vertex0{f,  -f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-f, -f, -f, nColor, 0.f, 0.f};
 		
-		glVertex3f(f,  f, -f);
-		glVertex3f(-f, f, -f);
-
-
-		glEnd();
-
-		glPopMatrix();
-	#endif
+		*pLines++ = Vertex0{f,  f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-f, f, -f, nColor, 0.f, 0.f};
+		VertexBufferPushFlush(pPushBuffer);
 	}
 	void DebugDrawBounds(const SDebugDrawBounds& Bounds)
 	{			
-#ifndef IMMEDIATE
 
-		glPushMatrix();
-			glMultMatrixf(&Bounds.mat.x.x);
-			v3 vScale = Bounds.vSize;
-			vScale = v3max(vScale, 0.1f) * 1.07f;
-			glScalef(vScale.x, vScale.y, vScale.z);
+		v3 vScale = Bounds.vSize;
+		vScale = v3max(vScale, 0.1f) * 1.07f;
+		SHADER_SET("ModelViewMatrix", Bounds.mat);
+		SHADER_SET("UseVertexColor", 1.f);
+		SHADER_SET("Size", vScale);
+		uint32_t nColor = Bounds.nColor;
+		float f = 1.0f;
+		float z = 0.64f;
+		Vertex0* pLines = (Vertex0*)VertexBufferPushVertices(pPushBuffer, 8 * 6, EDM_LINES);
+		*pLines++ = Vertex0{f, f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{z, f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{f, f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{f, z, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{f, f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{f, f, z, nColor, 0.f, 0.f};
 
-			glBegin(GL_LINES);
-			glColor3ub(Bounds.nColor>>16, Bounds.nColor>>8, Bounds.nColor);
+		*pLines++ = Vertex0{-f, f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-z, f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-f, f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-f, z, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-f, f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-f, f, z, nColor, 0.f, 0.f};
 
-			float f = 1.0f;
-			float z = 0.64f;
+		*pLines++ = Vertex0{f, -f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{z, -f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{f, -f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{f, -z, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{f, -f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{f, -f, z, nColor, 0.f, 0.f};
 
-			glVertex3f(f, f, f);
-			glVertex3f(z, f, f);
-			glVertex3f(f, f, f);
-			glVertex3f(f, z, f);
-			glVertex3f(f, f, f);
-			glVertex3f(f, f, z);
+		*pLines++ = Vertex0{-f,-f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-z,-f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-f,-f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-f,-z, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-f,-f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-f,-f, z, nColor, 0.f, 0.f};
 
-			glVertex3f(-f, f, f);
-			glVertex3f(-z, f, f);
-			glVertex3f(-f, f, f);
-			glVertex3f(-f, z, f);
-			glVertex3f(-f, f, f);
-			glVertex3f(-f, f, z);
+		*pLines++ = Vertex0{f, f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{z, f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{f, f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{f, z, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{f, f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{f, f, -z, nColor, 0.f, 0.f};
 
-			glVertex3f(f, -f, f);
-			glVertex3f(z, -f, f);
-			glVertex3f(f, -f, f);
-			glVertex3f(f, -z, f);
-			glVertex3f(f, -f, f);
-			glVertex3f(f, -f, z);
+		*pLines++ = Vertex0{-f, f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-z, f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-f, f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-f, z, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-f, f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-f, f, -z, nColor, 0.f, 0.f};
 
-			glVertex3f(-f,-f, f);
-			glVertex3f(-z,-f, f);
-			glVertex3f(-f,-f, f);
-			glVertex3f(-f,-z, f);
-			glVertex3f(-f,-f, f);
-			glVertex3f(-f,-f, z);
+		*pLines++ = Vertex0{f, -f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{z, -f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{f, -f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{f, -z, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{f, -f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{f, -f, -z, nColor, 0.f, 0.f};
 
-			glVertex3f(f, f, -f);
-			glVertex3f(z, f, -f);
-			glVertex3f(f, f, -f);
-			glVertex3f(f, z, -f);
-			glVertex3f(f, f, -f);
-			glVertex3f(f, f, -z);
+		*pLines++ = Vertex0{-f,-f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-z,-f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-f,-f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-f,-z, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-f,-f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0{-f,-f, -z, nColor, 0.f, 0.f};
+		VertexBufferPushFlush(pPushBuffer);
 
-			glVertex3f(-f, f, -f);
-			glVertex3f(-z, f, -f);
-			glVertex3f(-f, f, -f);
-			glVertex3f(-f, z, -f);
-			glVertex3f(-f, f, -f);
-			glVertex3f(-f, f, -z);
-
-			glVertex3f(f, -f, -f);
-			glVertex3f(z, -f, -f);
-			glVertex3f(f, -f, -f);
-			glVertex3f(f, -z, -f);
-			glVertex3f(f, -f, -f);
-			glVertex3f(f, -f, -z);
-
-			glVertex3f(-f,-f, -f);
-			glVertex3f(-z,-f, -f);
-			glVertex3f(-f,-f, -f);
-			glVertex3f(-f,-z, -f);
-			glVertex3f(-f,-f, -f);
-			glVertex3f(-f,-f, -z);
-
-
-
-
-			glEnd();
-
-
-
-
-			glPopMatrix();
-#endif
 	}
 }
 
 
-void DebugDrawFlush()
+void DebugDrawFlush(m mprj)
 {
 	if(g_lShowDebug)
 	{
+
+		if(!pPushBuffer)
+		{
+			pPushBuffer = VertexBufferCreatePush(EVF_FORMAT0, 10 << 10);
+			CheckGLError();
+		}
 		glDisable(GL_CULL_FACE);
 
 		glEnable(GL_DEPTH_TEST);
 		glDepthFunc(GL_LEQUAL);
+
+		ShaderUse(VS_DEBUG, PS_DEBUG);
+
+		SHADER_SET("Color", v4init(1,0,0,0));
+		SHADER_SET("ProjectionMatrix", mprj);
+		SHADER_SET("ModelViewMatrix", mid());
+		SHADER_SET("UseVertexColor", 1.f);
+		SHADER_SET("Size", v3init(1,1,1));
+
 
 		for(SDebugDrawBounds& Box : g_DebugDrawState.Boxes)
 		{
@@ -375,6 +378,7 @@ void DebugDrawFlush()
 
 		glDisable(GL_DEPTH_TEST);
 		glDepthMask(0);
+
 		for(SDebugDrawBounds& Box : g_DebugDrawState.Boxes)
 		{
 			if(!Box.nUseZ)
@@ -382,6 +386,7 @@ void DebugDrawFlush()
 				DebugDrawBox(Box);
 			}
 		}
+		
 
 		for(SDebugDrawBounds& Bounds : g_DebugDrawState.Bounds)
 		{
@@ -390,35 +395,70 @@ void DebugDrawFlush()
 		}
 
 
-#ifndef NOIMMEDIATE
+
+		{
+			ShaderUse(VS_DEBUG, PS_DEBUG);
+			SHADER_SET("Color", v4init(1,0,0,0));
+			SHADER_SET("ProjectionMatrix", mprj);
+			SHADER_SET("ModelViewMatrix", mid());
+			SHADER_SET("UseVertexColor", 1.f);
+			SHADER_SET("Size", v3init(1,1,1));
+
+			Vertex0* pLines = (Vertex0*)VertexBufferPushVertices(pPushBuffer, g_DebugDrawState.Lines.Size() * 2, EDM_LINES);
+			// glBegin(GL_LINES);
+			for(uint32_t i = 0; i < g_DebugDrawState.Lines.Size(); ++i)
+			{
+				uint32_t nColor = g_DebugDrawState.Lines[i].nColor;
+				pLines[i*2+0].nColor = nColor;
+				pLines[i*2+0].nX = g_DebugDrawState.Lines[i].start.x;
+				pLines[i*2+0].nY = g_DebugDrawState.Lines[i].start.y;
+				pLines[i*2+0].nZ = g_DebugDrawState.Lines[i].start.z;
+				pLines[i*2+1].nColor = nColor;
+				pLines[i*2+1].nX = g_DebugDrawState.Lines[i].end.x;
+				pLines[i*2+1].nY = g_DebugDrawState.Lines[i].end.y;
+				pLines[i*2+1].nZ = g_DebugDrawState.Lines[i].end.z;
+			}
+			VertexBufferPushFlush(pPushBuffer);
+		}
+		//glEnd();
+
+
+
 		v4* pVert = g_DebugDrawState.PolyVert.Ptr();
 		for(uint32 i = 0; i < g_DebugDrawState.Poly.Size(); ++i)
 		{
-
-			glBegin(GL_POLYGON);
 			uint32_t nColor = g_DebugDrawState.Poly[i].nColor;
 			uint32 nVertices = g_DebugDrawState.Poly[i].nVertices;
 			uint32 nStart = g_DebugDrawState.Poly[i].nStart;
-			glColor4ub(nColor >> 16, nColor >> 8, nColor, nColor>>24);
-			for(uint32 j = 0; j < nVertices; ++j)
+			Vertex0* pVertices = (Vertex0*)VertexBufferPushVertices(pPushBuffer, 3 *(nVertices-2), EDM_TRIANGLES);
+
+//			glColor4ub(nColor >> 16, nColor >> 8, nColor, nColor>>24);
+			for(uint32 j = 1; j < nVertices-1; ++j)
 			{
-				v4 v = pVert[nStart+j];
-				glVertex3fv(&v.x);
+				v4 v0 = pVert[nStart];
+				v4 v1 = pVert[nStart+j];
+				v4 v2 = pVert[nStart+j+1];
+				*pVertices++ = Vertex0{v0.x, v0.y, v0.z, nColor, 0.f, 0.f};
+				*pVertices++ = Vertex0{v1.x, v1.y, v1.z, nColor, 0.f, 0.f};
+				*pVertices++ = Vertex0{v2.x, v2.y, v2.z, nColor, 0.f, 0.f};
 			}
 
-			glEnd();
+			VertexBufferPushFlush(pPushBuffer);
+
 		}
+		CheckGLError();
+#ifndef NOIMMEDIATE
 
 
-		glBegin(GL_LINES);
-		for(uint32_t i = 0; i < g_DebugDrawState.Lines.Size(); ++i)
-		{
-			uint32_t nColor = g_DebugDrawState.Lines[i].nColor;
-			glColor3ub(nColor >> 16, nColor >> 8, nColor);
-			glVertex3fv((float*)&g_DebugDrawState.Lines[i].start);
-			glVertex3fv((float*)&g_DebugDrawState.Lines[i].end);
-		}
-		glEnd();
+		// glBegin(GL_LINES);
+		// for(uint32_t i = 0; i < g_DebugDrawState.Lines.Size(); ++i)
+		// {
+		// 	uint32_t nColor = g_DebugDrawState.Lines[i].nColor;
+		// 	glColor3ub(nColor >> 16, nColor >> 8, nColor);
+		// 	glVertex3fv((float*)&g_DebugDrawState.Lines[i].start);
+		// 	glVertex3fv((float*)&g_DebugDrawState.Lines[i].end);
+		// }
+		// glEnd();
 		{
 			glDisable(GL_DEPTH_TEST);
 			ShaderUse(VS_DEBUG, PS_DEBUG);

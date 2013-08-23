@@ -68,7 +68,7 @@ LightDesc g_LightBuffer[MAX_NUM_LIGHTS];
 SWorldState g_WorldState;
 SEditorState g_EditorState;
 
-void DebugRender()
+void DebugRender(m mprj)
 {
 	if(g_EditorState.pSelected)
 	{
@@ -76,7 +76,7 @@ void DebugRender()
 
 	}
 
-	DebugDrawFlush();
+	DebugDrawFlush(mprj);
 }
 
 void EditorStateInit()
@@ -330,6 +330,7 @@ void WorldRender()
 	m mcliptoworld = mmult(g_WorldState.Camera.mviewinv, g_WorldState.Camera.mprjinv);
 	v3 veye = g_WorldState.Camera.vPosition;
 	int nMaxTileLights = 0;
+	if(1)
 	for(int i = 0; i < g_LightTileWidth; ++i)
 	{
 			MICROPROFILE_SCOPEI("MAIN", "Tile Stuff", 0xff44dddd);
@@ -447,6 +448,7 @@ void WorldRender()
 		g_LightBuffer[i].Color[3] = g_WorldState.Lights[i].fRadius;
 	}
 	int nNumLights = g_WorldState.nNumLights;
+	if(1)
 	{
 		MICROPROFILE_SCOPEI("MAIN", "UpdateTexture", 0xff44dd44);
 		CheckGLError();
@@ -488,6 +490,13 @@ void WorldRender()
 	SHADER_SET("ScreenSize", v2init(g_Width, g_Height));
 	v3 vTileSize = v3init(g_LightTileWidth, g_LightTileHeight, TILE_SIZE);
 	SHADER_SET("TileSize", vTileSize);
+	// glLoadMatrixf(&g_WorldState.Camera.mprj.x.x);
+	// glMultMatrixf(&g_WorldState.Camera.mview.x.x);
+
+	m mprjview = mmult(g_WorldState.Camera.mprj, g_WorldState.Camera.mview);
+
+
+	SHADER_SET("ProjectionMatrix", mprjview);
 	// v2 vScreen = v2init(400,400);
 	// uprintf("screen init %f %f\n", vScreen.x, vScreen.y);
 	// vScreen = vScreen / vTileSize.z;
@@ -498,6 +507,23 @@ void WorldRender()
 	// vScreen.x = vScreen.x / vTileSize.x;
 	// vScreen.y = vScreen.y / vTileSize.y;
 	// uprintf("screen final %f %f\n", vScreen.x, vScreen.y);
+	static float fAng = 0;
+	fAng += 0.01f;
+	float fX = sin(fAng);
+	float fY = cos(fAng);
+	ZDEBUG_DRAWLINE(v3init(3, fX, fY), v3init(3, -fX, -fY), (uint32_t)-1, 0);
+	ZDEBUG_DRAWLINE(v3init(-3, fX, fY), v3init(-3, -fX, -fY), (uint32_t)-1, 0);
+	ZDEBUG_DRAWLINE(v3init(fX, fY, 3), v3init(-fX, -fY, 3), (uint32_t)-1, 0);
+	ZDEBUG_DRAWLINE(v3init(fX, fY, -3), v3init(-fX, -fY, -3), (uint32_t)-1, 0);
+	v3 lala[4] = 
+	{
+		v3init(fX, 0, fY),
+		v3init(fX, 0, -fY),
+		v3init(-fX, 0, -fY),
+		v3init(-fX, 0, fY)
+	};
+//	ZDEBUG_DRAW
+		ZDEBUG_DRAWPOLY(&lala[0], 4, 0xffff0000);
 
 	//ZBREAK();
 	CheckGLError();
@@ -506,7 +532,8 @@ void WorldRender()
 
 		// glPushMatrix();
 		// glMultMatrixf(&g_WorldState.WorldObjects[i].mObjectToWorld.x.x);
-		if(bCulled[i])
+		ZDEBUG_DRAWBOX(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].mObjectToWorld.w.tov3(), g_WorldState.WorldObjects[i].vSize, 0xffff0000, 0);
+		if(bCulled[i]&&0)
 		{
 			ZDEBUG_DRAWBOX(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].mObjectToWorld.w.tov3(), g_WorldState.WorldObjects[i].vSize, 0xffff0000, 0);
 		}
@@ -514,9 +541,10 @@ void WorldRender()
 		{
 			SHADER_SET("Size", g_WorldState.WorldObjects[i].vSize);
 			SHADER_SET("ModelViewMatrix", g_WorldState.WorldObjects[i].mObjectToWorld);
-			glEnable(GL_CULL_FACE);
-			MeshDraw(GetBaseMesh(MESH_BOX_FLAT));
+			//glEnable(GL_CULL_FACE);
 			glDisable(GL_CULL_FACE);
+			//MeshDraw(GetBaseMesh(MESH_BOX_FLAT));
+			
 			
 			CheckGLError();
 
@@ -726,20 +754,20 @@ void UpdateCamera()
 
 
 
-	if(g_KeyboardState.keys['a'] & BUTTON_DOWN)
+	if(g_KeyboardState.keys[SDL_SCANCODE_A] & BUTTON_DOWN)
 	{
 		vDir.x = -1.f;
 	}
-	else if(g_KeyboardState.keys['d'] & BUTTON_DOWN)
+	else if(g_KeyboardState.keys[SDL_SCANCODE_D] & BUTTON_DOWN)
 	{
 		vDir.x = 1.f;
 	}
 
-	if(g_KeyboardState.keys['w'] & BUTTON_DOWN)
+	if(g_KeyboardState.keys[SDL_SCANCODE_W] & BUTTON_DOWN)
 	{
 		vDir.z = 1.f;
 	}
-	else if(g_KeyboardState.keys['s'] & BUTTON_DOWN)
+	else if(g_KeyboardState.keys[SDL_SCANCODE_S] & BUTTON_DOWN)
 	{
 		vDir.z = -1.f;
 	}
@@ -859,6 +887,10 @@ int ProgramMain()
 	glDepthFunc(GL_LEQUAL);
 	CheckGLError();
 
+	m mprj = g_WorldState.Camera.mprj;
+	m mview = g_WorldState.Camera.mview;
+	m mprjview = mmult(mprj, mview);
+
 	// glMatrixMode(GL_PROJECTION);
 	// glLoadMatrixf(&g_WorldState.Camera.mprj.x.x);
 	// glMultMatrixf(&g_WorldState.Camera.mview.x.x);
@@ -868,6 +900,8 @@ int ProgramMain()
 	// glLoadIdentity();
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glDepthFunc(GL_LEQUAL);
+	glDisable(GL_DEPTH_TEST);
 	CheckGLError();
 	{
 		MICROPROFILE_SCOPEGPUI("GPU", "Render World", 0x88dd44);
@@ -875,7 +909,7 @@ int ProgramMain()
 	}
 	CheckGLError();
 	{
-		DebugRender();
+		DebugRender(mprjview);
 	}
 	CheckGLError();
 

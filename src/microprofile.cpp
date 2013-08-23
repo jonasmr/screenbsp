@@ -35,7 +35,7 @@ struct MicroProfileVertex
 
 
 #define MICROPROFILE_MAX_VERTICES (64<<10)
-#define MICROPROFILE_NUM_QUERIES (1<<10)
+#define MICROPROFILE_NUM_QUERIES (8<<10)
 #define MAX_FONT_CHARS 256
 #define CHECKGL() CheckGLError()
 #define Q0(d, member, v) d[0].member = v
@@ -330,8 +330,10 @@ void MicroProfileEndDraw()
 
 CheckGLError();
 	int nOffset = 0;
+	MICROPROFILE_SCOPEGPUI("GPU", "DrawTail", 0x0044ff);
 	for(int i = 0; i < nNumDrawCommands; ++i)
 	{
+		MICROPROFILE_SCOPEGPUI("GPU", "DrawCommand", 0xff4444);
 		int nCount = DrawCommands[i].nNumVertices;
 		CheckGLError();
 		glDrawArrays(DrawCommands[i].nCommand, nOffset, nCount);
@@ -359,6 +361,7 @@ CheckGLError();
 
 void MicroProfileDrawText(int nX, int nY, uint32_t nColor, const char* pText)
 {
+	//return;
 	MICROPROFILE_SCOPEI("MicroProfile", "TextDraw", 0xff88ee);
 	const float fEndV = 9.f / 16.f;
 	const float fOffsetU = 5.f / 1024.f;
@@ -515,10 +518,15 @@ uint32_t MicroProfileGpuInsertTimeStamp()
 }
 uint64_t MicroProfileGpuGetTimeStamp(uint32_t nKey)
 {
-	uint64_t result;
-	glGetQueryObjectui64v(g_GlTimers[nKey], GL_QUERY_RESULT, &result);
-	CHECKGL();
-	return result;
+
+	// uint avail;
+	// glGetQueryObjectuiv(g_GlTimers[nKey], GL_QUERY_RESULT_AVAILABLE, &avail);
+	// MP_ASSERT(avail);
+	int64_t result;
+	uint64_t result2;
+	glGetQueryObjecti64v(g_GlTimers[nKey], GL_QUERY_RESULT, &result);
+	glGetQueryObjectui64v(g_GlTimers[nKey], GL_QUERY_RESULT, &result2);
+	return result2;
 }
 
 uint64_t MicroProfileTicksPerSecondGpu()

@@ -373,9 +373,11 @@ int main(int argc, char* argv[])
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,  	    24);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE,  	    8);	
 	SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE,		    32);	
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,	    1);	
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+	SDL_GL_SetSwapInterval(1);
 
 	SDL_Window * pWindow = SDL_CreateWindow("ScreenBsp", 10, 10, g_BaseWidth, g_BaseHeight, SDL_WINDOW_OPENGL);
 	if(!pWindow)
@@ -463,7 +465,7 @@ int main(int argc, char* argv[])
 			MICROPROFILE_SCOPEI("MAIN", "DebugRender", 0x00eeee);
 			{
 				MICROPROFILE_SCOPEGPUI("GPU", "Render Debug", 0x88dd44);
-				DebugDrawFlush();
+//				DebugDrawFlush();
 				CheckGLError();
 			}
 
@@ -473,26 +475,28 @@ int main(int argc, char* argv[])
 				TextFlush();
 				CheckGLError();
 			}
-			MICROPROFILE_SCOPEI("MAIN", "DUMMY", randcolor());
-
-			for(int i = 0; i < 5; ++i)
+			if(0)
 			{
-				MICROPROFILE_SCOPEI("MAIN", "DUM0", randcolor());
-				usleep(100);				
-				{MICROPROFILE_SCOPEI("MAIN", "DUM1", randcolor());
-				usleep(100);
-				{MICROPROFILE_SCOPEI("MAIN", "DUM2", randcolor());
-				usleep(100);
-				{MICROPROFILE_SCOPEI("MAIN", "DUM3", randcolor());
-				usleep(200);
-				{MICROPROFILE_SCOPEI("MAIN", "DUM4", randcolor());
-				usleep(200);
-				{MICROPROFILE_SCOPEI("MAIN", "DUM5", randcolor());
-				usleep(200);
-				}}}}}
-	
-			}
+				MICROPROFILE_SCOPEI("MAIN", "DUMMY", randcolor());
 
+				for(int i = 0; i < 5; ++i)
+				{
+					MICROPROFILE_SCOPEI("MAIN", "DUM0", randcolor());
+					usleep(100);				
+					{MICROPROFILE_SCOPEI("MAIN", "DUM1", randcolor());
+					usleep(100);
+					{MICROPROFILE_SCOPEI("MAIN", "DUM2", randcolor());
+					usleep(100);
+					{MICROPROFILE_SCOPEI("MAIN", "DUM3", randcolor());
+					usleep(200);
+					{MICROPROFILE_SCOPEI("MAIN", "DUM4", randcolor());
+					usleep(200);
+					{MICROPROFILE_SCOPEI("MAIN", "DUM5", randcolor());
+					usleep(200);
+					}}}}}
+		
+				}
+			}
 		}
 
 
@@ -576,7 +580,6 @@ int main(int argc, char* argv[])
 
 
   	SDL_GL_DeleteContext(glcontext);  
-  
  	SDL_DestroyWindow(pWindow);
  	SDL_Quit();
 

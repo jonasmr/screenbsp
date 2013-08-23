@@ -3,13 +3,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "glinc.h"
+#include "buffer.h"
 
 struct
 {
 	GLuint VS[VS_SIZE];
 	GLuint PS[PS_SIZE];
 	GLuint LinkedPrograms[VS_SIZE * PS_SIZE];
-	ShaderBindInfo  LinkInfo[VS_SIZE * PS_SIZE];
 	int nCurrentIndex;
 
 } g_ShaderState;
@@ -95,7 +95,7 @@ GLuint CreateProgram(int nType, const char* pFile)
 void ShaderInit()
 {
 	memset(&g_ShaderState, 0, sizeof(g_ShaderState));
-	memset(&g_ShaderState.LinkInfo, 0xff, sizeof(g_ShaderState.LinkInfo));
+//	memset(&g_ShaderState.LinkInfo, 0xff, sizeof(g_ShaderState.LinkInfo));
 	g_ShaderState.PS[PS_FLAT_LIT] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "flat.ps");
 	g_ShaderState.VS[VS_DEFAULT] = CreateProgram(GL_VERTEX_SHADER_ARB, "default.vs");
 
@@ -132,14 +132,12 @@ void ShaderUse(EShaderVS vs, EShaderPS ps)
 		glAttachObjectARB(prg, g_ShaderState.PS[ps]);
 		glAttachObjectARB(prg, g_ShaderState.VS[vs]);
 
+
+		CheckGLError();
 		glBindFragDataLocation(prg, 0, "Out0");
 		glLinkProgramARB(prg);
 		g_ShaderState.LinkedPrograms[nIndex] = prg;
 
-		g_ShaderState.LinkInfo[nIndex].VertexIn = glGetAttribLocation(prg, "VertexIn");
-		g_ShaderState.LinkInfo[nIndex].ColorIn = glGetAttribLocation(prg, "ColorIn");
-		g_ShaderState.LinkInfo[nIndex].TC0In = glGetAttribLocation(prg, "TC0In");
-		g_ShaderState.LinkInfo[nIndex].NormalIn = glGetAttribLocation(prg, "NormalIn");
 
 		
 		CheckGLError();
@@ -147,6 +145,29 @@ void ShaderUse(EShaderVS vs, EShaderPS ps)
 		DumpGlLog(g_ShaderState.PS[ps]);
 		DumpGlLog(g_ShaderState.VS[vs]);
 		CheckGLError();
+
+		if(glGetAttribLocation(prg, "VertexIn")>=0)
+			glBindAttribLocation(prg, LOC_POSITION, "VertexIn");
+		if(glGetAttribLocation(prg, "ColorIn")>=0)
+			glBindAttribLocation(prg, LOC_COLOR, "ColorIn");
+		if(glGetAttribLocation(prg, "NormalIn")>=0)
+			glBindAttribLocation(prg, LOC_NORMAL, "NormalIn");
+		if(glGetAttribLocation(prg, "TC0In")>=0)
+			glBindAttribLocation(prg, LOC_TC0, "TC0In");
+
+
+		glLinkProgramARB(prg);
+
+		ZASSERT(glGetAttribLocation(prg, "TC0In") == -1 || glGetAttribLocation(prg, "TC0In") == LOC_TC0);
+		ZASSERT(glGetAttribLocation(prg, "NormalIn") == -1 || glGetAttribLocation(prg, "NormalIn") == LOC_NORMAL);
+		ZASSERT(glGetAttribLocation(prg, "ColorIn") == -1 || glGetAttribLocation(prg, "ColorIn") == LOC_COLOR);
+		ZASSERT(glGetAttribLocation(prg, "VertexIn") == -1 || glGetAttribLocation(prg, "VertexIn") == LOC_POSITION);
+
+		CheckGLError();
+		DumpGlLog(prg);
+
+
+
 	}
 	//use
 	CheckGLError();
@@ -195,9 +216,4 @@ void ShaderSetUniform(int location, float value)
 {
 	glUniform1f(location, value);
 	CheckGLError();
-}
-
-const ShaderBindInfo* ShaderGetCurrentBindInfo()
-{
-	return &g_ShaderState.LinkInfo[g_ShaderState.nCurrentIndex];
 }

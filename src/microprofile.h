@@ -164,7 +164,7 @@ inline int64_t MicroProfileGetTick()
 #define MICROPROFILE_BORDER_SIZE 1
 #define MICROPROFILE_MAX_GRAPH_TIME 100.f
 #define MICROPROFILE_INVALID_TICK ((uint64_t)-1)
-#define MICROPROFILE_GPU_FRAME_DELAY 3 //must be > 0
+#define MICROPROFILE_GPU_FRAME_DELAY 4 //must be > 0
 #define MICROPROFILE_PIX3_MODE 1
 #define MICROPROFILE_PIX3_HEIGHT (MICROPROFILE_DETAILED_BAR_HEIGHT-4)
 
@@ -403,7 +403,7 @@ struct
 
 	uint64_t nFrameStartCpuPrev;
 	uint64_t nFrameStartCpu;
-	uint32_t nFrameStartGpu[MICROPROFILE_GPU_FRAME_DELAY+1];
+	uint64_t nFrameStartGpu[MICROPROFILE_GPU_FRAME_DELAY+1];
 
 
 	MicroProfileGroupInfo 	GroupInfo[MICROPROFILE_MAX_GROUPS];
@@ -713,8 +713,21 @@ void MicroProfileFlip()
 		S.nFlipMax = MicroProfileMax(S.nFlipMax, nTick);
 	}
 	uint32_t nQueryIndex = MicroProfileGpuInsertTimeStamp();
-	uint64_t nFrameStartGpu = S.nFrameStartGpu[0] != (uint32_t)-1 ? MicroProfileGpuGetTimeStamp(S.nFrameStartGpu[0]) : 0;
-	uint64_t nFrameEndGpu = S.nFrameStartGpu[1] != (uint32_t)-1 ? MicroProfileGpuGetTimeStamp(S.nFrameStartGpu[1]) : nFrameStartGpu+1;
+	if(S.nFrameStartGpu[0] == (uint64_t)-1)
+		S.nFrameStartGpu[0] = 0;
+	if(S.nFrameStartGpu[1] == (uint64_t)-1)
+		S.nFrameStartGpu[1] = S.nFrameStartGpu[0]+1;
+	else
+		S.nFrameStartGpu[1] = MicroProfileGpuGetTimeStamp(S.nFrameStartGpu[1]) ;
+	uint64_t nFrameStartGpu = S.nFrameStartGpu[0];
+	uint64_t nFrameEndGpu = S.nFrameStartGpu[1];
+	// if(S.nFrameStartGpu[1] != (uint32_t)-1)
+	// {	
+	// 	printf("Fetch %x,   (and %x)\n", S.nFrameStartGpu[1], S.nFrameStartGpu[0]);
+	// 	nFrameEndGpu = MicroProfileGpuGetTimeStamp(S.nFrameStartGpu[1]);
+	// 	printf("I GOT %llx\n", nFrameEndGpu);
+	// }
+//	printf("frame gpu %llx :: %llx\n", nFrameStartGpu, nFrameEndGpu);
 	for(uint32_t i = 0; i < MICROPROFILE_GPU_FRAME_DELAY; ++i)
 	{
 		S.nFrameStartGpu[i] = S.nFrameStartGpu[i+1];
@@ -1269,7 +1282,8 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 		float fStart = f;
 		float fNext = MicroProfileMin<float>(floor(f)+1.f, fMsEnd);
 		uint32_t nXPos = nX + ((fStart-fMsBase) * fMsToScreen);
-		MicroProfileDrawBox(nXPos, nBaseY, nXPos + (fNext-fMsBase) * fMsToScreen+1, nBaseY + nHeight, g_nMicroProfileBackColors[nColorIndex++ & 1]);
+		printf("Draw dat shit %d %d\n", nXPos, int((fNext-fMsBase) * fMsToScreen+1));
+		MicroProfileDrawBox(nXPos, nBaseY, (fNext-fMsBase) * fMsToScreen+1, nBaseY + nHeight, g_nMicroProfileBackColors[nColorIndex++ & 1]);
 		f = fNext;
 	}
 	nY += MICROPROFILE_TEXT_HEIGHT+1;

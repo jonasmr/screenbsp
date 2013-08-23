@@ -2,6 +2,15 @@
 #include "base.h"
 #include "math.h"
 
+enum EVertexStreamIndex
+{
+	STREAM_POSITION = 0,
+	STREAM_COLOR = 1,
+	STREAM_NORMAL = 2,
+	STREAM_TC0 = 3,
+
+};
+
 
 enum EBaseMesh
 {
