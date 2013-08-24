@@ -107,6 +107,9 @@ void ShaderInit()
 
 	g_ShaderState.PS[PS_DEBUG] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "debug.ps");
 	g_ShaderState.VS[VS_DEBUG] = CreateProgram(GL_VERTEX_SHADER_ARB, "debug.vs");
+	g_ShaderState.PS[PS_TEXT] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "text.ps");
+	g_ShaderState.VS[VS_TEXT] = CreateProgram(GL_VERTEX_SHADER_ARB, "text.vs");
+
 }
 void ShaderUse(EShaderVS vs, EShaderPS ps)
 {

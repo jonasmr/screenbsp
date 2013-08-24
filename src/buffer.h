@@ -33,6 +33,12 @@ struct Vertex0
 	float fV;
 };
 
+#define Q0(d, v) d[0] = v
+#define Q1(d, v) d[1] = v; d[3] = v
+#define Q2(d, v) d[4] = v
+#define Q3(d, v) d[2] = v; d[5] = v
+
+
 struct SVertexBufferDynamic;
 struct SVertexBufferStatic;
 struct SIndexBuffer;

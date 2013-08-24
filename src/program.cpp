@@ -34,7 +34,7 @@ v3 vLockedCamDir = v3init(1,0,0);
 #define TILE_SIZE 8
 #define MAX_WIDTH 1920
 #define MAX_HEIGHT 1080
-#define MAX_LIGHT_INDEX (32<<10)
+#define MAX_LIGHT_INDEX (64<<10)
 #define LIGHT_INDEX_SIZE 1024
 //#define TILE_HEIGHT 8
 #define MAX_NUM_LIGHTS 1024
@@ -522,7 +522,8 @@ void WorldRender()
 
 		// glPushMatrix();
 		// glMultMatrixf(&g_WorldState.WorldObjects[i].mObjectToWorld.x.x);
-		ZDEBUG_DRAWBOX(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].mObjectToWorld.w.tov3(), g_WorldState.WorldObjects[i].vSize, 0xffff0000, 0);
+		if(i%12 == 0)
+			ZDEBUG_DRAWBOX(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].mObjectToWorld.w.tov3(), g_WorldState.WorldObjects[i].vSize, 0xffff0000, 0);
 		if(bCulled[i]&&0)
 		{
 			ZDEBUG_DRAWBOX(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].mObjectToWorld.w.tov3(), g_WorldState.WorldObjects[i].vSize, 0xffff0000, 0);
@@ -531,9 +532,8 @@ void WorldRender()
 		{
 			SHADER_SET("Size", g_WorldState.WorldObjects[i].vSize);
 			SHADER_SET("ModelViewMatrix", g_WorldState.WorldObjects[i].mObjectToWorld);
-			//glEnable(GL_CULL_FACE);
 			glDisable(GL_CULL_FACE);
-			//MeshDraw(GetBaseMesh(MESH_BOX_FLAT));
+			MeshDraw(GetBaseMesh(MESH_BOX_FLAT));
 			
 			
 			CheckGLError();
@@ -554,7 +554,7 @@ void UpdateEditorState()
 {
 	for(int i = 0; i < 10; ++i)
 	{
-		if(g_KeyboardState.keys['0' + i] & BUTTON_RELEASED)
+		if(g_KeyboardState.keys[SDL_SCANCODE_0 + i] & BUTTON_RELEASED)
 		{
 			g_EditorState.Mode = i;
 			if(g_EditorState.Dragging != DRAGSTATE_NONE && g_EditorState.DragTarget == DRAGTARGET_TOOL)

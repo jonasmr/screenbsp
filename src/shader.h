@@ -8,6 +8,7 @@ enum EShaderVS
 	VS_MICROPROFILE,
 	VS_LIGHTING,
 	VS_DEBUG,
+	VS_TEXT,
 	VS_FOO,	
 	VS_SIZE,
 };
@@ -17,6 +18,7 @@ enum EShaderPS
 	PS_MICROPROFILE,
 	PS_LIGHTING,
 	PS_DEBUG,
+	PS_TEXT,
 	PS_FOO,
 	PS_SIZE,
 };
