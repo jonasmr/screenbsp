@@ -421,7 +421,7 @@ void WorldRender()
 			}
 		}
 	}
-	uprintf("MAX LIGHTS %d\n", nMaxTileLights);
+//	uprintf("MAX LIGHTS %d\n", nMaxTileLights);
 	if(nNumPoints)
 	{
 		ZASSERT(nNumPoints == 4 * g_LightTileWidth * g_LightTileHeight);
@@ -491,64 +491,26 @@ void WorldRender()
 	SHADER_SET("ScreenSize", v2init(g_Width, g_Height));
 	v3 vTileSize = v3init(g_LightTileWidth, g_LightTileHeight, TILE_SIZE);
 	SHADER_SET("TileSize", vTileSize);
-	// glLoadMatrixf(&g_WorldState.Camera.mprj.x.x);
-	// glMultMatrixf(&g_WorldState.Camera.mview.x.x);
 
 	m mprjview = mmult(g_WorldState.Camera.mprj, g_WorldState.Camera.mview);
 
 
 	SHADER_SET("ProjectionMatrix", mprjview);
-	// v2 vScreen = v2init(400,400);
-	// uprintf("screen init %f %f\n", vScreen.x, vScreen.y);
-	// vScreen = vScreen / vTileSize.z;
-	// uprintf("screen div %f %f\n", vScreen.x, vScreen.y);
-	// vScreen.x = floor(vScreen.x);
-	// vScreen.y = floor(vScreen.y);
-	// uprintf("screen clmp %f %f\n", vScreen.x, vScreen.y);
-	// vScreen.x = vScreen.x / vTileSize.x;
-	// vScreen.y = vScreen.y / vTileSize.y;
-	// uprintf("screen final %f %f\n", vScreen.x, vScreen.y);
-	static float fAng = 0;
-	fAng += 0.01f;
-	float fX = sin(fAng);
-	float fY = cos(fAng);
-	ZDEBUG_DRAWLINE(v3init(3, fX, fY), v3init(3, -fX, -fY), (uint32_t)-1, 0);
-	ZDEBUG_DRAWLINE(v3init(-3, fX, fY), v3init(-3, -fX, -fY), (uint32_t)-1, 0);
-	ZDEBUG_DRAWLINE(v3init(fX, fY, 3), v3init(-fX, -fY, 3), (uint32_t)-1, 0);
-	ZDEBUG_DRAWLINE(v3init(fX, fY, -3), v3init(-fX, -fY, -3), (uint32_t)-1, 0);
-	//ZBREAK();
-	CheckGLError();
 	for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
 	{
 
-		// glPushMatrix();
-		// glMultMatrixf(&g_WorldState.WorldObjects[i].mObjectToWorld.x.x);
-		if(i%12 == 0)
-			ZDEBUG_DRAWBOX(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].mObjectToWorld.w.tov3(), g_WorldState.WorldObjects[i].vSize, 0xffff0000, 0);
-		if(bCulled[i]&&0)
+		if(bCulled[i])
 		{
-			ZDEBUG_DRAWBOX(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].mObjectToWorld.w.tov3(), g_WorldState.WorldObjects[i].vSize, 0xffff0000, 0);
+			ZDEBUG_DRAWBOX(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].mObjectToWorld.trans.tov3(), g_WorldState.WorldObjects[i].vSize, 0xffff0000, 0);
 		}
 		else
 		{
 			SHADER_SET("Size", g_WorldState.WorldObjects[i].vSize);
-			m mat = g_WorldState.WorldObjects[i].mObjectToWorld;
-			g_nDump =1;
-			SHADER_SET("ModelViewMatrix",g_WorldState.WorldObjects[i].mObjectToWorld);
-			SHADER_SET("ModelViewMatrix", mat);
-			g_nDump =0;
-
-//			SHADER_SET("poshack", pos);
-//			uplotfnxt("POS OS %f %f %f", pos.x, pos.y, pos.z);
+			SHADER_SET("ModelViewMatrix", g_WorldState.WorldObjects[i].mObjectToWorld);
 			glDisable(GL_CULL_FACE);
 			MeshDraw(GetBaseMesh(MESH_BOX_FLAT));
-			
-			
 			CheckGLError();
-
 		}
-
-		// glPopMatrix();
 	}
 	ShaderDisable();
 

@@ -133,7 +133,7 @@ void TextFlush()
 		CheckGLError();
 
 		ShaderUse(VS_TEXT, PS_TEXT);
-		SHADER_SET("ProjectionMatrix", prj);
+		SHADER_SET("ProjectionMatrix", &prj);
 		SHADER_SET("tex", 0);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, g_FontDescription.nTextureId);

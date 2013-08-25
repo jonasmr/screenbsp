@@ -37,7 +37,6 @@ struct MicroProfileVertex
 #define MICROPROFILE_MAX_VERTICES (64<<10)
 #define MICROPROFILE_NUM_QUERIES (8<<10)
 #define MAX_FONT_CHARS 256
-#define CHECKGL() CheckGLError()
 #define Q0(d, member, v) d[0].member = v
 #define Q1(d, member, v) d[1].member = v; d[3].member = v
 #define Q2(d, member, v) d[4].member = v
@@ -173,14 +172,10 @@ void main(void)   \
 
 	GLuint CreateProgram(int nType, const char* pShader)
 	{
-		printf("compiling \n%s\n", pShader);
 		GLuint handle = glCreateShaderObjectARB(nType);
-		CHECKGL();
 		glShaderSource(handle, 1, (const char**)&pShader, 0);
-		CHECKGL();
 		glCompileShader(handle);
 		DumpGlLog(handle);
-		CHECKGL();
 		MP_ASSERT(handle);	
 		return handle;
 	}
@@ -190,16 +185,11 @@ void main(void)   \
 
 void MicroProfileDrawInit()
 {
-	CheckGLError();
 	glGenBuffers(1, &g_VertexBuffer);
 	glGenVertexArrays(1, &g_VAO);
-	CheckGLError();
-
 	g_PixelShader = CreateProgram(GL_FRAGMENT_SHADER_ARB, g_PixelShaderCode);
 	g_VertexShader = CreateProgram(GL_VERTEX_SHADER_ARB, g_VertexShaderCode);
 	g_Program = glCreateProgramObjectARB();
-	CheckGLError();
-
 	glAttachObjectARB(g_Program, g_PixelShader);
 	glAttachObjectARB(g_Program, g_VertexShader);
 
@@ -216,7 +206,6 @@ void MicroProfileDrawInit()
 	g_LocTex = glGetUniformLocation(g_Program, "tex");
 	g_LocProjectionMatrix = glGetUniformLocation(g_Program, "ProjectionMatrix");
 
-	CheckGLError();
 	for(uint32_t i = 0; i < MAX_FONT_CHARS; ++i)
 	{
 		g_FontDescription.nCharOffsets[i] = 206;
@@ -265,29 +254,16 @@ void MicroProfileDrawInit()
 		}
 	}
 	uint32_t* p4 = &pUnpacked[0];
-	CheckGLError();
 	glGenTextures(1, &g_FontTexture);
 	glBindTexture(GL_TEXTURE_2D, g_FontTexture);
-	CheckGLError();
 	{
-		CheckGLError();
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        CheckGLError();
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);     
-        CheckGLError();
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        CheckGLError();
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        CheckGLError();
-        // glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_FALSE);
-        // CheckGLError();
     }
-    CheckGLError();
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, FONT_TEX_X, FONT_TEX_Y, 0, GL_RGBA, GL_UNSIGNED_BYTE, &p4[0]);
-	CheckGLError();
 	glBindTexture(GL_TEXTURE_2D, 0);
-	CheckGLError();
-	CheckGLError();
 }
 
 void MicroProfileBeginDraw(uint32_t nWidth, uint32_t nHeight, float* prj)
@@ -303,6 +279,8 @@ void MicroProfileEndDraw()
 	if(0 == nVertexPos)
 		return;
 	MICROPROFILE_SCOPEI("MicroProfile", "EndDraw", 0x003456);
+	MICROPROFILE_SCOPEGPUI("GPU", "EndDraw", 0xff4444);
+
 
 
 	glUseProgramObjectARB(g_Program);
@@ -328,31 +306,20 @@ void MicroProfileEndDraw()
 	glEnableVertexAttribArray(g_LocColorIn);
 	glEnableVertexAttribArray(g_LocTC0In);
 
-CheckGLError();
 	int nOffset = 0;
-	MICROPROFILE_SCOPEGPUI("GPU", "DrawTail", 0x0044ff);
 	for(int i = 0; i < nNumDrawCommands; ++i)
 	{
-		MICROPROFILE_SCOPEGPUI("GPU", "DrawCommand", 0xff4444);
 		int nCount = DrawCommands[i].nNumVertices;
-		CheckGLError();
 		glDrawArrays(DrawCommands[i].nCommand, nOffset, nCount);
-		CheckGLError();
 		nOffset += nCount;
 	}
-	CheckGLError();
 	glDisableVertexAttribArray(g_LocVertexIn);
 	glDisableVertexAttribArray(g_LocColorIn);
 	glDisableVertexAttribArray(g_LocTC0In);
 
-	// gl(GL_VERTEX_ARRAY);
-	// glDisableClientState(GL_COLOR_ARRAY);
-	// glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glUseProgramObjectARB(0);
 	glBindVertexArray(0);
-	CheckGLError();
-	//glDisable(GL_ALPHA_TEST);
 	nVertexPos = 0;
 	nNumDrawCommands = 0;
 }
@@ -361,7 +328,6 @@ CheckGLError();
 
 void MicroProfileDrawText(int nX, int nY, uint32_t nColor, const char* pText)
 {
-	//return;
 	MICROPROFILE_SCOPEI("MicroProfile", "TextDraw", 0xff88ee);
 	const float fEndV = 9.f / 16.f;
 	const float fOffsetU = 5.f / 1024.f;
@@ -504,9 +470,7 @@ void MicroProfileDrawLine2D(uint32_t nVertices, float* pVertices, uint32_t nColo
 void MicroProfileQueryInitGL()
 {
 	g_GlTimerPos = 0;
-		CHECKGL();
 	glGenQueries(MICROPROFILE_NUM_QUERIES, &g_GlTimers[0]);		
-	CHECKGL();
 }
 
 uint32_t MicroProfileGpuInsertTimeStamp()
@@ -518,15 +482,13 @@ uint32_t MicroProfileGpuInsertTimeStamp()
 }
 uint64_t MicroProfileGpuGetTimeStamp(uint32_t nKey)
 {
-
-	// uint avail;
-	// glGetQueryObjectuiv(g_GlTimers[nKey], GL_QUERY_RESULT_AVAILABLE, &avail);
-	// MP_ASSERT(avail);
-	int64_t result;
-	uint64_t result2;
-	glGetQueryObjecti64v(g_GlTimers[nKey], GL_QUERY_RESULT, &result);
-	glGetQueryObjectui64v(g_GlTimers[nKey], GL_QUERY_RESULT, &result2);
-	return result2;
+	uint64_t result;
+	#ifdef __APPLE__
+	//for some reason, on osx, this gets truncated to 32bit if only called once ?!?
+	glGetQueryObjectui64v(g_GlTimers[nKey], GL_QUERY_RESULT, &result);
+	#endif
+	glGetQueryObjectui64v(g_GlTimers[nKey], GL_QUERY_RESULT, &result);
+	return result;
 }
 
 uint64_t MicroProfileTicksPerSecondGpu()
