@@ -85,19 +85,19 @@ union m
 		v4 x;
 		v4 y;
 		v4 z;
-		union
-		{
-			v4 trans;
-			v4 w;
-		};
+		// union
+		// {
+		 	v4 trans;
+		// 	v4 w;
+		// };
 	};
-	struct
-	{
-		v4 r0;
-		v4 r1;
-		v4 r2;
-		v4 r3;
-	};
+	// struct
+	// {
+	// 	v4 r0;
+	// 	v4 r1;
+	// 	v4 r2;
+	// 	v4 r3;
+	// };
 };
 
 
