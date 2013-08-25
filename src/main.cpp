@@ -268,6 +268,12 @@ void HandleEvent(SDL_Event* pEvt)
 		//	}
 		//}
 		break;
+	case SDL_MOUSEWHEEL:
+		{
+			g_MicroProfileMouseDelta += pEvt->wheel.y;
+
+		}
+		break;
 	case SDL_MOUSEBUTTONDOWN:
 	case SDL_MOUSEBUTTONUP:
 		if(pEvt->type == SDL_MOUSEBUTTONUP)

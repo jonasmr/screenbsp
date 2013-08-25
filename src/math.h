@@ -78,19 +78,18 @@ struct v4
 /// x y z w  * y
 /// x y z w    z
 /// x y z w    w
-union m
+struct m
 {
-	struct
-	{
+	//{
 		v4 x;
 		v4 y;
 		v4 z;
 		// union
 		// {
-		 	v4 trans;
-		// 	v4 w;
-		// };
-	};
+			v4 trans;
+// 			v4 w;
+//		};
+	//};
 	// struct
 	// {
 	// 	v4 r0;
@@ -100,6 +99,11 @@ union m
 	// };
 };
 
+inline
+bool operator ==(const m& l, const m& r)
+{
+	return 0 == memcmp(&l, &r, sizeof(m));
+}
 
 v2 operator +(const v2 l, const v2 r);
 v2 operator -(const v2 l, const v2 r);

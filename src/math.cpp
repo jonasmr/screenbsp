@@ -965,26 +965,26 @@ m mcreate(v3 vDir, v3 vRight, v3 vPoint)
 m mmult(m m0, m m1)
 {
 	m r;
-	r.x.x = m0.x.x * m1.x.x + m0.y.x * m1.x.y + m0.z.x * m1.x.z + m0.w.x * m1.x.w;
-	r.x.y = m0.x.y * m1.x.x + m0.y.y * m1.x.y + m0.z.y * m1.x.z + m0.w.y * m1.x.w;
-	r.x.z = m0.x.z * m1.x.x + m0.y.z * m1.x.y + m0.z.z * m1.x.z + m0.w.z * m1.x.w;
-	r.x.w = m0.x.w * m1.x.x + m0.y.w * m1.x.y + m0.z.w * m1.x.z + m0.w.w * m1.x.w;
+	r.x.x = m0.x.x * m1.x.x + m0.y.x * m1.x.y + m0.z.x * m1.x.z + m0.trans.x * m1.x.w;
+	r.x.y = m0.x.y * m1.x.x + m0.y.y * m1.x.y + m0.z.y * m1.x.z + m0.trans.y * m1.x.w;
+	r.x.z = m0.x.z * m1.x.x + m0.y.z * m1.x.y + m0.z.z * m1.x.z + m0.trans.z * m1.x.w;
+	r.x.w = m0.x.w * m1.x.x + m0.y.w * m1.x.y + m0.z.w * m1.x.z + m0.trans.w * m1.x.w;
 
-	r.y.x = m0.x.x * m1.y.x + m0.y.x * m1.y.y + m0.z.x * m1.y.z + m0.w.x * m1.y.w;
-	r.y.y = m0.x.y * m1.y.x + m0.y.y * m1.y.y + m0.z.y * m1.y.z + m0.w.y * m1.y.w;
-	r.y.z = m0.x.z * m1.y.x + m0.y.z * m1.y.y + m0.z.z * m1.y.z + m0.w.z * m1.y.w;
-	r.y.w = m0.x.w * m1.y.x + m0.y.w * m1.y.y + m0.z.w * m1.y.z + m0.w.w * m1.y.w;
+	r.y.x = m0.x.x * m1.y.x + m0.y.x * m1.y.y + m0.z.x * m1.y.z + m0.trans.x * m1.y.w;
+	r.y.y = m0.x.y * m1.y.x + m0.y.y * m1.y.y + m0.z.y * m1.y.z + m0.trans.y * m1.y.w;
+	r.y.z = m0.x.z * m1.y.x + m0.y.z * m1.y.y + m0.z.z * m1.y.z + m0.trans.z * m1.y.w;
+	r.y.w = m0.x.w * m1.y.x + m0.y.w * m1.y.y + m0.z.w * m1.y.z + m0.trans.w * m1.y.w;
 
-	r.z.x = m0.x.x * m1.z.x + m0.y.x * m1.z.y + m0.z.x * m1.z.z + m0.w.x * m1.z.w;
-	r.z.y = m0.x.y * m1.z.x + m0.y.y * m1.z.y + m0.z.y * m1.z.z + m0.w.y * m1.z.w;
-	r.z.z = m0.x.z * m1.z.x + m0.y.z * m1.z.y + m0.z.z * m1.z.z + m0.w.z * m1.z.w;
-	r.z.w = m0.x.w * m1.z.x + m0.y.w * m1.z.y + m0.z.w * m1.z.z + m0.w.w * m1.z.w;
+	r.z.x = m0.x.x * m1.z.x + m0.y.x * m1.z.y + m0.z.x * m1.z.z + m0.trans.x * m1.z.w;
+	r.z.y = m0.x.y * m1.z.x + m0.y.y * m1.z.y + m0.z.y * m1.z.z + m0.trans.y * m1.z.w;
+	r.z.z = m0.x.z * m1.z.x + m0.y.z * m1.z.y + m0.z.z * m1.z.z + m0.trans.z * m1.z.w;
+	r.z.w = m0.x.w * m1.z.x + m0.y.w * m1.z.y + m0.z.w * m1.z.z + m0.trans.w * m1.z.w;
 
 
-	r.w.x = m0.x.x * m1.w.x + m0.y.x * m1.w.y + m0.z.x * m1.w.z + m0.w.x * m1.w.w;
-	r.w.y = m0.x.y * m1.w.x + m0.y.y * m1.w.y + m0.z.y * m1.w.z + m0.w.y * m1.w.w;
-	r.w.z = m0.x.z * m1.w.x + m0.y.z * m1.w.y + m0.z.z * m1.w.z + m0.w.z * m1.w.w;
-	r.w.w = m0.x.w * m1.w.x + m0.y.w * m1.w.y + m0.z.w * m1.w.z + m0.w.w * m1.w.w;
+	r.trans.x = m0.x.x * m1.trans.x + m0.y.x * m1.trans.y + m0.z.x * m1.trans.z + m0.trans.x * m1.trans.w;
+	r.trans.y = m0.x.y * m1.trans.x + m0.y.y * m1.trans.y + m0.z.y * m1.trans.z + m0.trans.y * m1.trans.w;
+	r.trans.z = m0.x.z * m1.trans.x + m0.y.z * m1.trans.y + m0.z.z * m1.trans.z + m0.trans.z * m1.trans.w;
+	r.trans.w = m0.x.w * m1.trans.x + m0.y.w * m1.trans.y + m0.z.w * m1.trans.z + m0.trans.w * m1.trans.w;
 
 
 	// r.x.x = m0.x.x * m1.x.x + m0.x.y * m1.y.x + m0.x.z * m1.z.x + m0.x.w * m1.w.x; 
@@ -1168,22 +1168,22 @@ m mtranspose(m mat)
 	r.x.x = mat.x.x;
 	r.x.y = mat.y.x;
 	r.x.z = mat.z.x;
-	r.x.w = mat.w.x;
+	r.x.w = mat.trans.x;
 
 	r.y.x = mat.x.y;
 	r.y.y = mat.y.y;
 	r.y.z = mat.z.y;
-	r.y.w = mat.w.y;
+	r.y.w = mat.trans.y;
 
 	r.z.x = mat.x.z;
 	r.z.y = mat.y.z;
 	r.z.z = mat.z.z;
-	r.z.w = mat.w.z;
+	r.z.w = mat.trans.z;
 
-	r.w.x = mat.x.w;
-	r.w.y = mat.y.w;
-	r.w.z = mat.z.w;
-	r.w.w = mat.w.w;
+	r.trans.x = mat.x.w;
+	r.trans.y = mat.y.w;
+	r.trans.z = mat.z.w;
+	r.trans.w = mat.trans.w;
 	return r;
 }
 
@@ -1215,9 +1215,9 @@ m mperspective(float fFovY, float fAspect, float fNear, float fFar)
 	r.x.x = f * fAspect;
 	r.y.y = f;
 	r.z.z = (fFar + fNear) / (fNear - fFar);
-	r.w.z = (2*fFar*fNear) / (fNear - fFar);
+	r.trans.z = (2*fFar*fNear) / (fNear - fFar);
 	r.z.w = -1.f;
-	r.w.w = 0.f;
+	r.trans.w = 0.f;
 	return r;
 }
 

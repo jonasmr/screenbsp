@@ -33,8 +33,17 @@ void ShaderSetUniform(int location, float value);
 void ShaderSetUniform(int location, v2 v);
 void ShaderSetUniform(int location, v3 v);
 void ShaderSetUniform(int location, v4 v);
+void ShaderSetUniform(int location, const m* mat);
 void ShaderSetUniform(int location, const m mat);
 
-#define SHADER_SET(name, v)do{ int i = ShaderGetLocation(name); ShaderSetUniform(i, v);} while(0)
+// I HEREBY WOW NEVER TO USE MACROS AGAIN
+//#define SHADER_SET(name, v)do{ int i = ShaderGetLocation(name); ShaderSetUniform(i, v);} while(0)
 #define ShaderDisable() ShaderUse(VS_SIZE,PS_SIZE)
+
+template<typename T>
+void SHADER_SET(const char* pName, T value)
+{
+	int i = ShaderGetLocation(pName); 
+	ShaderSetUniform(i, value);
+}
 
