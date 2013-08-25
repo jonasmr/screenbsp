@@ -16,6 +16,7 @@
 #include "physics.h"
 #include "microprofile.h"
 
+uint32_t g_nDump = 0;
 extern uint32_t g_Width;
 extern uint32_t g_Height;
 //render todo
@@ -385,7 +386,7 @@ void WorldRender()
 					g_LightIndex[idx].nIndex = k;
 					g_LightIndex[idx].nDummy = 0;
 					Index.nCount++;
-					ZASSERT(Index.nCount == (nLightIndex - Index.nBase));
+					///ZASSERT(Index.nCount == (nLightIndex - Index.nBase));
 					ZASSERT(nLightIndex < MAX_LIGHT_INDEX);
 				}
 			}
@@ -531,7 +532,14 @@ void WorldRender()
 		else
 		{
 			SHADER_SET("Size", g_WorldState.WorldObjects[i].vSize);
-			SHADER_SET("ModelViewMatrix", g_WorldState.WorldObjects[i].mObjectToWorld);
+			m mat = g_WorldState.WorldObjects[i].mObjectToWorld;
+			g_nDump =1;
+			SHADER_SET("ModelViewMatrix",g_WorldState.WorldObjects[i].mObjectToWorld);
+			SHADER_SET("ModelViewMatrix", mat);
+			g_nDump =0;
+
+//			SHADER_SET("poshack", pos);
+//			uplotfnxt("POS OS %f %f %f", pos.x, pos.y, pos.z);
 			glDisable(GL_CULL_FACE);
 			MeshDraw(GetBaseMesh(MESH_BOX_FLAT));
 			

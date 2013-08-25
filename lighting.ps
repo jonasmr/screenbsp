@@ -26,7 +26,7 @@ void main(void)
 	vec3 Normal = normalize(fNormal);
 	const float fAttenLength = 2.0;
 	#if 1
-	Out0.xyz = vec3(1,1,1) + fWorldPos * 0.0000001 + fNormal* 0.000001;
+	Out0.xyz = vec3(0,1,0) + fWorldPos * 0.0000001 + fNormal* 0.000001;
 	Out0.w = 1.0;
 
 	#else

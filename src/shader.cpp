@@ -95,16 +95,10 @@ GLuint CreateProgram(int nType, const char* pFile)
 void ShaderInit()
 {
 	memset(&g_ShaderState, 0, sizeof(g_ShaderState));
-//	memset(&g_ShaderState.LinkInfo, 0xff, sizeof(g_ShaderState.LinkInfo));
 	g_ShaderState.PS[PS_FLAT_LIT] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "flat.ps");
 	g_ShaderState.VS[VS_DEFAULT] = CreateProgram(GL_VERTEX_SHADER_ARB, "default.vs");
-
-	// g_ShaderState.PS[PS_MICROPROFILE] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "microprofile.ps");
-	// g_ShaderState.VS[VS_MICROPROFILE] = CreateProgram(GL_VERTEX_SHADER_ARB, "microprofile.vs");
-
 	g_ShaderState.PS[PS_LIGHTING] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "lighting.ps");
 	g_ShaderState.VS[VS_LIGHTING] = CreateProgram(GL_VERTEX_SHADER_ARB, "lighting.vs");
-
 	g_ShaderState.PS[PS_DEBUG] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "debug.ps");
 	g_ShaderState.VS[VS_DEBUG] = CreateProgram(GL_VERTEX_SHADER_ARB, "debug.vs");
 	g_ShaderState.PS[PS_TEXT] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "text.ps");
@@ -117,7 +111,6 @@ void ShaderUse(EShaderVS vs, EShaderPS ps)
 	{
 		g_ShaderState.nCurrentIndex = -1;
 		glUseProgramObjectARB(0);
-		//uprintf("USING NULL\n");
 		return;
 	}
 	CheckGLError();
@@ -197,8 +190,16 @@ void ShaderSetUniform(int loc, v4 v)
 {
 	glUniform4fv(loc, 1, &v.x);
 }
-void ShaderSetUniform(int loc, const m& mat)
+extern uint32_t g_nDump;
+void ShaderSetUniform(int loc, const m mat)
 {
+	if(g_nDump)
+	{
+		uprintf("mat %p : x, %f %f %f %f\n", &mat, mat.x.x, mat.x.y, mat.x.z, mat.x.w);
+		uprintf("mat %p : y, %f %f %f %f\n", &mat, mat.y.x, mat.y.y, mat.y.z, mat.y.w);
+		uprintf("mat %p : z, %f %f %f %f\n", &mat, mat.z.x, mat.z.y, mat.z.z, mat.z.w);
+		uprintf("mat %p : w, %f %f %f %f\n", &mat, mat.w.x, mat.w.y, mat.w.z, mat.w.w);
+	}
 	glUniformMatrix4fv(loc, 1, false, &mat.x.x);
 }
 
