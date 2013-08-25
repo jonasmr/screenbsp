@@ -20,5 +20,5 @@ void main(void)
 	vec4 pos = vec4(VertexIn, 1.0);
 	pos.xyz *= Size * 1.0;
 	Color = mix(ConstantColor, ColorIn, UseVertexColor);
-	gl_Position = ProjectionMatrix * ModelViewMatrix * pos;
+	gl_Position = ProjectionMatrix * (ModelViewMatrix * pos);
 }  
