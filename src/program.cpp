@@ -74,7 +74,7 @@ void DebugRender(m mprj)
 	if(g_EditorState.pSelected)
 	{
 		ZDEBUG_DRAWBOUNDS(g_EditorState.pSelected->mObjectToWorld, g_EditorState.pSelected->vSize, g_EditorState.bLockSelection ? (0xffffff00) : -1);
-
+		uplotfnxt("SELECTION %p", g_EditorState.pSelected);
 	}
 
 	DebugDrawFlush(mprj);
@@ -331,7 +331,6 @@ void WorldRender()
 	m mcliptoworld = mmult(g_WorldState.Camera.mviewinv, g_WorldState.Camera.mprjinv);
 	v3 veye = g_WorldState.Camera.vPosition;
 	int nMaxTileLights = 0;
-	if(1)
 	for(int i = 0; i < g_LightTileWidth; ++i)
 	{
 			MICROPROFILE_SCOPEI("MAIN", "Tile Stuff", 0xff44dddd);
@@ -421,7 +420,6 @@ void WorldRender()
 			}
 		}
 	}
-//	uprintf("MAX LIGHTS %d\n", nMaxTileLights);
 	if(nNumPoints)
 	{
 		ZASSERT(nNumPoints == 4 * g_LightTileWidth * g_LightTileHeight);
@@ -438,7 +436,6 @@ void WorldRender()
 	}
 	for(int i = 0; i < g_WorldState.nNumLights; ++ i)
 	{
-		ZDEBUG_DRAWSPHERE(g_WorldState.Lights[i].mObjectToWorld.trans.tov3(), 2.f, g_WorldState.Lights[i].nColor);
 		g_LightBuffer[i].Pos[0] = g_WorldState.Lights[i].mObjectToWorld.trans.x;
 		g_LightBuffer[i].Pos[1] = g_WorldState.Lights[i].mObjectToWorld.trans.y;
 		g_LightBuffer[i].Pos[2] = g_WorldState.Lights[i].mObjectToWorld.trans.z;
@@ -449,7 +446,6 @@ void WorldRender()
 		g_LightBuffer[i].Color[3] = g_WorldState.Lights[i].fRadius;
 	}
 	int nNumLights = g_WorldState.nNumLights;
-	if(1)
 	{
 		MICROPROFILE_SCOPEI("MAIN", "UpdateTexture", 0xff44dd44);
 		CheckGLError();
@@ -486,6 +482,7 @@ void WorldRender()
 	SHADER_SET("texLightTile", 2);
 	SHADER_SET("texLightIndex", 3);
 	SHADER_SET("NumLights", nNumLights);
+	//g_WorldState.nNumLights 
 	SHADER_SET("lightDelta", 1.f / (2*MAX_NUM_LIGHTS));
 	SHADER_SET("MaxTileLights", nMaxTileLights);
 	SHADER_SET("ScreenSize", v2init(g_Width, g_Height));
@@ -493,7 +490,8 @@ void WorldRender()
 	SHADER_SET("TileSize", vTileSize);
 
 	m mprjview = mmult(g_WorldState.Camera.mprj, g_WorldState.Camera.mview);
-
+	glEnable(GL_CULL_FACE);
+	glEnable(GL_DEPTH_TEST);
 
 	SHADER_SET("ProjectionMatrix", mprjview);
 	for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
@@ -507,13 +505,13 @@ void WorldRender()
 		{
 			SHADER_SET("Size", g_WorldState.WorldObjects[i].vSize);
 			SHADER_SET("ModelViewMatrix", g_WorldState.WorldObjects[i].mObjectToWorld);
-			glDisable(GL_CULL_FACE);
+			
 			MeshDraw(GetBaseMesh(MESH_BOX_FLAT));
 			CheckGLError();
 		}
 	}
 	ShaderDisable();
-
+	glDisable(GL_CULL_FACE);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glActiveTexture(GL_TEXTURE0);

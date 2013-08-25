@@ -367,14 +367,20 @@ void DebugDrawFlush(m mprj)
 
 			}
 		}
-		VertexBufferPushFlush(pPushBuffer);
 		
+		
+			ShaderUse(VS_DEBUG, PS_DEBUG);
+			SHADER_SET("Color", v4init(1,0,0,0));
+			SHADER_SET("ProjectionMatrix", mprj);
+			SHADER_SET("ModelViewMatrix", mid());
+			SHADER_SET("UseVertexColor", 1.f);
+			SHADER_SET("Size", v3init(1,1,1));
 
 		for(SDebugDrawBounds& Bounds : g_DebugDrawState.Bounds)
 		{
 			DebugDrawBounds(Bounds);
 		}
-
+		VertexBufferPushFlush(pPushBuffer);
 
 
 		{

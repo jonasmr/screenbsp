@@ -21,7 +21,7 @@ void main(void)
 {
 	vec4 pos = vec4(VertexIn,1.0);
 	//pos += vec4(poshack, 1.0);
-	//pos.xyz *= Size * 1.0;
+	pos.xyz *= Size;
 	mat3 foo;
 	foo[0] = ModelViewMatrix[0].xyz;
 	foo[1] = ModelViewMatrix[1].xyz;
@@ -31,7 +31,7 @@ void main(void)
 	//vec4 vWorldPos4 = pos;
 	fWorldPos = vWorldPos4.xyz / vWorldPos4.w;
 	//gl_FrontColor = vec4(1,1,1,1);
-	//gl_Position = ProjectionMatrix * vWorldPos4;
+	gl_Position = ProjectionMatrix * vWorldPos4;
 	// gl_Position = ProjectionMatrix * (ModelViewMatrix * vec4(VertexIn,1.0));
-	gl_Position = ProjectionMatrix * (ModelViewMatrix * vec4(VertexIn,1.0));
+	//gl_Position = ProjectionMatrix * (ModelViewMatrix * vec4(VertexIn,1.0));
 }  
