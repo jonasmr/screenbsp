@@ -35,7 +35,7 @@ v3 vLockedCamDir = v3init(1,0,0);
 #define TILE_SIZE 8
 #define MAX_WIDTH 1920
 #define MAX_HEIGHT 1080
-#define MAX_LIGHT_INDEX (64<<10)
+#define MAX_LIGHT_INDEX (32<<10)
 #define LIGHT_INDEX_SIZE 1024
 //#define TILE_HEIGHT 8
 #define MAX_NUM_LIGHTS 1024
@@ -158,9 +158,10 @@ void WorldInit()
 		g_WorldState.Lights[i].fRadius = 2.f;
 	}
 #else
-	g_WorldState.nNumLights = 15;
+	g_WorldState.nNumLights = 2;
 	for(int i = 0; i < g_WorldState.nNumLights; ++i)
 	{
+		ZDEBUG_DRAWSPHERE(g_WorldState.Lights[i].mObjectToWorld.trans.tov3(), 2.f, -1);
 		m mat = mid();
 		mat.trans.x = frandrange(-5.f, 5.f);
 		mat.trans.y = frandrange(-2.7f, -3.f);
@@ -246,7 +247,14 @@ void WorldRender()
 
 	uint32 nNumOccluders = g_WorldState.nNumOccluders;
 	static float foo = 0;
-	foo += 0.01f;
+	static int incfoo = 1;
+	if(g_KeyboardState.keys[SDL_SCANCODE_Y] & BUTTON_RELEASED)
+	{
+		incfoo = !incfoo;
+	}
+
+	if(incfoo)
+		foo += 0.01f;
 	v3 vPos = vLockedCamPos;
 	v3 vDir = vLockedCamDir;
 	v3 vRight = vLockedCamRight;
@@ -334,6 +342,7 @@ void WorldRender()
 	for(int i = 0; i < g_LightTileWidth; ++i)
 	{
 			MICROPROFILE_SCOPEI("MAIN", "Tile Stuff", 0xff44dddd);
+			//g_LightTileWidth
 
 		float x0 = 2*(float)i / (g_LightTileWidth)-1;
 		float x1 = 2*(float)(i+1) / (g_LightTileWidth)-1;
@@ -383,7 +392,7 @@ void WorldRender()
 					int idx = nLightIndex++;
 
 					g_LightIndex[idx].nIndex = k;
-					g_LightIndex[idx].nDummy = 0;
+					g_LightIndex[idx].nDummy = k;
 					Index.nCount++;
 					///ZASSERT(Index.nCount == (nLightIndex - Index.nBase));
 					ZASSERT(nLightIndex < MAX_LIGHT_INDEX);
@@ -488,12 +497,20 @@ void WorldRender()
 	SHADER_SET("ScreenSize", v2init(g_Width, g_Height));
 	v3 vTileSize = v3init(g_LightTileWidth, g_LightTileHeight, TILE_SIZE);
 	SHADER_SET("TileSize", vTileSize);
+	SHADER_SET("MaxLightTileIndex", nLightIndex);
 
 	m mprjview = mmult(g_WorldState.Camera.mprj, g_WorldState.Camera.mview);
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
 
 	SHADER_SET("ProjectionMatrix", mprjview);
+	static int g_Mode = 0;
+	uplotfnxt("mode is %d", g_Mode);
+	if(g_KeyboardState.keys[SDL_SCANCODE_T] & BUTTON_RELEASED)
+	{
+		g_Mode = (g_Mode+1)%3;
+	}
+	SHADER_SET("mode", g_Mode);
 	for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
 	{
 
