@@ -158,7 +158,7 @@ void WorldInit()
 		g_WorldState.Lights[i].fRadius = 2.f;
 	}
 #else
-	g_WorldState.nNumLights = 2;
+	g_WorldState.nNumLights = 15;
 	for(int i = 0; i < g_WorldState.nNumLights; ++i)
 	{
 		ZDEBUG_DRAWSPHERE(g_WorldState.Lights[i].mObjectToWorld.trans.tov3(), 2.f, -1);
@@ -226,6 +226,28 @@ void WorldInit()
 }
 
 
+
+void WorldDrawObjects(bool* bCulled)
+{
+	int nLocSize = ShaderGetLocation("Size");
+	int nLocModelView = ShaderGetLocation("ModelViewMatrix");
+	for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
+	{
+
+		if(bCulled[i])
+		{
+			ZDEBUG_DRAWBOX(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].mObjectToWorld.trans.tov3(), g_WorldState.WorldObjects[i].vSize, 0xffff0000, 0);
+		}
+		else
+		{
+			// SHADER_SET("Size", g_WorldState.WorldObjects[i].vSize);
+			// SHADER_SET("ModelViewMatrix", g_WorldState.WorldObjects[i].mObjectToWorld);
+			ShaderSetUniform(nLocSize, g_WorldState.WorldObjects[i].vSize);
+			ShaderSetUniform(nLocModelView, g_WorldState.WorldObjects[i].mObjectToWorld);
+			MeshDraw(GetBaseMesh(MESH_BOX_FLAT));
+		}
+	}
+}
 
 
 int g_nSimulate = 0;
@@ -482,9 +504,15 @@ void WorldRender()
 	glBindTexture(GL_TEXTURE_2D, g_LightTileTexture);
 	glActiveTexture(GL_TEXTURE3);
 	glBindTexture(GL_TEXTURE_2D, g_LightIndexTexture);
-
-
 	glActiveTexture(GL_TEXTURE0);
+	static int g_Mode = 0;
+	uplotfnxt("mode is %d", g_Mode);
+	if(g_KeyboardState.keys[SDL_SCANCODE_T] & BUTTON_RELEASED)
+	{
+		g_Mode = (g_Mode+1)%3;
+	}
+
+
 
 	ShaderUse(VS_LIGHTING, PS_LIGHTING);
 	SHADER_SET("texLight", 1);
@@ -498,35 +526,46 @@ void WorldRender()
 	v3 vTileSize = v3init(g_LightTileWidth, g_LightTileHeight, TILE_SIZE);
 	SHADER_SET("TileSize", vTileSize);
 	SHADER_SET("MaxLightTileIndex", nLightIndex);
-
 	m mprjview = mmult(g_WorldState.Camera.mprj, g_WorldState.Camera.mview);
+
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
 
 	SHADER_SET("ProjectionMatrix", mprjview);
-	static int g_Mode = 0;
-	uplotfnxt("mode is %d", g_Mode);
-	if(g_KeyboardState.keys[SDL_SCANCODE_T] & BUTTON_RELEASED)
-	{
-		g_Mode = (g_Mode+1)%3;
-	}
 	SHADER_SET("mode", g_Mode);
-	for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
+	static int usezpass = 1;
+	if(g_KeyboardState.keys[SDL_SCANCODE_W] & BUTTON_RELEASED)
 	{
+		usezpass = !usezpass;
+	}
 
-		if(bCulled[i])
+	{
+		MICROPROFILE_SCOPEGPUI("GPU", "OBJ PASS", 0xffff77);
+		if(usezpass)
 		{
-			ZDEBUG_DRAWBOX(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].mObjectToWorld.trans.tov3(), g_WorldState.WorldObjects[i].vSize, 0xffff0000, 0);
+			glDepthFunc(GL_LEQUAL);
+			{
+				//ShaderUse(VS_LIGHTING, PS_LIGHTING2);
+				SHADER_SET("ProjectionMatrix", mprjview);
+				MICROPROFILE_SCOPEGPUI("GPU", "zpass", 0x9900ee);
+				glColorMask(0,0,0,0);
+				WorldDrawObjects(&bCulled[0]);
+			}
+			ShaderUse(VS_LIGHTING, PS_LIGHTING);
+			glDepthFunc(GL_EQUAL);
+			MICROPROFILE_SCOPEGPUI("GPU", "objRenDering", 0xff0077);
+			MICROPROFILE_SCOPEGPUI("GPU", "OBJrendering", 0xff0077);
+			glColorMask(1,1,1,1);
+			WorldDrawObjects(&bCulled[0]);
+			glDepthFunc(GL_LEQUAL);
 		}
 		else
 		{
-			SHADER_SET("Size", g_WorldState.WorldObjects[i].vSize);
-			SHADER_SET("ModelViewMatrix", g_WorldState.WorldObjects[i].mObjectToWorld);
-			
-			MeshDraw(GetBaseMesh(MESH_BOX_FLAT));
-			CheckGLError();
+			MICROPROFILE_SCOPEGPUI("GPU", "objrendering", 0xff0077);
+			glColorMask(1,1,1,1);
+			WorldDrawObjects(&bCulled[0]);
 		}
-	}
+	}	
 	ShaderDisable();
 	glDisable(GL_CULL_FACE);
 	glActiveTexture(GL_TEXTURE1);
