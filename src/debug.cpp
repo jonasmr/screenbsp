@@ -431,7 +431,14 @@ void DebugDrawFlush(m mprj)
 			ShaderUse(VS_DEBUG, PS_DEBUG);
 			int nSizeLoc = ShaderGetLocation("Size");
 			int nColorLoc = ShaderGetLocation("Color");
-			SHADER_SET("UseVertexColor", 0.f);
+			SHADER_SET("UseVertexColor", 1.f);
+			SHADER_SET("Color", v4init(1,0,0,0));
+			SHADER_SET("ProjectionMatrix", mprj);
+			SHADER_SET("ModelViewMatrix", mid());
+//			SHADER_SET("UseVertexColor", 1.f);
+			SHADER_SET("Size", v3init(1,1,1));
+
+
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 			for(uint32_t i = 0; i < g_DebugDrawState.Spheres.Size(); ++i)
 			{
@@ -442,8 +449,9 @@ void DebugDrawFlush(m mprj)
 				ShaderSetUniform(nSizeLoc, v3rep(Sphere.fRadius));
 				ShaderSetUniform(nColorLoc, v4fromcolor(Sphere.nColor));
 				SHADER_SET("ModelViewMatrix", m0);
-				SHADER_SET("ConstantColor", v4fromcolor(Sphere.nColor));
+				SHADER_SET("ConstantColor", v4fromcolor(Sphere.nColor|0xff000000));
 				MeshDraw(GetBaseMesh(MESH_SPHERE_1));
+				uplotfnxt("SPHERE %f %f %f :: radius %f", vPos.x, vPos.y, vPos.z, Sphere.fRadius);
 
 			}
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

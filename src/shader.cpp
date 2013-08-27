@@ -55,9 +55,10 @@ static void DumpGlLog(GLuint handle)
 		glGetInfoLogARB(handle, nLogLen, &nLen, pChars);
 
 		uprintf("COMPILE MESSAGE\n%s\n\n", pChars);
-
+		if(strcasestr(pChars, "error"))
+			ZBREAK();
 		free(pChars);
-		ZBREAK();
+		//ZBREAK();
 	}
 
 
@@ -98,6 +99,7 @@ void ShaderInit()
 	g_ShaderState.PS[PS_FLAT_LIT] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "flat.ps");
 	g_ShaderState.VS[VS_DEFAULT] = CreateProgram(GL_VERTEX_SHADER_ARB, "default.vs");
 	g_ShaderState.PS[PS_LIGHTING] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "lighting.ps");
+	g_ShaderState.PS[PS_LIGHTING2] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "lighting2.ps");
 	g_ShaderState.VS[VS_LIGHTING] = CreateProgram(GL_VERTEX_SHADER_ARB, "lighting.vs");
 	g_ShaderState.PS[PS_DEBUG] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "debug.ps");
 	g_ShaderState.VS[VS_DEBUG] = CreateProgram(GL_VERTEX_SHADER_ARB, "debug.vs");
@@ -193,26 +195,18 @@ void ShaderSetUniform(int loc, v4 v)
 extern uint32_t g_nDump;
 void ShaderSetUniform(int loc, const m* mat)
 {
-	if(g_nDump)
-	{
-	
-		// uprintf("mat %p : x, %f %f %f %f\n", &mat, mat.x.x, mat.x.y, mat.x.z, mat.x.w);
-		// uprintf("mat %p : y, %f %f %f %f\n", &mat, mat.y.x, mat.y.y, mat.y.z, mat.y.w);
-		// uprintf("mat %p : z, %f %f %f %f\n", &mat, mat.z.x, mat.z.y, mat.z.z, mat.z.w);
-		// uprintf("mat %p : w, %f %f %f %f\n", &mat, mat.trans.x, mat.trans.y, mat.trans.z, mat.trans.w);
-	}
 	glUniformMatrix4fv(loc, 1, false, (float*)mat);
 }
 
-void ShaderSetUniform(int loc, const m mat)
+void ShaderSetUniform(int loc, const m& mat)
 {
-	if(g_nDump)
-	{
-		uprintf("mat %p : x, %f %f %f %f\n", &mat, mat.x.x, mat.x.y, mat.x.z, mat.x.w);
-		uprintf("mat %p : y, %f %f %f %f\n", &mat, mat.y.x, mat.y.y, mat.y.z, mat.y.w);
-		uprintf("mat %p : z, %f %f %f %f\n", &mat, mat.z.x, mat.z.y, mat.z.z, mat.z.w);
-		uprintf("mat %p : w, %f %f %f %f\n", &mat, mat.trans.x, mat.trans.y, mat.trans.z, mat.trans.w);
-	}
+	// if(g_nDump)
+	// {
+	// 	uprintf("mat %p : x, %f %f %f %f\n", &mat, mat.x.x, mat.x.y, mat.x.z, mat.x.w);
+	// 	uprintf("mat %p : y, %f %f %f %f\n", &mat, mat.y.x, mat.y.y, mat.y.z, mat.y.w);
+	// 	uprintf("mat %p : z, %f %f %f %f\n", &mat, mat.z.x, mat.z.y, mat.z.z, mat.z.w);
+	// 	uprintf("mat %p : w, %f %f %f %f\n", &mat, mat.trans.x, mat.trans.y, mat.trans.z, mat.trans.w);
+	// }
 	glUniformMatrix4fv(loc, 1, false, (float*)&mat);
 }
 
