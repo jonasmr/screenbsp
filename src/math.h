@@ -3,7 +3,7 @@
 #define PI 3.14159265358979323846f
 #define TWOPI 6.2831853071795864769f
 #define TORAD (PI/180.f)
-
+#include <string.h>
 
 struct v2;
 struct v3;

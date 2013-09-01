@@ -156,10 +156,10 @@ void TextFlush()
 			{
 				int16_t nOffset = g_FontDescription.nCharOffsets[*pStr++];
 				float fOffset = nOffset / 1024.f;
-				Vertex0 p0 = Vertex0{fX, fY, 0.f, nColor, fOffset, 0.f};
-				Vertex0 p1 = Vertex0{fX+TEXT_CHAR_WIDTH, fY, 0.f, nColor, fOffset+fOffsetU, 0.f};
-				Vertex0 p2 = Vertex0{fX+TEXT_CHAR_WIDTH, fY2, 0.f, nColor, fOffset+fOffsetU, 1.f};
-				Vertex0 p3 = Vertex0{fX, fY2, 0.f, nColor, fOffset, 1.f};
+				Vertex0 p0 = Vertex0(fX, fY, 0.f, nColor, fOffset, 0.f);
+				Vertex0 p1 = Vertex0(fX+TEXT_CHAR_WIDTH, fY, 0.f, nColor, fOffset+fOffsetU, 0.f);
+				Vertex0 p2 = Vertex0(fX+TEXT_CHAR_WIDTH, fY2, 0.f, nColor, fOffset+fOffsetU, 1.f);
+				Vertex0 p3 = Vertex0(fX, fY2, 0.f, nColor, fOffset, 1.f);
 				Q0(pVertices, p0);
 				Q1(pVertices, p1);
 				Q2(pVertices, p2);

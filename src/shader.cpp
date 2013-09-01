@@ -55,7 +55,9 @@ static void DumpGlLog(GLuint handle)
 		glGetInfoLogARB(handle, nLogLen, &nLen, pChars);
 
 		uprintf("COMPILE MESSAGE\n%s\n\n", pChars);
+#ifndef _WIN32
 		if(strcasestr(pChars, "error"))
+#endif
 			ZBREAK();
 		free(pChars);
 		//ZBREAK();
@@ -125,7 +127,9 @@ void ShaderUse(EShaderVS vs, EShaderPS ps)
 		CheckGLError();
 		glCompileShader(g_ShaderState.PS[ps]);
 		CheckGLError();
+		DumpGlLog(g_ShaderState.PS[ps]);
 		glCompileShader(g_ShaderState.VS[vs]);
+		DumpGlLog(g_ShaderState.VS[vs]);
 
 		glAttachObjectARB(prg, g_ShaderState.PS[ps]);
 		glAttachObjectARB(prg, g_ShaderState.VS[vs]);
@@ -140,8 +144,6 @@ void ShaderUse(EShaderVS vs, EShaderPS ps)
 		
 		CheckGLError();
 		DumpGlLog(prg);
-		DumpGlLog(g_ShaderState.PS[ps]);
-		DumpGlLog(g_ShaderState.VS[vs]);
 		CheckGLError();
 
 		if(glGetAttribLocation(prg, "VertexIn")>=0)
