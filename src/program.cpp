@@ -393,7 +393,7 @@ void WorldRender()
 			v4 plane2 = v4makeplane(_p2, vNormal2);
 			v4 plane3 = v4makeplane(_p3, vNormal3);
 
-			for(int k = 0; k < g_WorldState.nNumLights; ++k)
+			for(int k = 0; k < g_WorldState.nNumLights && nLightIndex < MAX_LIGHT_INDEX; ++k)
 			{
 				v4 center = g_WorldState.Lights[k].mObjectToWorld.trans;
 				float radius = g_WorldState.Lights[k].fRadius;
@@ -417,7 +417,7 @@ void WorldRender()
 					g_LightIndex[idx].nDummy = k;
 					Index.nCount++;
 					///ZASSERT(Index.nCount == (nLightIndex - Index.nBase));
-					ZASSERT(nLightIndex < MAX_LIGHT_INDEX);
+					//ZASSERT(nLightIndex < MAX_LIGHT_INDEX);
 				}
 			}
 			// if(Index.nCount)
@@ -553,15 +553,12 @@ void WorldRender()
 			}
 			ShaderUse(VS_LIGHTING, PS_LIGHTING);
 			glDepthFunc(GL_EQUAL);
-			MICROPROFILE_SCOPEGPUI("GPU", "objRenDering", 0xff0077);
-			MICROPROFILE_SCOPEGPUI("GPU", "OBJrendering", 0xff0077);
 			glColorMask(1,1,1,1);
 			WorldDrawObjects(&bCulled[0]);
 			glDepthFunc(GL_LEQUAL);
 		}
 		else
 		{
-			MICROPROFILE_SCOPEGPUI("GPU", "objrendering", 0xff0077);
 			glColorMask(1,1,1,1);
 			WorldDrawObjects(&bCulled[0]);
 		}

@@ -13,6 +13,8 @@ solution "bsp"
 
       links {"SDL2"}
 
+      debugdir "."
+
       configuration "windows"
          links { "opengl32", "glu32", "winmm", "dxguid"}
 
