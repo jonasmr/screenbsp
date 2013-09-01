@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <SDL.h>
+#ifdef main
+#undef main
+#endif
+
 #include <string>
 #include <thread>
 #include <atomic>
@@ -363,7 +367,7 @@ void MicroProfileDrawInit();
 void MicroProfileBeginDraw(uint32_t nWidth, uint32_t nHeight, float* prj);
 void MicroProfileEndDraw();
 
-//extern "C" 
+
 int main(int argc, char* argv[])
 {
 
@@ -380,9 +384,11 @@ int main(int argc, char* argv[])
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE,  	    8);	
 	SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE,		    32);	
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,	    1);	
+//#ifdef __APPLE__
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+//#endif
 	SDL_GL_SetSwapInterval(1);
 
 	SDL_Window * pWindow = SDL_CreateWindow("ScreenBsp", 10, 10, g_BaseWidth, g_BaseHeight, SDL_WINDOW_OPENGL);
@@ -450,7 +456,7 @@ int main(int argc, char* argv[])
 		int64_t nStart = TICK();
 		MICROPROFILE_SCOPE(MAIN);
 		CheckGLError();
-		PhysicsStep();
+		//PhysicsStep();
 		InputClear();
 		SDL_Event Evt;
 		while(SDL_PollEvent(&Evt))
@@ -527,6 +533,7 @@ int main(int argc, char* argv[])
 			glDisable(GL_DEPTH_TEST);
 			glDisable(GL_CULL_FACE);
 			CheckGLError();
+			glColorMask(1,1,1,1);
 
 			CheckGLError();
 			MicroProfileBeginDraw(g_Width, g_Height, (float*)&prj);

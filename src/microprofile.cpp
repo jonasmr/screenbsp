@@ -117,7 +117,7 @@ void main(void)   \
 	const char* g_VertexShaderCode = " \
 #version 150 \n \
 uniform mat4 ProjectionMatrix; \
-in vec3 VertexIn; \
+in vec2 VertexIn; \
 in vec4 ColorIn; \
 in vec2 TC0In; \
 out vec2 TC0; \
@@ -127,7 +127,7 @@ void main(void)   \
 { \
 	Color = ColorIn; \
 	TC0 = TC0In; \
-	gl_Position = ProjectionMatrix * vec4(VertexIn, 1.0); \
+	gl_Position = ProjectionMatrix * vec4(VertexIn, 0.0, 1.0); \
 } \
 ";
 

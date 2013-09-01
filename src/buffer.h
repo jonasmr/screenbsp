@@ -25,6 +25,15 @@ enum
 
 struct Vertex0
 {
+	Vertex0(float nX, float nY, float nZ, uint32_t nColor, float fU, float fV)
+		:nX(nX)
+		,nY(nY)
+		,nZ(nZ)
+		,nColor(nColor)
+		,fU(fU)
+		,fV(fV)
+	{}
+
 	float nX;
 	float nY;
 	float nZ;

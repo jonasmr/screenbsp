@@ -179,13 +179,13 @@ void DebugDrawPlane(SDebugDrawPlane& Plane)
 			v3 p2 = vPoints[(1+i)*PLANE_DEBUG_TESSELATION+j];
 			v3 p3 = vPoints[i*PLANE_DEBUG_TESSELATION+j];
 			v3 p4 = vPoints[i*PLANE_DEBUG_TESSELATION+j];
-			v3 p5 = vPoints[i*PLANE_DEBUG_TESSELATION+j] + vNormal * 0.03;
-			*pLines++ = Vertex0{p0.x, p0.y, p0.z, c0, 0.f, 0.f};
-			*pLines++ = Vertex0{p1.x, p1.y, p1.z, c0, 0.f, 0.f};
-			*pLines++ = Vertex0{p2.x, p2.y, p2.z, c0, 0.f, 0.f};
-			*pLines++ = Vertex0{p3.x, p3.y, p3.z, c0, 0.f, 0.f};
-			*pLines++ = Vertex0{p4.x, p4.y, p4.z, c1, 0.f, 0.f};
-			*pLines++ = Vertex0{p5.x, p5.y, p5.z, c1, 0.f, 0.f};
+			v3 p5 = vPoints[i*PLANE_DEBUG_TESSELATION+j] + vNormal * 0.03f;
+			*pLines++ = Vertex0(p0.x, p0.y, p0.z, c0, 0.f, 0.f);
+			*pLines++ = Vertex0(p1.x, p1.y, p1.z, c0, 0.f, 0.f);
+			*pLines++ = Vertex0(p2.x, p2.y, p2.z, c0, 0.f, 0.f);
+			*pLines++ = Vertex0(p3.x, p3.y, p3.z, c0, 0.f, 0.f);
+			*pLines++ = Vertex0(p4.x, p4.y, p4.z, c1, 0.f, 0.f);
+			*pLines++ = Vertex0(p5.x, p5.y, p5.z, c1, 0.f, 0.f);
 			nCount -= 6;
 		}
 	}
@@ -207,43 +207,43 @@ namespace
 		uint32_t nColor = Box.nColor;
 		Vertex0* pLines = (Vertex0*)VertexBufferPushVertices(pPushBuffer, 8 * 3, EDM_LINES);
 		float f = 1.0f;
-		*pLines++ = Vertex0{f, f, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{f, f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0(f, f, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(f, f, -f, nColor, 0.f, 0.f);
 		
-		*pLines++ = Vertex0{-f, f, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-f, f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0(-f, f, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-f, f, -f, nColor, 0.f, 0.f);
 
-		*pLines++ = Vertex0{-f, -f, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-f, -f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0(-f, -f, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-f, -f, -f, nColor, 0.f, 0.f);
 		
-		*pLines++ = Vertex0{f, -f, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{f, -f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0(f, -f, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(f, -f, -f, nColor, 0.f, 0.f);
 
 
-		*pLines++ = Vertex0{f, f, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{f, -f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0(f, f, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(f, -f, f, nColor, 0.f, 0.f);
 		
-		*pLines++ = Vertex0{-f, f, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-f, -f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0(-f, f, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-f, -f, f, nColor, 0.f, 0.f);
 
-		*pLines++ = Vertex0{-f, f, -f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-f, -f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0(-f, f, -f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-f, -f, -f, nColor, 0.f, 0.f);
 		
-		*pLines++ = Vertex0{f, f, -f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{f, -f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0(f, f, -f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(f, -f, -f, nColor, 0.f, 0.f);
 
 
-		*pLines++ = Vertex0{f,  f, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-f, f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0(f,  f, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-f, f, f, nColor, 0.f, 0.f);
 		
-		*pLines++ = Vertex0{f,  -f, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-f, -f, f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0(f,  -f, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-f, -f, f, nColor, 0.f, 0.f);
 
-		*pLines++ = Vertex0{f,  -f, -f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-f, -f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0(f,  -f, -f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-f, -f, -f, nColor, 0.f, 0.f);
 		
-		*pLines++ = Vertex0{f,  f, -f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-f, f, -f, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0(f,  f, -f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-f, f, -f, nColor, 0.f, 0.f);
 		//VertexBufferPushFlush(pPushBuffer);
 	}
 	void DebugDrawBounds(const SDebugDrawBounds& Bounds)
@@ -258,61 +258,61 @@ namespace
 		float f = 1.0f;
 		float z = 0.64f;
 		Vertex0* pLines = (Vertex0*)VertexBufferPushVertices(pPushBuffer, 8 * 6, EDM_LINES);
-		*pLines++ = Vertex0{f, f, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{z, f, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{f, f, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{f, z, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{f, f, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{f, f, z, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0(f, f, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(z, f, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(f, f, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(f, z, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(f, f, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(f, f, z, nColor, 0.f, 0.f);
 
-		*pLines++ = Vertex0{-f, f, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-z, f, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-f, f, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-f, z, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-f, f, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-f, f, z, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0(-f, f, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-z, f, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-f, f, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-f, z, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-f, f, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-f, f, z, nColor, 0.f, 0.f);
 
-		*pLines++ = Vertex0{f, -f, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{z, -f, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{f, -f, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{f, -z, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{f, -f, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{f, -f, z, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0(f, -f, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(z, -f, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(f, -f, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(f, -z, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(f, -f, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(f, -f, z, nColor, 0.f, 0.f);
 
-		*pLines++ = Vertex0{-f,-f, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-z,-f, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-f,-f, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-f,-z, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-f,-f, f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-f,-f, z, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0(-f,-f, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-z,-f, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-f,-f, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-f,-z, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-f,-f, f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-f,-f, z, nColor, 0.f, 0.f);
 
-		*pLines++ = Vertex0{f, f, -f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{z, f, -f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{f, f, -f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{f, z, -f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{f, f, -f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{f, f, -z, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0(f, f, -f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(z, f, -f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(f, f, -f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(f, z, -f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(f, f, -f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(f, f, -z, nColor, 0.f, 0.f);
 
-		*pLines++ = Vertex0{-f, f, -f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-z, f, -f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-f, f, -f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-f, z, -f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-f, f, -f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-f, f, -z, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0(-f, f, -f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-z, f, -f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-f, f, -f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-f, z, -f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-f, f, -f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-f, f, -z, nColor, 0.f, 0.f);
 
-		*pLines++ = Vertex0{f, -f, -f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{z, -f, -f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{f, -f, -f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{f, -z, -f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{f, -f, -f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{f, -f, -z, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0(f, -f, -f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(z, -f, -f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(f, -f, -f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(f, -z, -f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(f, -f, -f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(f, -f, -z, nColor, 0.f, 0.f);
 
-		*pLines++ = Vertex0{-f,-f, -f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-z,-f, -f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-f,-f, -f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-f,-z, -f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-f,-f, -f, nColor, 0.f, 0.f};
-		*pLines++ = Vertex0{-f,-f, -z, nColor, 0.f, 0.f};
+		*pLines++ = Vertex0(-f,-f, -f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-z,-f, -f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-f,-f, -f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-f,-z, -f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-f,-f, -f, nColor, 0.f, 0.f);
+		*pLines++ = Vertex0(-f,-f, -z, nColor, 0.f, 0.f);
 		//VertexBufferPushFlush(pPushBuffer);
 
 	}
@@ -419,9 +419,9 @@ void DebugDrawFlush(m mprj)
 				v4 v0 = pVert[nStart];
 				v4 v1 = pVert[nStart+j];
 				v4 v2 = pVert[nStart+j+1];
-				*pVertices++ = Vertex0{v0.x, v0.y, v0.z, nColor, 0.f, 0.f};
-				*pVertices++ = Vertex0{v1.x, v1.y, v1.z, nColor, 0.f, 0.f};
-				*pVertices++ = Vertex0{v2.x, v2.y, v2.z, nColor, 0.f, 0.f};
+				*pVertices++ = Vertex0(v0.x, v0.y, v0.z, nColor, 0.f, 0.f);
+				*pVertices++ = Vertex0(v1.x, v1.y, v1.z, nColor, 0.f, 0.f);
+				*pVertices++ = Vertex0(v2.x, v2.y, v2.z, nColor, 0.f, 0.f);
 			}
 		}
 		VertexBufferPushFlush(pPushBuffer);

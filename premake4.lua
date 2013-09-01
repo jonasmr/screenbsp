@@ -5,13 +5,13 @@ solution "bsp"
    project "bsp"
       kind "WindowedApp"
       language "C++"
-      files { "src/**.h", "src/**.cpp", "src/**.c" }
-      includedirs {"sdl/include/", "glew/glew-1.9.0/include", "bullet-2.81/src" } 
+      files { "src/**.h", "src/**.cpp", "src/**.c"}
+      includedirs {"sdl2/include/", "glew/", "bullet-2.81/src" } 
       defines {"GLEW_STATIC"} 
       
-      libdirs {"sdl/VisualC/Release/", "sdl/VisualC/SDLmain/Release/", "bullet-2.81/lib/"}
+      libdirs {"sdl2/VisualC/SDL/Win32/Release/", "sdl2/VisualC/SDLmain/Release/", "bullet-2.81/lib/"}
 
-      links {"SDL", "SDLmain" }
+      links {"SDL2"}
 
       configuration "windows"
          links { "opengl32", "glu32", "winmm", "dxguid"}
@@ -26,3 +26,6 @@ solution "bsp"
          links {"BulletCollision_vs2010", "BulletDynamics_vs2010", "LinearMath_vs2010"}         
          defines { "NDEBUG" }
          flags { "Optimize", "Symbols", "StaticRuntime" }   
+
+      configuration "SDL2.dll"
+         buildaction "Copy"
