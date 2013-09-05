@@ -5,3 +5,5 @@ syntax: glob
 build/
 bullet-2.81/
 sdl/
+sdl2/
+SDL2.dll
