@@ -211,6 +211,9 @@ inline
 v3 v3init(v4 v)
 { v3 r; r.x = v.x; r.y = v.y; r.z = v.z; return r;}
 
+inline
+v3 v3lerp(v3 from_, v3 to_, float fLerp) { return from_ + (to_-from_) * fLerp; }
+
 
 inline
 float v3dot(v3 v0, v3 v1)
@@ -251,6 +254,7 @@ v4 v4init(v3 v, float w){ v4 r; r.x = v.x; r.y = v.y; r.z = v.z; r.w = w; return
 inline
 v4 v4init(v4 v, float w){ v4 r; r.x = v.x; r.y = v.y; r.z = v.z; r.w = w; return r; }
 
+
 v4 v4fromcolor(uint32_t nColor);
 float v4dot(v4 v0, v4 v1);
 float v4length(v4 v0);
@@ -275,6 +279,10 @@ v4 operator -(float f, const v4 l);
 v4 operator *(float f, const v4 v);
 v4 operator /(float f, const v4 v);
 v4 operator -(const v4 v);
+
+inline
+v4 v4lerp(v4 from_, v4 to_, float fLerp) { return from_ + (to_-from_) * fLerp; }
+
 
 
 

@@ -113,7 +113,7 @@ void WorldInit()
 	g_WorldState.WorldObjects[1].vSize = v3init(0.25f, 0.2f, 0.2f)* 0.5f; 
 	g_WorldState.nNumWorldObjects = 2;
 
-	if(1)
+	if(0)
 	{
 		int idx = 0;
 		#define GRID_SIZE 10
@@ -136,12 +136,12 @@ void WorldInit()
 			idx++;
 		}}}
 		g_WorldState.nNumWorldObjects = idx;
+		for(int i = 0; i < g_WorldState.nNumWorldObjects; ++i)
+		{
+			PhysicsAddObjectBox(&g_WorldState.WorldObjects[i]);
+		}
 	}
 
-	for(int i = 0; i < g_WorldState.nNumWorldObjects; ++i)
-	{
-		PhysicsAddObjectBox(&g_WorldState.WorldObjects[i]);
-	}
 
 #if 0
 	g_WorldState.nNumLights = 1;
@@ -258,18 +258,20 @@ void WorldRender()
 	{
 		g_nSimulate = !g_nSimulate;
 	}
+	static int incfoo = 1;
 	if(g_nSimulate)
 	{
 		g_WorldState.WorldObjects[0].mObjectToWorld = mmult(g_WorldState.WorldObjects[0].mObjectToWorld, mrotatey(0.5f*TORAD));
 		g_WorldState.Occluders[0].mObjectToWorld = mmult(g_WorldState.Occluders[0].mObjectToWorld, mrotatez(0.3f*TORAD));
 		static float xx = 0;
-		xx += 0.005f;
+		if(incfoo)
+			xx += 0.005f;
 		g_WorldState.WorldObjects[0].mObjectToWorld.trans = v4init(3.f, 0.f, sin(xx)*2, 1.f);
 	}
 
 	uint32 nNumOccluders = g_WorldState.nNumOccluders;
 	static float foo = 0;
-	static int incfoo = 1;
+	
 	if(g_KeyboardState.keys[SDL_SCANCODE_Y] & BUTTON_RELEASED)
 	{
 		incfoo = !incfoo;
@@ -306,6 +308,8 @@ void WorldRender()
 		
 	
 	ZDEBUG_DRAWBOX(mid(), vPos, v3rep(0.02f), -1,1);
+	ZDEBUG_DRAWBOX(mid(), vPos, v3rep(0.04f), -1,1);
+	ZDEBUG_DRAWBOX(mid(), vPos, v3rep(0.06f), -1,1);
 	SOccluderBspViewDesc ViewDesc;
 	ViewDesc.vOrigin = vPos;
 	ViewDesc.vDirection = vDir;
@@ -313,6 +317,7 @@ void WorldRender()
 	ViewDesc.fFovY = g_WorldState.Camera.fFovY;
 	ViewDesc.fAspect = (float)g_Height / (float)g_Width;
 	ViewDesc.fZNear = g_WorldState.Camera.fNear;
+	uplotfnxt("DEBUG POS %f %f %f", vPos.x, vPos.y, vPos.z);
 
 	BspBuild(g_Bsp, &g_WorldState.Occluders[0], nNumOccluders, &g_WorldState.WorldObjects[0], 
 		//g_WorldState.nNumWorldObjects, 
@@ -460,10 +465,10 @@ void WorldRender()
 			ZDEBUG_DRAWLINE(PointBuffer[i+3], PointBuffer[i], -1, 0);
 		}
 
-		ZDEBUG_DRAWPLANE(DumpPlaneNormal0, DumpPlanePos0);
-		ZDEBUG_DRAWPLANE(DumpPlaneNormal1, DumpPlanePos1);
-		ZDEBUG_DRAWPLANE(DumpPlaneNormal2, DumpPlanePos2);
-		ZDEBUG_DRAWPLANE(DumpPlaneNormal3, DumpPlanePos3);
+		ZDEBUG_DRAWPLANE(DumpPlaneNormal0, DumpPlanePos0, -1);
+		ZDEBUG_DRAWPLANE(DumpPlaneNormal1, DumpPlanePos1, -1);
+		ZDEBUG_DRAWPLANE(DumpPlaneNormal2, DumpPlanePos2, -1);
+		ZDEBUG_DRAWPLANE(DumpPlaneNormal3, DumpPlanePos3, -1);
 	}
 	for(int i = 0; i < g_WorldState.nNumLights; ++ i)
 	{
@@ -576,11 +581,31 @@ void WorldRender()
 }
 void UpdateEditorState()
 {
-	for(int i = 0; i < 10; ++i)
+	//for(int i = 0; i < 10; ++i)
 	{
-		if(g_KeyboardState.keys[SDL_SCANCODE_0 + i] & BUTTON_RELEASED)
+		int but = 0;
+		int released = 0;
+		if(g_KeyboardState.keys[SDL_SCANCODE_0] & BUTTON_RELEASED)
 		{
-			g_EditorState.Mode = i;
+			but = 0;
+			released = 1;
+
+		}
+		else if(g_KeyboardState.keys[SDL_SCANCODE_1] & BUTTON_RELEASED)
+		{
+			but = 1;
+			released = 1;
+		}
+		else if(g_KeyboardState.keys[SDL_SCANCODE_2] & BUTTON_RELEASED)
+		{
+			but = 2;
+			released = 1;
+		}
+
+		if(released)
+		{
+			g_EditorState.Mode = but;
+			uprintf("switched mode to %d\n", g_EditorState.Mode);
 			if(g_EditorState.Dragging != DRAGSTATE_NONE && g_EditorState.DragTarget == DRAGTARGET_TOOL)
 			{
 				if(g_EditorState.Manipulators[g_EditorState.Mode])
