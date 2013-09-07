@@ -43,6 +43,7 @@ struct SDebugDrawPlane
 {
 	v3 vNormal;
 	v3 vPosition;
+	uint32_t nColor;
 };
 
 struct SDebugDrawState
@@ -59,13 +60,14 @@ struct SDebugDrawState
 } g_DebugDrawState;
 
 
-void DebugDrawPlane(v3 vNormal, v3 vPosition)
+void DebugDrawPlane(v3 vNormal, v3 vPosition, uint32_t nColor)
 {
 	if(g_DebugDrawState.Planes.Full()) return;
 	SDebugDrawPlane* pPlane = g_DebugDrawState.Planes.PushBack();
 	ZASSERT(v3length(vNormal) > 0.8f);
 	pPlane->vNormal = vNormal;
 	pPlane->vPosition = vPosition;
+	pPlane->nColor = nColor;
 }
 
 void DebugDrawBounds(m mObjectToWorld, v3 vSize, uint32 nColor)
@@ -168,8 +170,7 @@ void DebugDrawPlane(SDebugDrawPlane& Plane)
 	int nCount = 6 * (PLANE_DEBUG_TESSELATION-1) * (PLANE_DEBUG_TESSELATION-1);
 	Vertex0* pLines = (Vertex0*)VertexBufferPushVertices(pPushBuffer, 
 		nCount, EDM_LINES);
-	uint32_t c0 = 0xffff0000;
-	uint32_t c1 = 0xff00ff00;
+	uint32_t color = Plane.nColor;
 	for(int i = 0; i < PLANE_DEBUG_TESSELATION-1; ++i)
 	{
 		for(int j = 0; j < PLANE_DEBUG_TESSELATION-1; ++j)
@@ -180,12 +181,12 @@ void DebugDrawPlane(SDebugDrawPlane& Plane)
 			v3 p3 = vPoints[i*PLANE_DEBUG_TESSELATION+j];
 			v3 p4 = vPoints[i*PLANE_DEBUG_TESSELATION+j];
 			v3 p5 = vPoints[i*PLANE_DEBUG_TESSELATION+j] + vNormal * 0.03f;
-			*pLines++ = Vertex0(p0.x, p0.y, p0.z, c0, 0.f, 0.f);
-			*pLines++ = Vertex0(p1.x, p1.y, p1.z, c0, 0.f, 0.f);
-			*pLines++ = Vertex0(p2.x, p2.y, p2.z, c0, 0.f, 0.f);
-			*pLines++ = Vertex0(p3.x, p3.y, p3.z, c0, 0.f, 0.f);
-			*pLines++ = Vertex0(p4.x, p4.y, p4.z, c1, 0.f, 0.f);
-			*pLines++ = Vertex0(p5.x, p5.y, p5.z, c1, 0.f, 0.f);
+			*pLines++ = Vertex0(p0.x, p0.y, p0.z, color, 0.f, 0.f);
+			*pLines++ = Vertex0(p1.x, p1.y, p1.z, color, 0.f, 0.f);
+			*pLines++ = Vertex0(p2.x, p2.y, p2.z, color, 0.f, 0.f);
+			*pLines++ = Vertex0(p3.x, p3.y, p3.z, color, 0.f, 0.f);
+			*pLines++ = Vertex0(p4.x, p4.y, p4.z, color, 0.f, 0.f);
+			*pLines++ = Vertex0(p5.x, p5.y, p5.z, color, 0.f, 0.f);
 			nCount -= 6;
 		}
 	}
@@ -204,7 +205,7 @@ namespace
 		SHADER_SET("ModelViewMatrix", Box.mat);
 		SHADER_SET("UseVertexColor", 1.f);
 		SHADER_SET("Size", Box.vSize);
-		uint32_t nColor = Box.nColor;
+		uint32_t nColor = -1;//Box.nColor|0xff000000;
 		Vertex0* pLines = (Vertex0*)VertexBufferPushVertices(pPushBuffer, 8 * 3, EDM_LINES);
 		float f = 1.0f;
 		*pLines++ = Vertex0(f, f, f, nColor, 0.f, 0.f);
@@ -336,9 +337,13 @@ void DebugDrawFlush(m mprj)
 		glEnable(GL_DEPTH_TEST);
 		glDepthFunc(GL_LEQUAL);
 
+
+		//glEnable(GL_DEPTH_TEST);
+		//glDepthFunc(GL_LEQUAL);
+
 		ShaderUse(VS_DEBUG, PS_DEBUG);
 
-		SHADER_SET("Color", v4init(1,0,0,0));
+		SHADER_SET("Color", v4init(1,0,0,1));
 		SHADER_SET("ProjectionMatrix", mprj);
 		SHADER_SET("ModelViewMatrix", mid());
 		SHADER_SET("UseVertexColor", 1.f);
@@ -350,9 +355,9 @@ void DebugDrawFlush(m mprj)
 			if(Box.nUseZ)
 			{
 				DebugDrawBox(Box);
+				VertexBufferPushFlush(pPushBuffer);
 			}
 		}
-		VertexBufferPushFlush(pPushBuffer);
 
 		glDisable(GL_DEPTH_TEST);
 		glDepthMask(0);
@@ -362,25 +367,25 @@ void DebugDrawFlush(m mprj)
 			if(!Box.nUseZ)
 			{
 				DebugDrawBox(Box);
-
 				VertexBufferPushFlush(pPushBuffer);
-
 			}
 		}
+		VertexBufferPushFlush(pPushBuffer);
 		
 		
-			ShaderUse(VS_DEBUG, PS_DEBUG);
-			SHADER_SET("Color", v4init(1,0,0,0));
-			SHADER_SET("ProjectionMatrix", mprj);
-			SHADER_SET("ModelViewMatrix", mid());
-			SHADER_SET("UseVertexColor", 1.f);
-			SHADER_SET("Size", v3init(1,1,1));
+		ShaderUse(VS_DEBUG, PS_DEBUG);
+		SHADER_SET("Color", v4init(1,0,0,0));
+		SHADER_SET("ProjectionMatrix", mprj);
+		SHADER_SET("ModelViewMatrix", mid());
+		SHADER_SET("UseVertexColor", 1.f);
+		SHADER_SET("Size", v3init(1,1,1));
 
 		for(SDebugDrawBounds& Bounds : g_DebugDrawState.Bounds)
 		{
 			DebugDrawBounds(Bounds);
+			VertexBufferPushFlush(pPushBuffer);
 		}
-		VertexBufferPushFlush(pPushBuffer);
+		
 
 
 		{
@@ -395,6 +400,7 @@ void DebugDrawFlush(m mprj)
 			for(uint32_t i = 0; i < g_DebugDrawState.Lines.Size(); ++i)
 			{
 				uint32_t nColor = g_DebugDrawState.Lines[i].nColor;
+				nColor = -1;
 				pLines[i*2+0].nColor = nColor;
 				pLines[i*2+0].nX = g_DebugDrawState.Lines[i].start.x;
 				pLines[i*2+0].nY = g_DebugDrawState.Lines[i].start.y;
