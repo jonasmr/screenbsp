@@ -51,6 +51,7 @@ struct SOccluderBspNode
 	uint8 bLeaf : 1;
 	uint16	nInside;
 	uint16	nOutside;
+	v3 vDebugCorner;
 };
 
 struct SOccluderBsp
@@ -408,6 +409,44 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 #endif
 //	ZASSERT(nOccluderIndex <= pBsp->Occluders.Size());
 
+
+	if(g_nBspDebugPlane < pBsp->Nodes.Size() && g_nBspDebugPlane)
+	{
+		v4 vPlane = GET_PLANE(pBsp, pBsp->Nodes[g_nBspDebugPlane]);
+		v3 vCorner = pBsp->Nodes[g_nBspDebugPlane].vDebugCorner;
+		ZDEBUG_DRAWPLANE(vPlane.tov3(), vCorner, -1);
+		v4 vColor0 = v4init(0,1,0,1);
+		v4 vColor1 = v4init(1,0,1,1);
+		int child = g_nBspDebugPlane;
+		int nChildArray[20];
+
+		int nCount = 0;
+		for(int i = 0; i < 20; ++i)
+		{
+			for(int j = 0;j < pBsp->Nodes.Size(); ++j)
+			{
+				SOccluderBspNode& N = pBsp->Nodes[j];
+				if(N.nInside == child || N.nOutside == child)
+				{
+					nChildArray[nCount++] = j; 
+					child = j;
+					break;
+				}
+			}
+		}
+		for(int i = 0; i < nCount; ++i)
+		{
+			float f = float(i) / (nCount-1);
+			v4 vColor = v4lerp(vColor0, vColor1, f);
+			int idx = nChildArray[i];
+			v4 vPlane = GET_PLANE(pBsp, pBsp->Nodes[idx]);
+			v3 vCorner = pBsp->Nodes[idx].vDebugCorner;
+			ZDEBUG_DRAWPLANE(vPlane.tov3(), vCorner, vColor.tocolor());
+
+		}
+	}
+
+
 	g_nCheck = 1;
 	if(g_KeyboardState.keys[SDL_SCANCODE_F10] & BUTTON_RELEASED)
 	{
@@ -601,13 +640,15 @@ int BspAddInternal(SOccluderBsp* pBsp, SBspEdgeIndex* Poly, uint32 nEdges, uint3
 				pBsp->Nodes[nPrev].nInside = nIndex;
 			nPrev = nIndex;
 			//if(i < nEdges - 1)
-			if(g_nBspDebugPlane == g_nBspDebugPlaneCounter++)
-			{
-				v4 vPlane = GET_PLANE(pBsp, Poly[i]);
-				uplotfnxt("DEBUG PLANE %d :: %d, flip %d", Poly[i].nOccluderIndex, Poly[i].nEdge, Poly[i].nFlip);
-				v3 vCorner = BspGetCorner(pBsp, Poly, nEdges, i < nEdges - 1 ? i : i-1);
-				BspDebugDrawHalfspace(vPlane.tov3(), vCorner);
-			}
+			pNode->vDebugCorner = BspGetCorner(pBsp, Poly, nEdges, i < nEdges - 1 ? i : i-1);
+			// if(g_nBspDebugPlane == g_nBspDebugPlaneCounter++)
+			// {
+			// 	v4 vPlane = GET_PLANE(pBsp, Poly[i]);
+			// 	uplotfnxt("DEBUG PLANE %d :: %d, flip %d", Poly[i].nOccluderIndex, Poly[i].nEdge, Poly[i].nFlip);
+				
+			// 	//BspDebugDrawHalfspace(vPlane.tov3(), vCorner);
+			// 	ZDEBUG_DRAWPLANE(vPlane.tov3(), vCorner, 0xff00ff00);
+			// }
 		}
 	}
 
