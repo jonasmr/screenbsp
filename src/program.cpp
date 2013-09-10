@@ -277,8 +277,18 @@ void WorldRender()
 		incfoo = !incfoo;
 	}
 
+
+
 	if(incfoo)
 		foo += 0.01f;
+	foo = 1.0f;
+
+	if(g_KeyboardState.keys[SDL_SCANCODE_L] & BUTTON_RELEASED)
+	{
+		g_WorldState.Camera.vPosition = v3init(0,sin(foo), 0);;
+	}
+
+
 	v3 vPos = vLockedCamPos;
 	v3 vDir = vLockedCamDir;
 	v3 vRight = vLockedCamRight;
