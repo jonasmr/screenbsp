@@ -683,6 +683,14 @@ v4 v4fromcolor(uint32_t nColor)
 }
 
 
+v4 v4neg(v4 v)
+{
+	v.x = -v.x;
+	v.y = -v.y;
+	v.z = -v.z;
+	v.w = -v.w;
+	return v;
+}
 
 float v4dot(v4 v0, v4 v1)
 {

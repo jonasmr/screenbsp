@@ -205,7 +205,7 @@ namespace
 		SHADER_SET("ModelViewMatrix", Box.mat);
 		SHADER_SET("UseVertexColor", 1.f);
 		SHADER_SET("Size", Box.vSize);
-		uint32_t nColor = -1;//Box.nColor|0xff000000;
+		uint32_t nColor = Box.nColor|0xff000000;
 		Vertex0* pLines = (Vertex0*)VertexBufferPushVertices(pPushBuffer, 8 * 3, EDM_LINES);
 		float f = 1.0f;
 		*pLines++ = Vertex0(f, f, f, nColor, 0.f, 0.f);
