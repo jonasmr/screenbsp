@@ -205,6 +205,9 @@ v3 operator -(const v3 v);
 
 inline 
 v3 v3init(float f){v3 r; r.x = f; r.y = f; r.z = f; return r;}
+inline 
+v3 v3init(v2 v, float f){v3 r; r.x = v.x; r.y = v.y; r.z = f; return r;}
+
 inline
 v3 v3init(float x, float y, float z){v3 r; r.x = x; r.y = y;r.z = z; return r;}
 inline 
@@ -256,6 +259,7 @@ v4 v4init(v4 v, float w){ v4 r; r.x = v.x; r.y = v.y; r.z = v.z; r.w = w; return
 
 
 v4 v4fromcolor(uint32_t nColor);
+v4 v4neg(v4 v);
 float v4dot(v4 v0, v4 v1);
 float v4length(v4 v0);
 float v4length2(v4 v0);
