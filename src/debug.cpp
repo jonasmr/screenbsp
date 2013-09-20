@@ -419,6 +419,11 @@ void DebugDrawFlush(m mprj)
 			uint32_t nColor = g_DebugDrawState.Poly[i].nColor;
 			uint32 nVertices = g_DebugDrawState.Poly[i].nVertices;
 			uint32 nStart = g_DebugDrawState.Poly[i].nStart;
+			if(nVertices < 3)
+			{
+				uprintf("empty poly!\n");
+				continue;
+			}
 			Vertex0* pVertices = (Vertex0*)VertexBufferPushVertices(pPushBuffer, 3 *(nVertices-2), EDM_TRIANGLES);
 			for(uint32 j = 1; j < nVertices-1; ++j)
 			{
