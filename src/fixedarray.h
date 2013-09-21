@@ -33,6 +33,17 @@ struct TFixedArray
 		POD::Construct(&Ptr()[nSize]);
 		return &Ptr()[nSize++];
 	}
+	T* PushBackN(uint32_t nCount)
+	{ 
+		ZASSERT(nCount + nSize < Capacity());
+		for(uint32_t i = 0; i < nCount; ++i)
+		{
+			POD::Construct(&Ptr()[i+nSize]);
+		}
+		nSize += nCount;
+		return &Ptr()[nSize-nCount];
+	}
+
 	T* PushBack(T* p, uint32_t nCount)
 	{
 		ZASSERT(nCount + nSize < Capacity());
@@ -57,6 +68,16 @@ struct TFixedArray
 		POD::Destruct(&Ptr()[nSize]);
 		return Back;
 	}
+	void PopBackN(uint32_t nCount)
+	{
+		ZASSERT(nCount <= nSize);
+		while(nCount--)
+		{
+			POD::Destruct(&Ptr()[--nSize]);
+		}		
+	}
+
+
 	T Top()
 	{
 		ZASSERT(nSize);

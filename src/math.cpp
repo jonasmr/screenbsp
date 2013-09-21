@@ -710,7 +710,8 @@ float v4length2(v4 v0)
 
 v4 v4makeplane(v3 p, v3 normal)
 {
-	v4 r = v4init(normal, -(v3dot(normal,p)));
+	float fDot = v3dot(normal,p);
+	v4 r = v4init(normal, -(fDot));
 	float vDot = v4dot(v4init(p, 1.f), r);
 	if(fabsf(vDot) > 0.001f)
 	{
