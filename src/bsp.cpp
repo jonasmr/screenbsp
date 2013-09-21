@@ -217,10 +217,9 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 	const v3 vLocalUp = v3normalize(v3cross(vLocalRight, vLocalDirection));
 	const v3 vWorldOrigin = Desc.vOrigin;
 	const v3 vWorldDirection = Desc.vDirection;
-
-	// uplotfnxt("vLocalRight %4.2f %4.2f %4.2f", vLocalRight.x, vLocalRight.y, vLocalRight.z);
-	// uplotfnxt("vLocalOrigin %4.2f %4.2f %4.2f", vLocalOrigin.x, vLocalOrigin.y, vLocalOrigin.z);
-	// uplotfnxt("vLocalDirection %4.2f %4.2f %4.2f", vLocalDirection.x, vLocalDirection.y, vLocalDirection.z);
+	uplotfnxt("vLocalRight %4.2f %4.2f %4.2f", vLocalRight.x, vLocalRight.y, vLocalRight.z);
+	uplotfnxt("vLocalOrigin %4.2f %4.2f %4.2f", vLocalOrigin.x, vLocalOrigin.y, vLocalOrigin.z);
+	uplotfnxt("vLocalDirection %4.2f %4.2f %4.2f", vLocalDirection.x, vLocalDirection.y, vLocalDirection.z);
 	pBsp->mtobsp = mtobsp;
 	pBsp->mfrombsp = maffineinverse(mtobsp);
 
@@ -343,11 +342,11 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 		{
 			SWorldObject* pObject = pKeys[i].nIndex + pWorldObjects;
 			m mat = pObject->mObjectToWorld;
-			v3 pos = mat.trans.tov3();
+			//v3 pos = mat.trans.tov3();
 //			ZDEBUG_DRAWBOX(mid(), pos, vDBG, 0xffff0000, 1);
 
 			mat = mmult(mtobsp, mat);
-			pos = mtransform(pBsp->mfrombsp, mat.trans).tov3();
+//			pos = mtransform(pBsp->mfrombsp, mat.trans).tov3();
 //			ZDEBUG_DRAWBOX(mid(), pos, vDBG2, 0xff00ff, 1);
 
 
@@ -601,14 +600,14 @@ bool BspAddOccluder(SOccluderBsp* pBsp, v3 vCenter, v3 vNormal, v3 vUp, float fU
 		vCorners[2] = vCenter - vUp * fUpSize - vLeft * fLeftSize;
 		vCorners[3] = vCenter + vUp * fUpSize - vLeft * fLeftSize;
 	}
-	// v3 pos = mtransform(pBsp->mfrombsp, vCorners[0]);
-	// ZDEBUG_DRAWBOX(mid(), pos, v3rep(0.03f), 0xff00ff, 1);
-	// pos = mtransform(pBsp->mfrombsp, vCorners[1]);
-	// ZDEBUG_DRAWBOX(mid(), pos, v3rep(0.03f), 0xff00ff, 1);
-	// pos = mtransform(pBsp->mfrombsp, vCorners[2]);
-	// ZDEBUG_DRAWBOX(mid(), pos, v3rep(0.03f), 0xff00ff, 1);
-	// pos = mtransform(pBsp->mfrombsp, vCorners[3]);
-	// ZDEBUG_DRAWBOX(mid(), pos, v3rep(0.03f), 0xff00ff, 1);
+	v3 pos = mtransform(pBsp->mfrombsp, vCorners[0]);
+	ZDEBUG_DRAWBOX(mid(), pos, v3rep(0.03f), 0xff00ff, 1);
+	pos = mtransform(pBsp->mfrombsp, vCorners[1]);
+	ZDEBUG_DRAWBOX(mid(), pos, v3rep(0.03f), 0xff00ff, 1);
+	pos = mtransform(pBsp->mfrombsp, vCorners[2]);
+	ZDEBUG_DRAWBOX(mid(), pos, v3rep(0.03f), 0xff00ff, 1);
+	pos = mtransform(pBsp->mfrombsp, vCorners[3]);
+	ZDEBUG_DRAWBOX(mid(), pos, v3rep(0.03f), 0xff00ff, 1);
 
 
 //	const v3 vNormal = v3cross(vCorners[0] - vCorners[1], vCorners[2] - vCorners[0]);
@@ -632,6 +631,7 @@ bool BspAddOccluder(SOccluderBsp* pBsp, v3* vCorners, uint32 nNumCorners)
 	ZASSERT(nNumCorners == 4);
 	const v3 vOrigin = v3zero();
 	const v3 vDirection = v3init(0,0,-1);//vLocalDirection
+
 	uint32 nIndex = pBsp->Occluders.Size();
 	SOccluderPlane* pPlane = pBsp->Occluders.PushBack();
 	v3 vInnerNormal = v3normalize(v3cross(vCorners[1]-vCorners[0], vCorners[3]-vCorners[0]));
