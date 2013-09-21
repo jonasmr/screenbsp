@@ -329,7 +329,10 @@ void WorldRender()
 	ViewDesc.fZNear = g_WorldState.Camera.fNear;
 	uplotfnxt("DEBUG POS %f %f %f", vPos.x, vPos.y, vPos.z);
 
-	BspBuild(g_Bsp, &g_WorldState.Occluders[0], nNumOccluders, &g_WorldState.WorldObjects[0], 
+	BspBuild(g_Bsp, &g_WorldState.Occluders[0], 
+		//nNumOccluders, 
+		2,
+		&g_WorldState.WorldObjects[0], 
 		//g_WorldState.nNumWorldObjects, 
 		1,
 		ViewDesc);
@@ -376,6 +379,7 @@ void WorldRender()
 	m mcliptoworld = mmult(g_WorldState.Camera.mviewinv, g_WorldState.Camera.mprjinv);
 	v3 veye = g_WorldState.Camera.vPosition;
 	int nMaxTileLights = 0;
+	if(0)
 	for(int i = 0; i < g_LightTileWidth; ++i)
 	{
 			MICROPROFILE_SCOPEI("MAIN", "Tile Stuff", 0xff44dddd);
