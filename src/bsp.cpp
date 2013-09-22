@@ -753,8 +753,8 @@ v3 BspToPlane2(v4 p)
 	// fAbs = abs(fDot);
 	// ZASSERT(fAbs < 0.001f);
 
-
-	return v3init(p.x, p.y, p.w + p.z);
+	
+	return v3init(v2normalize(v2init(p.x, p.y)), p.w + p.z);
 }
 
 float BspKryds2d(v3 p0, v3 p1)
