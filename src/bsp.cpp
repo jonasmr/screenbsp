@@ -25,7 +25,7 @@ uint32 g_nCheck = 0;
 int g_EdgeMask = 0xff;
 
 
-
+uint32 g_nFirst = 0;
 struct SOccluderPlane;
 struct SBspEdgeIndex;
 struct SOccluderBspNode;
@@ -183,7 +183,7 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 	g_nBspDebugPlaneCounter = 0;
 	g_nDrawCount = 0;
 
-	uplotfnxt("OCCLUDER Occluders:(f3)%d Clipresult:(f4)%d Edges:(f5)%d", g_nBspOccluderDrawOccluders, g_nBspOccluderDebugDrawClipResult, g_nBspOccluderDrawEdges);
+	//uplotfnxt("OCCLUDER Occluders:(f3)%d Clipresult:(f4)%d Edges:(f5)%d", g_nBspOccluderDrawOccluders, g_nBspOccluderDebugDrawClipResult, g_nBspOccluderDrawEdges);
 	if(g_KeyboardState.keys[SDL_SCANCODE_F8] & BUTTON_RELEASED)
 		g_nBspDebugPlane ++;
 	if(g_KeyboardState.keys[SDL_SCANCODE_F7] & BUTTON_RELEASED)
@@ -198,7 +198,7 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 	pBsp->nDepth = 0;
 	pBsp->Nodes.Clear();
 	pBsp->Planes.Clear();
-
+	g_nFirst = 0;
 	pBsp->DescOrg = Desc;
 	m mtobsp = mcreate(Desc.vDirection, Desc.vRight, Desc.vOrigin);
 	const v3 vLocalDirection = mrotate(mtobsp, Desc.vDirection);
@@ -207,9 +207,9 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 	const v3 vLocalUp = v3normalize(v3cross(vLocalRight, vLocalDirection));
 	const v3 vWorldOrigin = Desc.vOrigin;
 	const v3 vWorldDirection = Desc.vDirection;
-	uplotfnxt("vLocalRight %4.2f %4.2f %4.2f", vLocalRight.x, vLocalRight.y, vLocalRight.z);
-	uplotfnxt("vLocalOrigin %4.2f %4.2f %4.2f", vLocalOrigin.x, vLocalOrigin.y, vLocalOrigin.z);
-	uplotfnxt("vLocalDirection %4.2f %4.2f %4.2f", vLocalDirection.x, vLocalDirection.y, vLocalDirection.z);
+	//uplotfnxt("vLocalRight %4.2f %4.2f %4.2f", vLocalRight.x, vLocalRight.y, vLocalRight.z);
+	//uplotfnxt("vLocalOrigin %4.2f %4.2f %4.2f", vLocalOrigin.x, vLocalOrigin.y, vLocalOrigin.z);
+	//uplotfnxt("vLocalDirection %4.2f %4.2f %4.2f", vLocalDirection.x, vLocalDirection.y, vLocalDirection.z);
 	pBsp->mtobsp = mtobsp;
 	pBsp->mfrombsp = maffineinverse(mtobsp);
 
@@ -219,7 +219,7 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 	float fDist1 = v3distance(test,en);
 	float fDist = v3distance(v3init(0,0,-1), vLocalDirection);
 	//uprintf("DISTANCE IS %f... %f\n", fDist, fDist1);
-	if(abs(fDist)> 1e-5f || fDist1 > 1e-5f)
+	if(abs(fDist)> 1e-3f || fDist1 > 1e-3f)
 	{
 		ZBREAK();
 	}
@@ -675,7 +675,7 @@ void BspDrawPoly(SOccluderBsp* pBsp, uint16* Poly, uint32 nVertices, uint32 nCol
 {
 	uint32 nPolyEdges = nVertices-1;
 	v3* vCorners = (v3*)alloca(sizeof(v3)*nPolyEdges);
-	v4 vNormalPlane = BspGetPlane(pBsp, nPolyEdges);
+	v4 vNormalPlane = BspGetPlane(pBsp, Poly[nPolyEdges]);
 	for(int i = 0; i < nPolyEdges; ++i)
 	{
 		uint32 i0 = i;
@@ -775,10 +775,18 @@ bool BspPlaneTest(v4 plane0, v4 plane1, v4 ptest,  bool bDebug = false)
 	v2 p3 = p2d1.tov2() * -p2d1.z;
 	v2 p4 = v2hat(p2d1.tov2()) + p3;
 
-	//ZASSERT(abs(v3dot(v3init(p1, 1.f), p2d0))<0.0001f);
-	//ZASSERT(abs(v3dot(v3init(p2, 1.f), p2d0))<0.0001f);
-	//ZASSERT(abs(v3dot(v3init(p3, 1.f), p2d1))<0.0001f);
-	//ZASSERT(abs(v3dot(v3init(p4, 1.f), p2d1))<0.0001f);
+	float fDot1 = v3dot(v3init(p1, 1.f), p2d0);
+	if(fabs(fDot1)>0.0001f)
+		ZBREAK();
+	float fDot2 = v3dot(v3init(p2, 1.f), p2d0);
+	if(fabs(fDot2)>0.0001f)
+		ZBREAK();
+	float fDot3 =v3dot(v3init(p3, 1.f), p2d1);
+	if(fabs(fDot3)>0.0001f)
+		ZBREAK();
+	float fDot4 = v3dot(v3init(p4, 1.f), p2d1);
+	if(fabs(fDot4)>0.0001f)
+		ZBREAK();
 
 	float t0 = p1.x * p2.y - p1.y * p2.x;
 	float t1 = p3.x * p4.y - p3.y * p4.x;
@@ -1072,6 +1080,7 @@ void BspDrawPoly2(SOccluderBsp* pBsp, uint16* Poly, uint32 nVertices, uint32 nCo
 
 int BspAddInternal(SOccluderBsp* pBsp, uint16 nParent, bool bOutsideParent, uint16* pIndices, uint16 nNumPlanes, uint32 nExcludeMask, uint32 nLevel)
 {
+	uplotfnxt("ADDING INTERNAL parent %d.. nIndices %d, nExcludeMask %08x level %d", nParent, nNumPlanes, nExcludeMask, nLevel);
 
 	int nNewIndex = (int)pBsp->Nodes.Size();
 	int nPrev = -1;
@@ -1325,11 +1334,12 @@ ClipPolyResult BspClipPoly(SOccluderBsp* pBsp, uint16 nClipPlane, uint16* pIndic
 	v4 vClipPlane = BspGetPlane(pBsp, nClipPlane);
 	for(int i = 0; i < nNumPlanes; ++i)
 		vPlanes[i] = BspGetPlane(pBsp, pIndices[i]);
+	bool bDebug = 0 == g_nFirst++;
 	for(int i = 0; i < nNumEdges; ++i)
 	{
 		v4 p0 = vPlanes[i];
 		v4 p1 = vPlanes[(i+1)%nNumEdges];
-		bCorners[i] = BspPlaneTest(p0, p1, vClipPlane, false);
+		bCorners[i] = BspPlaneTest(p0, p1, vClipPlane, bDebug);
 	}
 
 
@@ -1469,6 +1479,7 @@ void BspAddRecursive(SOccluderBsp* pBsp, uint32 nBspIndex, uint16* pIndices, uin
 	uint32 nExcludeMaskOut = 0, nExcludeMaskIn = 0;
 
 	ClipPolyResult CR = BspClipPoly(pBsp, Node.nPlaneIndex, pIndices, nNumIndices, nExcludeMask, &ClippedPolyIn[0], &ClippedPolyOut[0], nNumEdgeIn, nNumEdgeOut, nExcludeMaskIn, nExcludeMaskOut);
+	uplotfnxt("CLIP RES %02x start %d, in %d, out %d", CR, nNumIndices, nNumEdgeIn, nNumEdgeOut);
 
 
 	ZASSERT(Node.nInside != OCCLUDER_EMPTY);
