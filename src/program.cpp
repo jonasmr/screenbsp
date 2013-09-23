@@ -331,7 +331,7 @@ void WorldRender()
 
 	BspBuild(g_Bsp, &g_WorldState.Occluders[0], 
 		//nNumOccluders, 
-		2,
+		1,
 		&g_WorldState.WorldObjects[0], 
 		//g_WorldState.nNumWorldObjects, 
 		1,

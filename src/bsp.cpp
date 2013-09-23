@@ -1517,180 +1517,170 @@ void BspAddRecursive(SOccluderBsp* pBsp, uint32 nBspIndex, uint16* pIndices, uin
 
 
 
-bool BspCullObjectR(SOccluderBsp* pBsp, uint32 Index, SBspEdgeIndex* Poly, uint32 nNumEdges)
+bool BspCullObjectR(SOccluderBsp* pBsp, uint32 Index, uint16* Poly, uint32 nNumEdges)
 {
-	return false;
-//	if(g_nBspDebugPlane == g_nBspDebugPlaneCounter)
-//	{
-//		BspDrawPoly(pBsp, Poly, nNumEdges, 0xff000000|randredcolor(), 0, 1);
-//		if(g_nBreakOnClipIndex && g_nBspDebugPlane == g_nBspDebugPlaneCounter)
-//		{
-//			//uprintf("BREAK\n");
-//		}
-//	}
-//	g_nBspDebugPlaneCounter++;
-//
-//
-//
-//	SOccluderBspNode Node = pBsp->Nodes[Index];
-//	SBspEdgeIndex EI = Node;
-//	uint32 nMaxEdges = (nNumEdges+1) * 2;
-//	SBspEdgeIndex* ClippedPoly = (SBspEdgeIndex*)alloca(nMaxEdges * sizeof(SBspEdgeIndex));
-//	uint32 nIn = 0;
-//	uint32 nOut = 0;
-//
-//	ClipPolyResult CR = BspClipPoly(pBsp, EI, Poly, nNumEdges, ClippedPoly, nIn, nOut);
-//	SBspEdgeIndex* pIn = &ClippedPoly[0];
-//	SBspEdgeIndex* pOut = &ClippedPoly[nIn];
-//	bool bFail = false;
-//	if(CR & ECPR_INSIDE)
-//	{
-//		ZASSERT(Node.nInside != OCCLUDER_EMPTY);
-//		if(Node.nInside == OCCLUDER_LEAF)
-//		{
-////			ZASSERT(Node.nEdge == 4);
-//			//culled
-//		}
-//		else if(!BspCullObjectR(pBsp, Node.nInside, pIn, nIn))
-//		{
-//			if(!g_nBspOccluderDebugDrawClipResult)
-//				return false;
-//			bFail = true;
-//		//	uplotfnxt("FAIL INSIDE");
-//		}
-//	}
-//	if(CR & ECPR_OUTSIDE)
-//	{
-//		if(g_nBspOccluderDebugDrawClipResult && Node.nOutside == OCCLUDER_EMPTY)
-//		{
-//			BspDrawPoly(pBsp, pOut, nOut, 0xff000000|randredcolor(), 0, 1);
-//		}
-//
-//		ZASSERT(Node.nOutside != OCCLUDER_LEAF);
-//		if((Node.nOutside == OCCLUDER_EMPTY || !BspCullObjectR(pBsp, Node.nOutside, pOut, nOut)))
-//		{
-//			//uplotfnxt("FAIL OUTSIDE %d :: %d,%d", Index, Node.nOccluderIndex, Node.nEdge);
-//
-//			return false;
-//		}
-//
-//	}
-//	return !bFail;
+	// if(g_nBspDebugPlane == g_nBspDebugPlaneCounter)
+	// {
+	// 	BspDrawPoly(pBsp, Poly, nNumEdges, 0xff000000|randredcolor(), 0, 1);
+	// 	if(g_nBreakOnClipIndex && g_nBspDebugPlane == g_nBspDebugPlaneCounter)
+	// 	{
+	// 		//uprintf("BREAK\n");
+	// 	}
+	// }
+	//	g_nBspDebugPlaneCounter++;
+
+
+	SOccluderBspNode Node = pBsp->Nodes[Index];
+	uint32 nMaxEdges = (nNumEdges+1);
+	uint16* ClippedPolyIn = (uint16*)alloca(nMaxEdges * sizeof(uint16));
+	uint16* ClippedPolyOut = (uint16*)alloca(nMaxEdges * sizeof(uint16));
+	uint32 nIn = 0;
+	uint32 nOut = 0;
+	uint32 nExclusionIn = 0, nExclusionOut = 0;
+
+
+// ClipPolyResult BspClipPoly(SOccluderBsp* pBsp, uint16 nClipPlane, uint16* pIndices, 
+// 	uint16 nNumPlanes, uint32 nExcludeMask, uint16* pPolyIn, uint16* pPolyOut, 
+// 	uint32& nEdgesIn_, uint32& nEdgesOut_, uint32& nMaskIn_, uint32& nMaskOut_)
+
+	ClipPolyResult CR = BspClipPoly(pBsp, Node.nPlaneIndex, Poly, nNumEdges, 0, ClippedPolyIn, ClippedPolyOut, 
+									nIn, nOut, nExclusionIn, nExclusionOut);
+	bool bFail = false;
+	if(CR & ECPR_INSIDE)
+	{
+		ZASSERT(Node.nInside != OCCLUDER_EMPTY);
+		if(Node.nInside == OCCLUDER_LEAF)
+		{
+//			ZASSERT(Node.nEdge == 4);
+			//culled
+		}
+		else if(!BspCullObjectR(pBsp, Node.nInside, ClippedPolyIn, nIn))
+		{
+			if(!g_nBspOccluderDebugDrawClipResult)
+				return false;
+			bFail = true;
+		//	uplotfnxt("FAIL INSIDE");
+		}
+	}
+	if(CR & ECPR_OUTSIDE)
+	{
+		if(g_nBspOccluderDebugDrawClipResult && Node.nOutside == OCCLUDER_EMPTY)
+		{
+			BspDrawPoly(pBsp, ClippedPolyOut, nOut, 0xff000000|randredcolor(), 0, 1);
+		}
+
+		ZASSERT(Node.nOutside != OCCLUDER_LEAF);
+		if((Node.nOutside == OCCLUDER_EMPTY || !BspCullObjectR(pBsp, Node.nOutside, ClippedPolyOut, nOut)))
+		{
+			//uplotfnxt("FAIL OUTSIDE %d :: %d,%d", Index, Node.nOccluderIndex, Node.nEdge);
+
+			return false;
+		}
+
+	}
+	return !bFail;
 }
 
 bool BspCullObject(SOccluderBsp* pBsp, SWorldObject* pObject)
 {
-	return false;
 	MICROPROFILE_SCOPEIC("BSP", "Cull");
-	//if(!pBsp->Nodes.Size())
-	//	return false;
-	//g_nBspDebugPlaneCounter = 0;	
-	//long seed = rand();
-	//srand((int)(uintptr)pObject);
+	if(!pBsp->Nodes.Size())
+		return false;
+	g_nBspDebugPlaneCounter = 0;	
+	long seed = rand();
+	srand((int)(uintptr)pObject);
 
 	//SBspEdgeIndex Poly[5];
-	//uint32 nSize = pBsp->Occluders.Size();
-	//{
-	//	MICROPROFILE_SCOPEIC("BSP", "CullPrepare");
-	//	m mObjectToWorld = pObject->mObjectToWorld;
-	//	m mObjectToBsp = mmult(pBsp->mtobsp, mObjectToWorld);
-	//	v3 vHalfSize = pObject->vSize;
-	//	v4 vCenterWorld_ = mtransform(pBsp->mtobsp, pObject->mObjectToWorld.trans);
-	//	v4 vCenterWorld_1 = mObjectToBsp.trans;
-	//	v3 vCenterWorld = v3init(vCenterWorld_);
-	//	v3 vCenterWorld1 = v3init(vCenterWorld_1);
-	//	//uprintf("distance is %f\n", v3distance(vCenterWorld1, vCenterWorld));
-	//	ZASSERT(abs(v3distance(vCenterWorld1, vCenterWorld)) < 1e-3f);
-	//	v3 vOrigin = v3zero(); //vLocalOrigin
-	//	v3 vToCenter = v3normalize(vCenterWorld - vOrigin);
-	//	v3 vUp = v3init(0.f,1.f, 0.f);//replace with camera up.
-	//	if(v3dot(vUp, vToCenter) > 0.9f)
-	//		vUp = v3init(1.f, 0, 0);
-	//	v3 vRight = v3normalize(v3cross(vToCenter, vUp));
-	//	m mbox = mcreate(vToCenter, vRight, vCenterWorld);
-	//	m mboxinv = maffineinverse(mbox);
-	//	m mcomposite = mmult(mbox, mObjectToWorld);
-	//	v3 AABB = obbtoaabb(mcomposite, vHalfSize);
-	//	
-	//	vRight = mgetxaxis(mboxinv);
-	//	vUp = mgetyaxis(mboxinv);
+	uint16_t Poly[5];
+	uint32 nSize = pBsp->Planes.Size();
+	{
+		MICROPROFILE_SCOPEIC("BSP", "CullPrepare");
+		m mObjectToWorld = pObject->mObjectToWorld;
+		m mObjectToBsp = mmult(pBsp->mtobsp, mObjectToWorld);
+		v3 vHalfSize = pObject->vSize;
+		v4 vCenterWorld_ = mtransform(pBsp->mtobsp, pObject->mObjectToWorld.trans);
+		v4 vCenterWorld_1 = mObjectToBsp.trans;
+		v3 vCenterWorld = v3init(vCenterWorld_);
+		v3 vCenterWorld1 = v3init(vCenterWorld_1);
+		//uprintf("distance is %f\n", v3distance(vCenterWorld1, vCenterWorld));
+		ZASSERT(abs(v3distance(vCenterWorld1, vCenterWorld)) < 1e-3f);
+		v3 vOrigin = v3zero(); //vLocalOrigin
+		v3 vToCenter = v3normalize(vCenterWorld - vOrigin);
+		v3 vUp = v3init(0.f,1.f, 0.f);//replace with camera up.
+		if(v3dot(vUp, vToCenter) > 0.9f)
+			vUp = v3init(1.f, 0, 0);
+		v3 vRight = v3normalize(v3cross(vToCenter, vUp));
+		m mbox = mcreate(vToCenter, vRight, vCenterWorld);
+		m mboxinv = maffineinverse(mbox);
+		m mcomposite = mmult(mbox, mObjectToBsp);
+		v3 AABB = obbtoaabb(mcomposite, vHalfSize);
+		
+		vRight = mgetxaxis(mboxinv);
+		vUp = mgetyaxis(mboxinv);
 
-	//	v3 vCenterQuad = vCenterWorld - vToCenter * AABB.z * 1.1f;
-	//	v3 v0 = vCenterQuad + vRight * AABB.x + vUp * AABB.y;
-	//	v3 v1 = vCenterQuad + vRight * -AABB.x + vUp * AABB.y;
-	//	v3 v2 = vCenterQuad + vRight * -AABB.x + vUp * -AABB.y;
-	//	v3 p3 = vCenterQuad + vRight * AABB.x + vUp * -AABB.y;
-
-
-	//	if(g_nBspOccluderDebugDrawClipResult)
-	//	{
-	//		ZDEBUG_DRAWLINE(v0, v1, 0xff00ff00, true);
-	//		ZDEBUG_DRAWLINE(v2, v1, 0xff00ff00, true);
-	//		ZDEBUG_DRAWLINE(p3, v2, 0xff00ff00, true);
-	//		ZDEBUG_DRAWLINE(v0, p3, 0xff00ff00, true);
-	//	}
-	//	// vCenterQuad += vToCenter * 2*AABB.z;
-	//	// v3 v0_ = vCenterQuad + vRight * AABB.x + vUp * AABB.y;
-	//	// v3 v1_ = vCenterQuad + vRight * -AABB.x + vUp * AABB.y;
-	//	// v3 v2_ = vCenterQuad + vRight * -AABB.x + vUp * -AABB.y;
-	//	// v3 v3_ = vCenterQuad + vRight * AABB.x + vUp * -AABB.y;
-
-	//	// ZDEBUG_DRAWLINE(v0_, v1_, 0xff00ff00, true);
-	//	// ZDEBUG_DRAWLINE(v2_, v1_, 0xff00ff00, true);
-	//	// ZDEBUG_DRAWLINE(v3_, v2_, 0xff00ff00, true);
-	//	// ZDEBUG_DRAWLINE(v0_, v3_, 0xff00ff00, true);
-
-	//	// ZDEBUG_DRAWLINE(v0, v0_, 0xff00ff00, true);
-	//	// ZDEBUG_DRAWLINE(v1, v1_, 0xff00ff00, true);
-	//	// ZDEBUG_DRAWLINE(v2, v2_, 0xff00ff00, true);
-	//	// ZDEBUG_DRAWLINE(p3, v3_, 0xff00ff00, true);
-
-	//	// ZDEBUG_DRAWLINE(v0*5.f, v3zero(), 0, true);
-	//	// ZDEBUG_DRAWLINE(v1*5.f, v3zero(), 0, true);
-	//	// ZDEBUG_DRAWLINE(v2*5.f, v3zero(), 0, true);
-	//	// ZDEBUG_DRAWLINE(p3*5.f, v3zero(), 0, true);
-	//	
-	//	pBsp->Occluders.Resize(nSize+1);//TODO use thread specific blocks
-
-	//	SOccluderPlane* pPlanes = pBsp->Occluders.Ptr() + nSize;
-	//	v3 n0 = v3normalize(v3cross(v0, v0 - v1));
-	//	v3 n1 = v3normalize(v3cross(v1, v1 - v2));
-	//	v3 n2 = v3normalize(v3cross(v2, v2 - p3));
-	//	v3 n3 = v3normalize(v3cross(p3, p3 - v0));
-	//	pPlanes[0].p[0] = v4makeplane(v0, n0);
-	//	pPlanes[0].p[1] = v4makeplane(v1, n1);
-	//	pPlanes[0].p[2] = v4makeplane(v2, n2);
-	//	pPlanes[0].p[3] = v4makeplane(p3, n3);
-	//	pPlanes[0].p[4] = v4makeplane(p3, v3normalize(vToCenter));
+		v3 vCenterQuad = vCenterWorld - vToCenter * AABB.z * 1.1f;
+		v3 v0 = vCenterQuad + vRight * AABB.x + vUp * AABB.y;
+		v3 v1 = vCenterQuad + vRight * -AABB.x + vUp * AABB.y;
+		v3 v2 = vCenterQuad + vRight * -AABB.x + vUp * -AABB.y;
+		v3 p3 = vCenterQuad + vRight * AABB.x + vUp * -AABB.y;
 
 
+		if(g_nBspOccluderDebugDrawClipResult)
+		{
+			v3 v0_ = mtransform(pBsp->mfrombsp, v0);
+			v3 v1_ = mtransform(pBsp->mfrombsp, v1);
+			v3 v2_ = mtransform(pBsp->mfrombsp, v2);
+			v3 p3_ = mtransform(pBsp->mfrombsp, p3);
+			ZDEBUG_DRAWLINE(v0_, v1_, 0xff00ff00, true);
+			ZDEBUG_DRAWLINE(v2_, v1_, 0xff00ff00, true);
+			ZDEBUG_DRAWLINE(p3_, v2_, 0xff00ff00, true);
+			ZDEBUG_DRAWLINE(v0_, p3_, 0xff00ff00, true);
+		}
+		// vCenterQuad += vToCenter * 2*AABB.z;
+		// v3 v0_ = vCenterQuad + vRight * AABB.x + vUp * AABB.y;
+		// v3 v1_ = vCenterQuad + vRight * -AABB.x + vUp * AABB.y;
+		// v3 v2_ = vCenterQuad + vRight * -AABB.x + vUp * -AABB.y;
+		// v3 v3_ = vCenterQuad + vRight * AABB.x + vUp * -AABB.y;
 
-	//	Poly[0].nOccluderIndex = nSize;
-	//	Poly[0].nEdge = 0;
-	//	Poly[0].nFlip = 0;
-	//	Poly[0].nSkip = 0;
-	//	Poly[1].nOccluderIndex = nSize;
-	//	Poly[1].nEdge = 1;
-	//	Poly[1].nFlip = 0;
-	//	Poly[1].nSkip = 0;
-	//	Poly[2].nOccluderIndex = nSize;
-	//	Poly[2].nEdge = 2;
-	//	Poly[2].nFlip = 0;
-	//	Poly[2].nSkip = 0;
-	//	Poly[3].nOccluderIndex = nSize;
-	//	Poly[3].nEdge = 3;
-	//	Poly[3].nFlip = 0;
-	//	Poly[3].nSkip = 0;
-	//	Poly[4].nOccluderIndex = nSize;
-	//	Poly[4].nEdge = 4;
-	//	Poly[4].nFlip = 0;
-	//	Poly[4].nSkip = 0;
-	//}
-	//bool bResult = BspCullObjectR(pBsp, 0, &Poly[0], 5);
-	//pBsp->Occluders.Resize(nSize);
-	//srand(seed);
+		// ZDEBUG_DRAWLINE(v0_, v1_, 0xff00ff00, true);
+		// ZDEBUG_DRAWLINE(v2_, v1_, 0xff00ff00, true);
+		// ZDEBUG_DRAWLINE(v3_, v2_, 0xff00ff00, true);
+		// ZDEBUG_DRAWLINE(v0_, v3_, 0xff00ff00, true);
 
-	//return bResult;
+		// ZDEBUG_DRAWLINE(v0, v0_, 0xff00ff00, true);
+		// ZDEBUG_DRAWLINE(v1, v1_, 0xff00ff00, true);
+		// ZDEBUG_DRAWLINE(v2, v2_, 0xff00ff00, true);
+		// ZDEBUG_DRAWLINE(p3, v3_, 0xff00ff00, true);
+
+		// ZDEBUG_DRAWLINE(v0*5.f, v3zero(), 0, true);
+		// ZDEBUG_DRAWLINE(v1*5.f, v3zero(), 0, true);
+		// ZDEBUG_DRAWLINE(v2*5.f, v3zero(), 0, true);
+		// ZDEBUG_DRAWLINE(p3*5.f, v3zero(), 0, true);
+		
+		pBsp->Planes.Resize(nSize+5);//TODO use thread specific blocks
+
+		v4* pPlanes = pBsp->Planes.Ptr() + nSize;
+		v3 n0 = v3normalize(v3cross(v0, v0 - v1));
+		v3 n1 = v3normalize(v3cross(v1, v1 - v2));
+		v3 n2 = v3normalize(v3cross(v2, v2 - p3));
+		v3 n3 = v3normalize(v3cross(p3, p3 - v0));
+		pPlanes[0] = v4init(n0, 0.f);
+		pPlanes[1] = v4init(n1, 0.f);
+		pPlanes[2] = v4init(n2, 0.f);
+		pPlanes[3] = v4init(n3, 0.f);
+		// pPlanes[0] = v4makeplane(v0, n0);
+		// pPlanes[1] = v4makeplane(v1, n1);
+		// pPlanes[2] = v4makeplane(v2, n2);
+		// pPlanes[3] = v4makeplane(p3, n3);
+		pPlanes[4] = v4makeplane(p3, v3normalize(vToCenter));
+		for(int i = 0; i < 5; ++i)
+			Poly[i] = nSize + i;
+	}
+	bool bResult = BspCullObjectR(pBsp, 0, &Poly[0], 5);
+	pBsp->Planes.Resize(nSize);
+	srand(seed);
+
+	return bResult;
 }
 
 
