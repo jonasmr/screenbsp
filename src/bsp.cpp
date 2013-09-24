@@ -7,6 +7,17 @@
 #include "bsp.h"
 #include "microprofileinc.h"
 
+// todo:
+//  cull in front
+//  overlap occluders in front
+//  check corner issue
+//  do box test
+//
+//
+//  optimize!
+//
+
+
 #include <algorithm>
 #define OCCLUDER_EMPTY (0xc000)
 #define OCCLUDER_LEAF (0x8000)
@@ -1531,6 +1542,35 @@ bool BspCullObjectR(SOccluderBsp* pBsp, uint32 Index, uint16* Poly, uint32 nNumE
 
 
 	SOccluderBspNode Node = pBsp->Nodes[Index];
+	v4 vPlane = BspGetPlane(pBsp, Node.nPlaneIndex);
+	if(Node.nInside == OCCLUDER_LEAF)
+	{
+		ZASSERT(vPlane.w != 0.f);
+		//v3 BspPlaneIntersection(v4 p0, v4 p1, v4 p2)
+		v4 vNormalPlane = BspGetPlane(pBsp, Poly[nNumEdges-1]);
+		bool bVisible = true;
+		for(int i = 0; i < nNumEdges-1; ++i)
+		{
+			v4 p0 = BspGetPlane(pBsp, Poly[i]);
+			v4 p1 = BspGetPlane(pBsp, Poly[(i+1)%(nNumEdges-1)]);
+			v3 vIntersect = BspPlaneIntersection(p0, p1, vNormalPlane);
+			float fDot = v4dot(v4init(vIntersect, 1.f), vPlane);
+			uplotfnxt("VISIBLE dot %f", fDot);
+			bVisible = bVisible && fDot < 0.f;
+		}
+		if(bVisible)
+		{
+			BspDrawPoly(pBsp, Poly, nNumEdges, 0xff000000|randredcolor(), 0, 1);
+
+		}
+		uplotfnxt("VISIBLE TEST %d", bVisible);
+		return !bVisible;
+	}
+	else
+	{
+		ZASSERT(vPlane.w == 0.f);
+
+	}
 	uint32 nMaxEdges = (nNumEdges+1);
 	uint16* ClippedPolyIn = (uint16*)alloca(nMaxEdges * sizeof(uint16));
 	uint16* ClippedPolyOut = (uint16*)alloca(nMaxEdges * sizeof(uint16));
