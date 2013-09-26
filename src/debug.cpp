@@ -334,12 +334,12 @@ void DebugDrawFlush(m mprj)
 		}
 		glDisable(GL_CULL_FACE);
 
+
+
+
+		//ENABLE DEPTH
 		glEnable(GL_DEPTH_TEST);
 		glDepthFunc(GL_LEQUAL);
-
-
-		//glEnable(GL_DEPTH_TEST);
-		//glDepthFunc(GL_LEQUAL);
 
 		ShaderUse(VS_DEBUG, PS_DEBUG);
 
@@ -359,6 +359,12 @@ void DebugDrawFlush(m mprj)
 			}
 		}
 
+
+
+
+
+
+		//DISABLE DEPTH
 		glDisable(GL_DEPTH_TEST);
 		glDepthMask(0);
 
@@ -371,8 +377,8 @@ void DebugDrawFlush(m mprj)
 			}
 		}
 		VertexBufferPushFlush(pPushBuffer);
-		
-		
+
+
 		ShaderUse(VS_DEBUG, PS_DEBUG);
 		SHADER_SET("Color", v4init(1,0,0,0));
 		SHADER_SET("ProjectionMatrix", mprj);
@@ -386,7 +392,6 @@ void DebugDrawFlush(m mprj)
 			VertexBufferPushFlush(pPushBuffer);
 		}
 		
-
 
 		{
 			ShaderUse(VS_DEBUG, PS_DEBUG);
@@ -413,9 +418,6 @@ void DebugDrawFlush(m mprj)
 			VertexBufferPushFlush(pPushBuffer);
 		}
 
-		glEnable(GL_DEPTH_TEST);
-		glDepthMask(GL_TRUE);
-
 
 		v4* pVert = g_DebugDrawState.PolyVert.Ptr();
 		for(uint32 i = 0; i < g_DebugDrawState.Poly.Size(); ++i)
@@ -440,6 +442,7 @@ void DebugDrawFlush(m mprj)
 			}
 		}
 		VertexBufferPushFlush(pPushBuffer);
+
 		CheckGLError();
 		{
 			glDisable(GL_DEPTH_TEST);
@@ -450,7 +453,6 @@ void DebugDrawFlush(m mprj)
 			SHADER_SET("Color", v4init(1,0,0,0));
 			SHADER_SET("ProjectionMatrix", mprj);
 			SHADER_SET("ModelViewMatrix", mid());
-//			SHADER_SET("UseVertexColor", 1.f);
 			SHADER_SET("Size", v3init(1,1,1));
 
 
