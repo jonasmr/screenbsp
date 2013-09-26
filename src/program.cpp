@@ -90,7 +90,7 @@ void EditorStateInit()
 void WorldInit()
 {
 	g_WorldState.Occluders[0].mObjectToWorld = mrotatey(90*TORAD);
-	g_WorldState.Occluders[0].mObjectToWorld.trans = v4init(2.f,0.f,0.1f, 1.f);
+	g_WorldState.Occluders[0].mObjectToWorld.trans = v4init(3.f,0.f,0.1f, 1.f);
 	g_WorldState.Occluders[0].vSize = v3init(0.5f, 0.5f, 0.f);
 
 	g_WorldState.Occluders[1].mObjectToWorld = mrotatey(90*TORAD);
@@ -330,7 +330,7 @@ void WorldRender()
 	uplotfnxt("DEBUG POS %f %f %f", vPos.x, vPos.y, vPos.z);
 
 	BspBuild(g_Bsp, &g_WorldState.Occluders[0], 
-		//nNumOccluders, 
+		//nNumOccluders,
 		2,
 		&g_WorldState.WorldObjects[0], 
 		//g_WorldState.nNumWorldObjects, 
