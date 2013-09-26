@@ -56,7 +56,7 @@ SVertexBufferDynamic* VertexBufferCreatePush(EVertexFormat eFormat, uint32_t nEl
 	glBindBuffer(GL_ARRAY_BUFFER, pBuffer->nBufferObject);
 	glBufferData(GL_ARRAY_BUFFER, nDataSize, pBuffer->GetBackBuffer(), GL_STREAM_DRAW);
 	glVertexAttribPointer(LOC_POSITION, 3, GL_FLOAT, 0, nStride, 0);
-	glVertexAttribPointer(LOC_COLOR, 4, GL_UNSIGNED_BYTE, 1, nStride, (void*)(offsetof(Vertex0,nColor)));
+	glVertexAttribPointer(LOC_COLOR, GL_BGRA, GL_UNSIGNED_BYTE, 1, nStride, (void*)(offsetof(Vertex0,nColor)));
 	glVertexAttribPointer(LOC_TC0, 2, GL_FLOAT, 1, nStride, (void*)(offsetof(Vertex0,fU)));
 //	glVertexAttribPointer(LOC_POSITION, 3, GL_FLOAT, 0, nStride, 0);
 	glEnableVertexAttribArray(LOC_POSITION);
