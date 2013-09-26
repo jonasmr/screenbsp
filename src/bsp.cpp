@@ -1587,7 +1587,7 @@ bool BspCullObjectR(SOccluderBsp* pBsp, uint32 Index, uint16* Poly, uint32 nNumE
 		ZASSERT(vPlane.w != 0.f);
 		//v3 BspPlaneIntersection(v4 p0, v4 p1, v4 p2)
 		v4 vNormalPlane = BspGetPlane(pBsp, Poly[nNumEdges-1]);
-		bool bVisible = true;
+		bool bVisible = false;
 		for(int i = 0; i < nNumEdges-1; ++i)
 		{
 			v4 p0 = BspGetPlane(pBsp, Poly[i]);
@@ -1595,7 +1595,7 @@ bool BspCullObjectR(SOccluderBsp* pBsp, uint32 Index, uint16* Poly, uint32 nNumE
 			v3 vIntersect = BspPlaneIntersection(p0, p1, vNormalPlane);
 			float fDot = v4dot(v4init(vIntersect, 1.f), vPlane);
 			uplotfnxt("VISIBLE dot %f", fDot);
-			bVisible = bVisible && fDot < 0.f;
+			bVisible = bVisible || fDot < 0.f;
 		}
 		if(bVisible)
 		{
