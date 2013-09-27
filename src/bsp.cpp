@@ -23,7 +23,7 @@
 #define OCCLUDER_LEAF (0x8000)
 #define OCCLUDER_CLIP_MAX 0x100
 #define USE_FRUSTUM 0
-
+#define BSP_ADD_FRONT 1
 
 uint32 g_nBspOccluderDebugDrawClipResult = 1;
 uint32 g_nBspOccluderDrawEdges = 2;
@@ -1111,8 +1111,9 @@ void BspDrawPoly2(SOccluderBsp* pBsp, uint16* Poly, uint32 nVertices, uint32 nCo
 
 int BspAddInternal(SOccluderBsp* pBsp, uint16 nParent, bool bOutsideParent, uint16* pIndices, uint16 nNumPlanes, uint32 nExcludeMask, uint32 nLevel)
 {
-	uplotfnxt("ADDING INTERNAL parent %d.. nIndices %d, nExcludeMask %08x level %d", nParent, nNumPlanes, nExcludeMask, nLevel);
-
+	ZASSERT(nNumPlanes>1);
+	int nCount = 0;
+	uint32 nBaseExcludeMask = nExcludeMask;
 	int nNewIndex = (int)pBsp->Nodes.Size();
 	int nPrev = -1;
 	if(nLevel + nNumPlanes > pBsp->nDepth)
@@ -1121,6 +1122,7 @@ int BspAddInternal(SOccluderBsp* pBsp, uint16 nParent, bool bOutsideParent, uint
 	{
 		if(0 ==(nExcludeMask&1))
 		{
+			nCount++;
 			int nIndex = (int)pBsp->Nodes.Size();
 			SOccluderBspNode* pNode = pBsp->Nodes.PushBack();
 			pNode->nOutside = OCCLUDER_EMPTY;
@@ -1159,6 +1161,7 @@ int BspAddInternal(SOccluderBsp* pBsp, uint16 nParent, bool bOutsideParent, uint
 	//		BspDrawPoly(pBsp, Poly, nNumEdges, 0xff000000|randredcolor(), 0, 1);
 
 	BspDrawPoly(pBsp, pIndices, nNumPlanes, randcolor(), randcolor(), 1);
+	uplotfnxt("ADDING INTERNAL parent %d COUNT %d.. nIndices %d, nExcludeMask %08x level %d", nParent, nCount, nNumPlanes, nBaseExcludeMask, nLevel);
 
 
 
@@ -1525,20 +1528,67 @@ void BspAddRecursive(SOccluderBsp* pBsp, uint32 nBspIndex, uint16* pIndices, uin
 	uint16 ClippedPolyIn[OCCLUDER_POLY_MAX];
 	uint16 ClippedPolyOut[OCCLUDER_POLY_MAX];
 
-	uint32 nNumEdgeIn = 0, nNumEdgeOut = 0;
-	uint32 nExcludeMaskOut = 0, nExcludeMaskIn = 0;
+	//ClipPolyResult CR = BspClipPoly(pBsp, Node.nPlaneIndex, pIndices, nNumIndices, nExcludeMask, &ClippedPolyIn[0], &ClippedPolyOut[0], nNumEdgeIn, nNumEdgeOut, nExcludeMaskIn, nExcludeMaskOut);
 
-	ClipPolyResult CR = BspClipPoly(pBsp, Node.nPlaneIndex, pIndices, nNumIndices, nExcludeMask, &ClippedPolyIn[0], &ClippedPolyOut[0], nNumEdgeIn, nNumEdgeOut, nExcludeMaskIn, nExcludeMaskOut);
-	uplotfnxt("CLIP RES %02x start %d, in %d, out %d", CR, nNumIndices, nNumEdgeIn, nNumEdgeOut);
+	uint16* pPolyInside = nullptr;
+	uint32 nPolyEdgeIn = 0;
+	uint16* pPolyOutside = nullptr;
+	uint32 nPolyEdgeOut = 0;
+	uint32 nExcludeMaskOut = 0, 
+		   nExcludeMaskIn = 0;
 
 
+	ClipPolyResult CR = ECPR_CLIPPED;
+	if(Node.nInside == OCCLUDER_LEAF)
+	{
+		if(BSP_ADD_FRONT)
+		{
+			ZASSERT(vPlane.w != 0.f);
+			bool bOk = false;
+			{{
+				ZASSERT(vPlane.w != 0.f);
+				v4 vNormalPlane = BspGetPlane(pBsp, pIndices[nNumIndices-1]);
+				for(int i = 0; i < nNumIndices-1; ++i)
+				{
+					v4 p0 = BspGetPlane(pBsp, pIndices[i]);
+					v4 p1 = BspGetPlane(pBsp, pIndices[(i+1)%(nNumIndices-1)]);
+					v3 vIntersect = BspPlaneIntersection(p0, p1, vNormalPlane);
+					float fDot = v4dot(v4init(vIntersect, 1.f), vPlane);
+					uplotfnxt("VISIBLE dot %f", fDot);
+					bOk = bOk || fDot < 0.f;
+				}
+			}}
+			//todo test
+			if(bOk)
+			{
+
+				pPolyOutside = pIndices;
+				nPolyEdgeOut = nNumIndices;
+				nExcludeMaskOut = nExcludeMask;
+				CR = ECPR_OUTSIDE;
+			}
+		}
+	}
+	else
+	{
+		ZASSERT(vPlane.w == 0.f);
+
+		uint32 nNumEdgeIn = 0, 
+			   nNumEdgeOut = 0;
+
+
+		CR = BspClipPoly(pBsp, Node.nPlaneIndex, pIndices, nNumIndices, nExcludeMask, &ClippedPolyIn[0], &ClippedPolyOut[0], nNumEdgeIn, nNumEdgeOut, nExcludeMaskIn, nExcludeMaskOut);
+		pPolyInside = &ClippedPolyIn[0];
+		nPolyEdgeIn = nNumEdgeIn;
+		pPolyOutside = &ClippedPolyOut[0];
+		nPolyEdgeOut = nNumEdgeOut;
+
+
+
+	}
 	ZASSERT(Node.nInside != OCCLUDER_EMPTY);
 	ZASSERT(Node.nOutside != OCCLUDER_LEAF);
 	
-	uint16* pPolyInside = &ClippedPolyIn[0];
-	uint32 nPolyEdgeIn = nNumEdgeIn;
-	uint16* pPolyOutside = &ClippedPolyOut[0];
-	uint32 nPolyEdgeOut = nNumEdgeOut;
 
 	if((ECPR_INSIDE & CR) != 0)
 	{

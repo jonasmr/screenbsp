@@ -418,6 +418,8 @@ void DebugDrawFlush(m mprj)
 			VertexBufferPushFlush(pPushBuffer);
 		}
 
+		glEnable(GL_DEPTH_TEST);
+		glDepthMask(1);
 
 		v4* pVert = g_DebugDrawState.PolyVert.Ptr();
 		for(uint32 i = 0; i < g_DebugDrawState.Poly.Size(); ++i)
@@ -445,6 +447,8 @@ void DebugDrawFlush(m mprj)
 
 		CheckGLError();
 		{
+			glDepthMask(0);
+
 			glDisable(GL_DEPTH_TEST);
 			ShaderUse(VS_DEBUG, PS_DEBUG);
 			int nSizeLoc = ShaderGetLocation("Size");
