@@ -8,12 +8,9 @@
 #include "microprofileinc.h"
 
 // todo:
-//  cull in front
-//  overlap occluders in front
-//  check corner issue
 //  do box test
 //
-//
+//  generate test scene
 //  optimize!
 //
 
@@ -317,13 +314,13 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 		//	ZDEBUG_DRAWLINE(vCornersWorldSpace[3], vCornersWorldSpace[0], 0, true);
 		//}
 	}
-#if 0
-	static float foo = 0.f;
-	foo += 0.11f;
-	float DBG = sin(foo);
-	float DBG2 = cos(foo);
-	v3 vDBG = v3rep(DBG) * 0.3f + 0.7f;
-	v3 vDBG2 = v3rep(DBG2) * 0.3f + 0.7f;
+#if 1
+	// static float foo = 0.f;
+	// foo += 0.11f;
+	// float DBG = sin(foo);
+	// float DBG2 = cos(foo);
+	// v3 vDBG = v3rep(DBG) * 0.3f + 0.7f;
+	// v3 vDBG2 = v3rep(DBG2) * 0.3f + 0.7f;
 	{
 		struct SSortKey
 		{
@@ -364,7 +361,7 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 			v3 vX = mat.x.tov3();
 			v3 vY = mat.y.tov3();
 			v3 vZ = mat.z.tov3();
-
+			vSize *= 1.02f;
 
 			v3 vCenterX = vCenter + vX * vSize.x;
 			v3 vCenterY = vCenter + vY * vSize.y;
@@ -410,7 +407,7 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluderDesc, uint32 nNumOccluders
 			// BspAddOccluder(pBsp, vCenter + vY * vSize.y/**1.01*/, vY, vZ, vSize.z, vX, vSize.x,true);			
 			// BspAddOccluder(pBsp, vCenter + vX * vSize.x/**1.01*/, vX, vY, vSize.y, vZ, vSize.z, true);
 			//BspAddOccluder(pBsp, vCenter + vZ * vSize.z/**1.01*/, vZ, vY, vSize.y, vX, vSize.x, true);
-			if(pBsp->Occluders.Size()>150 || pBsp->Nodes.Size() > 300)
+			if(pBsp->Planes.Size()>150 || pBsp->Nodes.Size() > 300)
 				break;
 		}
 	}
