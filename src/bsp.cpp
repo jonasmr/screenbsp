@@ -8,6 +8,9 @@
 #include "microprofileinc.h"
 
 // todo:
+//  fix precision issue as is now
+//  make box thing reuse planes
+//  fix so shared planes are not readded
 //  do box test
 //
 //  generate test scene
@@ -1521,6 +1524,31 @@ void BspAddRecursive(SOccluderBsp* pBsp, uint32 nBspIndex, uint16* pIndices, uin
 	SOccluderBspNode Node = pBsp->Nodes[nBspIndex];
 
 	v4 vPlane = BspGetPlane(pBsp, Node.nPlaneIndex);
+	char pTest[256] = "Test ";
+	bool bPlaneOverlap = false;
+	for(int i = 0; i < nNumIndices-1; ++i)
+	{
+		if(0 == (nExcludeMask&(1<<i)))
+		{
+			v4 vInner = BspGetPlane(pBsp, pIndices[i]);
+			float fDot0 = v4distance(vInner, vPlane);
+			float fDot1 = v4distance(v4neg(vInner), vPlane);
+			if(fDot0 < 0.001f || fDot1 < 0.001f)
+			{
+				nExcludeMask |= (1<<i);
+				bPlaneOverlap = true;
+				uplotfnxt("PLANE OVERLAP [%5.2f,%5.2f,%5.2f]-[%5.2f,%5.2f,%5.2f]",
+					vInner.x, vInner.y, vInner.z,
+					vPlane.x, vPlane.y, vPlane.z);
+
+			}
+			char buff[64];
+			snprintf(buff, 64, "[%f,%f] ", fDot0, fDot1);
+			strcat(pTest, buff);
+		}
+	}
+	uplotfnxt(pTest);
+
 
 	uint16 ClippedPolyIn[OCCLUDER_POLY_MAX];
 	uint16 ClippedPolyOut[OCCLUDER_POLY_MAX];
@@ -1565,6 +1593,40 @@ void BspAddRecursive(SOccluderBsp* pBsp, uint32 nBspIndex, uint16* pIndices, uin
 				CR = ECPR_OUTSIDE;
 			}
 		}
+	}
+	else if(bPlaneOverlap)
+	{
+		uint32 nNumEdgeIn = 0, 
+			   nNumEdgeOut = 0;
+		// uint32 nExcludeMaskIn_ = 0;
+		// uint32 nExcludeMaskOut_ = 0;
+			   int nA = 0;
+			   int nB = 0;
+
+		//ZASSERT(vPlane.w != 0.f);
+		v4 vNormalPlane = BspGetPlane(pBsp, pIndices[nNumIndices-1]);
+		for(int i = 0; i < nNumIndices-1; ++i)
+		{
+			v4 p0 = BspGetPlane(pBsp, pIndices[i]);
+			v4 p1 = BspGetPlane(pBsp, pIndices[(i+1)%(nNumIndices-1)]);
+			v3 vIntersect = BspPlaneIntersection(p0, p1, vNormalPlane);
+			float fDot = v4dot(v4init(vIntersect, 1.f), vPlane);
+//			uplotfnxt("VISIBLE dot %f", fDot);
+			if(fDot < -0.001f)
+				nA++;
+			if(fDot > 0.001f)
+				nB++;
+			//bOk = bOk || fDot < 0.f;
+		}
+
+
+		CR = BspClipPoly(pBsp, Node.nPlaneIndex, pIndices, nNumIndices, nExcludeMask, &ClippedPolyIn[0], &ClippedPolyOut[0], nNumEdgeIn, nNumEdgeOut, nExcludeMaskIn, nExcludeMaskOut);
+		pPolyInside = &ClippedPolyIn[0];
+		nPolyEdgeIn = nNumEdgeIn;
+		pPolyOutside = &ClippedPolyOut[0];
+		nPolyEdgeOut = nNumEdgeOut;
+		uplotfnxt("OVERLAP COUNT in %d .. out %d .. mask %08x %08x %d %d", nNumEdgeIn, nNumEdgeOut, nExcludeMaskIn, nExcludeMaskOut, nA, nB); 
+
 	}
 	else
 	{
