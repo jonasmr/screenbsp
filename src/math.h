@@ -256,6 +256,19 @@ inline
 v4 v4init(v3 v, float w){ v4 r; r.x = v.x; r.y = v.y; r.z = v.z; r.w = w; return r; }
 inline
 v4 v4init(v4 v, float w){ v4 r; r.x = v.x; r.y = v.y; r.z = v.z; r.w = w; return r; }
+v4 operator +(const v4 l, const v4 r);
+v4 operator -(const v4 l, const v4 r);
+v4 operator *(const v4 l, const v4 r);
+v4 operator /(const v4 l, const v4 r);
+v4 operator +(const v4 l, float f);
+v4 operator -(const v4 l, float f);
+v4 operator *(const v4 v, float f);
+v4 operator /(const v4 v, float f);
+v4 operator +(float f, const v4 l);
+v4 operator -(float f, const v4 l);
+v4 operator *(float f, const v4 v);
+v4 operator /(float f, const v4 v);
+v4 operator -(const v4 v);
 
 
 v4 v4fromcolor(uint32_t nColor);
@@ -269,20 +282,7 @@ v4 v4makeplane(v3 p, v3 normal);
 
 
 
-v4 operator +(const v4 l, const v4 r);
-v4 operator -(const v4 l, const v4 r);
-v4 operator *(const v4 l, const v4 r);
-v4 operator /(const v4 l, const v4 r);
-
-v4 operator +(const v4 l, float f);
-v4 operator -(const v4 l, float f);
-v4 operator *(const v4 v, float f);
-v4 operator /(const v4 v, float f);
-v4 operator +(float f, const v4 l);
-v4 operator -(float f, const v4 l);
-v4 operator *(float f, const v4 v);
-v4 operator /(float f, const v4 v);
-v4 operator -(const v4 v);
+inline float v4distance(v4 v0, v4 v1){ return v4length(v0-v1);}
 
 inline
 v4 v4lerp(v4 from_, v4 to_, float fLerp) { return from_ + (to_-from_) * fLerp; }
