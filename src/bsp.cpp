@@ -12,6 +12,8 @@
 //  make box thing reuse planes
 //  fix so shared planes are not readded
 //  do box test
+//  shared priority for planes and boxes.
+//  reenable frustum
 //
 //  generate test scene
 //  optimize!
@@ -111,6 +113,7 @@ void BspDrawPoly2(SOccluderBsp *pBsp, uint16 *Poly, uint32 nVertices, uint32 nCo
 int BspFindParent(SOccluderBsp *pBsp, int nChildIndex);
 int BspFindParent(SOccluderBsp *pBsp, int nChildIndex, bool &bInside);
 v3 BspToPlane2(v4 p);
+float BspAreaEstimate(v4* vPlanes, uint16* pPlanes, uint32 nNumPlanes);
 
 uint32_t g_nDrawCount = 0;
 uint32_t g_nDebugDrawPoly = 1;
@@ -245,6 +248,175 @@ void BspDebugTest(v3 vEye)
 
 }
 
+struct SBspPotentialPoly
+{
+	uint16 nIndex[5];
+	float fArea;
+};
+struct SBspPotentialOccluders
+{
+	TFixedArray<v4, SOccluderBsp::MAX_PLANES> Planes;
+	TFixedArray<int, SOccluderBsp::MAX_PLANES> Indices;
+	TFixedArray<SBspPotentialPoly, SOccluderBsp::MAX_PLANES> PotentialPolys;
+};
+
+
+
+bool BspAddPotentialQuad(SOccluderBsp *pBsp, v3 *vCorners, uint32 nNumCorners)
+{
+	ZASSERT(nNumCorners == 4);
+	const v3 vOrigin = v3zero();
+	const v3 vDirection = v3init(0, 0, -1); // vLocalDirection
+
+	uint32 nIndex = pBsp->Planes.Size();
+	v4 *pPlanes = pBsp->Planes.PushBackN(5);
+	v3 *pCorners = pBsp->Corners.PushBackN(5);
+	v3 vInnerNormal = v3normalize(v3cross(vCorners[1] - vCorners[0], vCorners[3] - vCorners[0]));
+	bool bFlip = false;
+	v4 vNormalPlane = v4makeplane(vCorners[0], vInnerNormal);
+	{
+		float fMinDot = v3dot(vCorners[0] - vOrigin, vDirection);
+		fMinDot = Min(fMinDot, v3dot(vCorners[1] - vOrigin, vDirection));
+		fMinDot = Min(fMinDot, v3dot(vCorners[2] - vOrigin, vDirection));
+		fMinDot = Min(fMinDot, v3dot(vCorners[3] - vOrigin, vDirection));
+		// project origin onto plane
+		float fDist = v4dot(vNormalPlane, v4init(vOrigin, 1.f));
+		if(fabs(fDist) < pBsp->DescOrg.fZNear) // if plane is very close to camera origin,
+											   // discard to avoid intersection with near plane
+		{
+			if(fMinDot < 1.5 * pBsp->DescOrg.fZNear) // _unless_ all 4 points clearly in front
+			{
+				pBsp->Planes.PopBackN(5);
+				pBsp->Corners.PopBackN(5);
+				return false;
+			}
+		}
+		v3 vPointOnPlane = vOrigin - fDist * vNormalPlane.tov3();
+		float fFoo = v4dot(vNormalPlane, v4init(vPointOnPlane, 1.f));
+		ZASSERT(fabs(fFoo) < 1e-4f);
+
+		if(fDist > 0)
+		{
+			bFlip = true;
+			vInnerNormal = -vInnerNormal;
+			vNormalPlane = -vNormalPlane;
+		}
+	}
+	pPlanes[4] = vNormalPlane;
+	pCorners[4] = vCorners[0];
+	for(uint32 i = 0; i < 4; ++i)
+	{
+		v3 v0 = vCorners[i];
+		v3 v1 = vCorners[(i + 1) % 4];
+		pCorners[i] = vCorners[i];
+		v3 v2 = vOrigin;
+		v3 vCenter = (v0 + v1 + v2) / v3init(3.f);
+		v3 vNormal = v3normalize(v3cross(v3normalize(v1 - v0), v3normalize(v2 - v0)));
+		v3 vEnd = vCenter + vNormal;
+		// pPlanes[i] = v4makeplane(vCorners[i], vNormal);
+		pPlanes[i] = v4init(vNormal, 0.f);
+		if(bFlip)
+			pPlanes[i] = -pPlanes[i];
+		if(g_nBspOccluderDrawEdges & 1)
+		{
+			v0 = mtransform(pBsp->mfrombsp, v0);
+			v1 = mtransform(pBsp->mfrombsp, v1);
+			v2 = mtransform(pBsp->mfrombsp, v2);
+			ZDEBUG_DRAWLINE(v0, v1, (uint32) - 1, true);
+			ZDEBUG_DRAWLINE(v1, v2, (uint32) - 1, true);
+			ZDEBUG_DRAWLINE(v2, v0, (uint32) - 1, true);
+		}
+	}
+	//BspAddOccluderInternal(pBsp, pPlanes, 5, nIndex);
+	return true;
+}
+
+bool BspAddPotentialBoxQuad(SBspPotentialOccluders& PotentialOccluders,
+	v3 vCenter, v3 vNormal, v3 vUp, float fUpSize, v3 vLeft, float fLeftSize, bool bFlip)
+{
+	v3 vCorners[4];
+	if(bFlip)
+	{
+		vCorners[3] = vCenter + vUp * fUpSize - vLeft * fLeftSize;
+		vCorners[2] = vCenter - vUp * fUpSize - vLeft * fLeftSize;
+		vCorners[1] = vCenter - vUp * fUpSize + vLeft * fLeftSize;
+		vCorners[0] = vCenter + vUp * fUpSize + vLeft * fLeftSize;
+	}
+	else
+	{
+		vCorners[0] = vCenter + vUp * fUpSize + vLeft * fLeftSize;
+		vCorners[1] = vCenter - vUp * fUpSize + vLeft * fLeftSize;
+		vCorners[2] = vCenter - vUp * fUpSize - vLeft * fLeftSize;
+		vCorners[3] = vCenter + vUp * fUpSize - vLeft * fLeftSize;
+	}
+	v3 pos = mtransform(pBsp->mfrombsp, vCorners[0]);
+	ZDEBUG_DRAWBOX(mid(), pos, v3rep(0.03f), 0xff00ff, 1);
+	pos = mtransform(pBsp->mfrombsp, vCorners[1]);
+	ZDEBUG_DRAWBOX(mid(), pos, v3rep(0.03f), 0xff00ff, 1);
+	pos = mtransform(pBsp->mfrombsp, vCorners[2]);
+	ZDEBUG_DRAWBOX(mid(), pos, v3rep(0.03f), 0xff00ff, 1);
+	pos = mtransform(pBsp->mfrombsp, vCorners[3]);
+	ZDEBUG_DRAWBOX(mid(), pos, v3rep(0.03f), 0xff00ff, 1);
+
+	const v3 vToCenter = vCenter; //- pBsp->vLocalOrigin;
+	const float fDot = v3dot(vToCenter, vNormal);
+	//uplotfnxt("DOT IS %f", fDot);
+	if(fDot < 0.03f) // reject backfacing and gracing polygons
+	{
+		return BspAddPotentialQuad(pBsp, &vCorners[0], 4);
+	}
+	else
+	{
+		uplotfnxt("REJECT BECAUSE DOT IS %f", fDot);
+		return false;
+	}
+}
+
+
+void BspAddPotentialBoxes(SBspPotentialOccluders& PotentialOccluders, SWorldObject *pWorldObjects, uint32 nNumWorldObjects)
+{
+	for(uint32 i = 0; i < nNumWorldObjects; ++i)
+	{
+		SWorldObject *pObject = i + pWorldObjects;
+		m mat = pObject->mObjectToWorld;
+		mat = mmult(mtobsp, mat);
+
+		v3 vSize = pObject->vSize;
+		v3 vCenter = mat.trans.tov3();
+		v3 vX = mat.x.tov3();
+		v3 vY = mat.y.tov3();
+		v3 vZ = mat.z.tov3();
+		vSize *= 1.02f;
+
+		v3 vCenterX = vCenter + vX * vSize.x;
+		v3 vCenterY = vCenter + vY * vSize.y;
+		v3 vCenterZ = vCenter + vZ * vSize.z;
+		v3 vCenterXNeg = vCenter - vX * vSize.x;
+		v3 vCenterYNeg = vCenter - vY * vSize.y;
+		v3 vCenterZNeg = vCenter - vZ * vSize.z;
+
+		const v3 vToCenterX = vCenterX - vLocalOrigin;
+		const v3 vToCenterY = vCenterY - vLocalOrigin;
+		const v3 vToCenterZ = vCenterZ - vLocalOrigin;
+		bool bFrontX = v3dot(vX, vToCenterX) < 0.f;
+		bool bFrontY = v3dot(vY, vToCenterY) < 0.f;
+		bool bFrontZ = v3dot(vZ, vToCenterZ) < 0.f;
+
+		vX = bFrontX ? vX : -vX;
+		vY = bFrontY ? vY : -vY;
+		vZ = bFrontZ ? vZ : -vZ;
+		vCenterX = bFrontX ? vCenterX : vCenterXNeg;
+		vCenterY = bFrontY ? vCenterY : vCenterYNeg;
+		vCenterZ = bFrontZ ? vCenterZ : vCenterZNeg;
+
+		BspAddPotentialBox(PotentialOccluders, vCenterY, vY, vZ, vSize.z, vX, vSize.x, true);
+		BspAddPotentialBox(PotentialOccluders, vCenterX, vX, vY, vSize.y, vZ, vSize.z, true);
+		BspAddPotentialBox(PotentialOccluders, vCenterZ, vZ, vY, vSize.y, vX, vSize.x, true);
+	}
+}
+
+
+
 void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders,
 			  SWorldObject *pWorldObjects, uint32 nNumWorldObjects,
 			  const SOccluderBspViewDesc &Desc)
@@ -319,19 +491,12 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 	pBsp->DescOrg = Desc;
 	m mtobsp = mcreate(Desc.vDirection, Desc.vRight, Desc.vOrigin);
 
-#if 0
-	BspDebugTest(Desc.vOrigin);
-#endif
 	const v3 vLocalDirection = mrotate(mtobsp, Desc.vDirection);
 	const v3 vLocalOrigin = mtransform(mtobsp, Desc.vOrigin);
 	const v3 vLocalRight = mrotate(mtobsp, Desc.vRight);
 	const v3 vLocalUp = v3normalize(v3cross(vLocalRight, vLocalDirection));
 	const v3 vWorldOrigin = Desc.vOrigin;
 	const v3 vWorldDirection = Desc.vDirection;
-	// uplotfnxt("vLocalRight %4.2f %4.2f %4.2f", vLocalRight.x, vLocalRight.y, vLocalRight.z);
-	// uplotfnxt("vLocalOrigin %4.2f %4.2f %4.2f", vLocalOrigin.x, vLocalOrigin.y, vLocalOrigin.z);
-	// uplotfnxt("vLocalDirection %4.2f %4.2f %4.2f", vLocalDirection.x, vLocalDirection.y,
-	// vLocalDirection.z);
 	pBsp->mtobsp = mtobsp;
 	pBsp->mfrombsp = maffineinverse(mtobsp);
 
@@ -346,10 +511,30 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 		ZBREAK();
 	}
 
-	// m mcreate(v3 vDir, v3 vRight, v3 vPoint);
+#if 1
 
-	//	pBsp->Occluders.Resize(1+nNumOccluders);
-	//	SOccluderPlane* pPlanes = pBsp->Occluders.Ptr();
+
+	SBspPotentialOccluders P;
+
+	BspAddPotentialBoxes(P, pWorldObjects, nNumWorldObjects);
+
+
+
+	for(int i = 0; i < P.PotentialPolys.Size(); ++i)
+	{
+		P.PotentialPolys[i].fArea = BspAreaEstimate(P.Planes.Ptr(), &P.PotentialPolys[i].nIndex[0], 5);
+	}
+	std::sort(&P.PotentialPolys[0], P.PotentialPolys.Size() + &P.PotentialPolys[0],
+		[](const SBspPotentialPoly& l, const SBspPotentialPoly& r) -> bool
+		{
+			return l.fArea > r.fArea;
+		}
+	);
+
+	for(int i = 0; i < P.PotentialPolys.Size(); ++i)
+	{
+		uplotfnxt("AREA %f", P.PotentialPolys[i].fArea);
+	}
 
 	// FRUSTUM
 	if(USE_FRUSTUM)
@@ -423,7 +608,9 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 		//	ZDEBUG_DRAWLINE(vCornersWorldSpace[3], vCornersWorldSpace[0], 0, true);
 		//}
 	}
-#if 1
+
+#else //old shit
+#if 0
 	// static float foo = 0.f;
 	// foo += 0.11f;
 	// float DBG = sin(foo);
@@ -609,8 +796,21 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 		// nOccluderIndex++;
 	}
 #endif
-	//	ZASSERT(nOccluderIndex <= pBsp->Occluders.Size());
+#endif
 
+
+	g_nCheck = 1;
+	if(g_KeyboardState.keys[SDL_SCANCODE_F10] & BUTTON_RELEASED)
+	{
+		BspDump(pBsp, 0, 0);
+	}
+
+	uplotfnxt("BSP: NODES[%03d] PLANES[%03d] DEPTH[%03d]", pBsp->Nodes.Size(), pBsp->Planes.Size(),
+			  pBsp->nDepth);
+	srand(seed);
+}
+	// void dumpchilds
+	//	ZASSERT(nOccluderIndex <= pBsp->Occluders.Size());
 	// if(g_nBspDebugPlane < pBsp->Nodes.Size())
 	//{
 	//	v4 vPlane = GET_PLANE(pBsp, pBsp->Nodes[g_nBspDebugPlane]);
@@ -652,32 +852,21 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 
 	//	}
 	//}
-
-	g_nCheck = 1;
-	if(g_KeyboardState.keys[SDL_SCANCODE_F10] & BUTTON_RELEASED)
-	{
-		BspDump(pBsp, 0, 0);
-	}
-
-	uplotfnxt("BSP: NODES[%03d] PLANES[%03d] DEPTH[%03d]", pBsp->Nodes.Size(), pBsp->Planes.Size(),
-			  pBsp->nDepth);
-	srand(seed);
-}
 void BSPDUMP()
 {
 	BspDump(g_pBsp, 0, 0);
 }
-float BspAreaEstimate(SOccluderBsp* pBsp, uint16* pPlanes, uint32 nNumPlanes)
+float BspAreaEstimate(v4* vPlanes, uint16* pPlanes, uint32 nNumPlanes)
 {
 	float fSum = 0;
 	for(int i = 0; i < nNumPlanes-1; ++i)
 	{
-		v4 p0 = BspGetPlane(pBsp, pPlanes[i]);
-		v4 p1 = BspGetPlane(pBsp, pPlanes[(i+1)%(nNumPlanes-1)]);
-		v4 p2 = BspGetPlane(pBsp, pPlanes[(i+2)%(nNumPlanes-1)]);
+		v4 p0 = vPlanes[pPlanes[i]];
+		v4 p1 = vPlanes[pPlanes[(i+1)%(nNumPlanes-1)]];
+		v4 p2 = vPlanes[pPlanes[(i+2)%(nNumPlanes-1)]];
 		fSum += BspPlaneTestNew(p0,p1,p2);
 	}
-	return fSum;
+	return abs(fSum);
 }
 
 void BspAddOccluderInternal(SOccluderBsp *pBsp, v4 *pPlanes, uint32 nNumPlanes, uint32 nPlaneIndex)
@@ -702,8 +891,8 @@ void BspAddOccluderInternal(SOccluderBsp *pBsp, v4 *pPlanes, uint32 nNumPlanes, 
 		for(int i = 0; i < nNumPlanes; ++i)
 			nPlaneIndices[i] = nPlaneIndex + i;
 	}
-	float fEstimate = BspAreaEstimate(pBsp, nPlaneIndices, nNumPlanes);
-	uplotfnxt("area estimate is %f", fEstimate);
+	// float fEstimate = BspAreaEstimate(pBsp, nPlaneIndices, nNumPlanes);
+	// uplotfnxt("area estimate is %f", fEstimate);
 
 
 	uint32 nNumNodes = (uint32)pBsp->Nodes.Size();
