@@ -249,6 +249,8 @@ v3 v3rep(float f){ v3 r = {f,f,f}; return r;}
 
 inline 
 v4 v4init(float f){v4 r; r.x = f; r.y = f; r.z = f; r.w = f; return r;}
+inline
+v4 v4zero(){v4 z = {0,0,0,0};return z;}
 
 inline
 v4 v4init(float x, float y, float z, float w) {v4 r; r.x = x; r.y = y; r.z = z; r.w = w; return r;}

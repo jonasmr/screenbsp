@@ -280,8 +280,8 @@ void WorldRender()
 
 
 	if(incfoo)
-		foo += 0.01f;
-	foo = 1.0f;
+		foo += 0.001f;
+	//foo = 1.0f;
 
 	if(g_KeyboardState.keys[SDL_SCANCODE_L] & BUTTON_RELEASED)
 	{
@@ -331,10 +331,10 @@ void WorldRender()
 
 	BspBuild(g_Bsp, &g_WorldState.Occluders[0], 
 		//nNumOccluders,
-		1,
+		3,
 		&g_WorldState.WorldObjects[0], 
 		//g_WorldState.nNumWorldObjects, 
-		0,
+		2,
 		ViewDesc);
 
 	uint32 nNumObjects = g_WorldState.nNumWorldObjects;
