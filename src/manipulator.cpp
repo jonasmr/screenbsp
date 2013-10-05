@@ -20,6 +20,7 @@ bool ManipulatorTranslate::DragBegin(v2 vDragStart, v2 vDragEnd, SObject* pSelec
 }
 void ManipulatorTranslate::DragUpdate(v2 vDragStart, v2 vDragEnd)
 {
+	ZASSERT(m_pSelection);
 
 	v3 vDirStart = DirectionFromScreen(vDragStart, g_WorldState.Camera);
 	v3 vDirEnd = DirectionFromScreen(vDragEnd, g_WorldState.Camera);
