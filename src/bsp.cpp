@@ -288,10 +288,21 @@ bool BspAddPotentialQuad(SOccluderBsp* pBsp, SBspPotentialOccluders& PotentialOc
 	bool bFlip = false;
 	v4 vNormalPlane = v4makeplane(vCorners[0], vInnerNormal);
 	{
-		float fMinDot = v3dot(vCorners[0] - vOrigin, vDirection);
-		fMinDot = Min(fMinDot, v3dot(vCorners[1] - vOrigin, vDirection));
-		fMinDot = Min(fMinDot, v3dot(vCorners[2] - vOrigin, vDirection));
-		fMinDot = Min(fMinDot, v3dot(vCorners[3] - vOrigin, vDirection));
+		float fDot0 = v3dot(vCorners[0] - vOrigin, vDirection);
+		float fDot1 = v3dot(vCorners[1] - vOrigin, vDirection);
+		float fDot2 = v3dot(vCorners[2] - vOrigin, vDirection);
+		float fDot3 = v3dot(vCorners[3] - vOrigin, vDirection);
+		float fMinDot = Min(fDot0, fDot1);
+		fMinDot = Min(fDot2, fMinDot);
+		fMinDot = Min(fDot3, fMinDot);
+		float fMaxDot = Max(fDot0, fDot1);
+		fMaxDot = Max(fDot2, fMaxDot);
+		fMaxDot = Max(fDot3, fMaxDot);
+		uplotfnxt("MAX DOT IS %f", fMaxDot);
+		if(fMaxDot < 0.f) //all behind eye
+		{
+			return false;
+		}
 		// project origin onto plane
 		float fDist = v4dot(vNormalPlane, v4init(vOrigin, 1.f));
 		if(fabs(fDist) < pBsp->DescOrg.fZNear) // if plane is very close to camera origin,
@@ -567,13 +578,15 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 		uint16 nCount = P.PotentialPolys[i].nCount;
 		P.PotentialPolys[i].fArea = BspAreaEstimate(P.Planes.Ptr() + nIndex, nCount);
 	}
-	std::sort(&P.PotentialPolys[0], P.PotentialPolys.Size() + &P.PotentialPolys[0],
-		[](const SBspPotentialPoly& l, const SBspPotentialPoly& r) -> bool
-		{
-			return l.fArea > r.fArea;
-		}
-	);
-
+	if(P.PotentialPolys.Size())
+	{
+		std::sort(&P.PotentialPolys[0], P.PotentialPolys.Size() + &P.PotentialPolys[0],
+			[](const SBspPotentialPoly& l, const SBspPotentialPoly& r) -> bool
+			{
+				return l.fArea > r.fArea;
+			}
+		);
+	}
 	{
 		v4* vPlanes = P.Planes.Ptr();
 		v3* vCorners = P.Corners.Ptr();
