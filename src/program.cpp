@@ -334,13 +334,13 @@ void WorldRender()
 		2,
 		&g_WorldState.WorldObjects[0], 
 		//g_WorldState.nNumWorldObjects, 
-		1,
+		2,
 		ViewDesc);
 
 	uint32 nNumObjects = g_WorldState.nNumWorldObjects;
 	bool* bCulled = (bool*)alloca(nNumObjects);
 	bCulled[0] = false;
-	for(uint32 i = 1; i < nNumObjects; ++i)
+	for(uint32 i = 2; i < nNumObjects; ++i)
 	{
 		bCulled[i] = BspCullObject(g_Bsp, &g_WorldState.WorldObjects[i]);
 	}
