@@ -87,6 +87,58 @@ void EditorStateInit()
 	g_EditorState.Manipulators[1] = new ManipulatorRotate();
 }
 
+#define OCCLUSION_TEST_MIN -300
+#define OCCLUSION_TEST_MAX 300
+#define OCCLUSION_NUM_LARGE 10
+#define OCCLUSION_NUM_SMALL 100
+#define OCCLUSION_NUM_LONG 20
+#define OCCLUSION_NUM_OBJECTS 100
+
+void WorldOcclusionCreate(v3 vSize)
+{
+	v3 vPos = v3zero();
+	vPos.x = frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
+	vPos.z = frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
+	vPos.y = 0.8f * vSize.y;
+
+
+	g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects].mObjectToWorld = mid();
+	g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects].mObjectToWorld.trans = v4init(vPos, 1.f);
+	g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects].vSize = vSize; 
+	g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects].nFlags = 0;
+	g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects].nFlags |= SObject::OCCLUDER_BOX; 
+	g_WorldState.nNumWorldObjects++;
+}
+void WorldInitOcclusionTest()
+{
+	g_WorldState.nNumWorldObjects = 0;
+	for(int i = 0; i < OCCLUSION_NUM_LARGE; ++i)
+	{
+		float fHeight = frandrange(50, 100);
+		float fWidth = frandrange(7, 15);
+		float fDepth = frandrange(7, 15);
+		WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth));
+	}
+	for(int i = 0; i < OCCLUSION_NUM_SMALL; ++i)
+	{
+		float fHeight = frandrange(10, 15);
+		float fWidth = frandrange(7, 15);
+		float fDepth = frandrange(7, 15);
+		WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth));
+	}
+	for(int i = 0; i < OCCLUSION_NUM_LONG; ++i)
+	{
+		float fHeight = frandrange(10, 20);
+		float fWidth = frandrange(25, 50);
+		float fDepth = frandrange(7, 12);
+		if(frand() < 0.5f)
+		{
+			Swap(fWidth, fHeight);
+		}
+		WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth));
+	}
+}
+
 void WorldInit()
 {
 	g_WorldState.Occluders[0].mObjectToWorld = mrotatey(90*TORAD);
@@ -104,15 +156,26 @@ void WorldInit()
 	g_WorldState.nNumOccluders = 3;
 
 
-	g_WorldState.WorldObjects[0].mObjectToWorld = mrotatey(90*TORAD);
-	g_WorldState.WorldObjects[0].mObjectToWorld.trans = v4init(3.f,0.f,-0.5f, 1.f);
-	g_WorldState.WorldObjects[0].vSize = v3init(0.25f, 0.2f, 0.2f); 
+	if(1)
+	{
+		g_WorldState.nNumWorldObjects = 0;
+		WorldInitOcclusionTest();
+	}
+	else
+	{
+		g_WorldState.WorldObjects[0].mObjectToWorld = mrotatey(90*TORAD);
+		g_WorldState.WorldObjects[0].mObjectToWorld.trans = v4init(3.f,0.f,-0.5f, 1.f);
+		g_WorldState.WorldObjects[0].vSize = v3init(0.25f, 0.2f, 0.2f); 
+		g_WorldState.WorldObjects[0].nFlags = 0;
+		g_WorldState.WorldObjects[0].nFlags |= SObject::OCCLUDER_BOX; 
 
-	g_WorldState.WorldObjects[1].mObjectToWorld = mrotatey(90*TORAD);
-	g_WorldState.WorldObjects[1].mObjectToWorld.trans = v4init(3.f,0.f,-1.5f, 1.f);
-	g_WorldState.WorldObjects[1].vSize = v3init(0.25f, 0.2f, 0.2f)* 0.5f; 
-	g_WorldState.nNumWorldObjects = 2;
-
+		g_WorldState.WorldObjects[1].mObjectToWorld = mrotatey(90*TORAD);
+		g_WorldState.WorldObjects[1].mObjectToWorld.trans = v4init(3.f,0.f,-1.5f, 1.f);
+		g_WorldState.WorldObjects[1].vSize = v3init(0.25f, 0.2f, 0.2f)* 0.5f; 
+		g_WorldState.WorldObjects[1].nFlags = 0; 
+		g_WorldState.WorldObjects[1].nFlags |= SObject::OCCLUDER_BOX; 
+		g_WorldState.nNumWorldObjects = 2;
+	}
 	if(0)
 	{
 		int idx = 0;
@@ -333,8 +396,8 @@ void WorldRender()
 		//nNumOccluders,
 		3,
 		&g_WorldState.WorldObjects[0], 
-		//g_WorldState.nNumWorldObjects, 
-		2,
+		g_WorldState.nNumWorldObjects, 
+		//2,
 		ViewDesc);
 
 	uint32 nNumObjects = g_WorldState.nNumWorldObjects;
@@ -553,10 +616,10 @@ void WorldRender()
 	SHADER_SET("ProjectionMatrix", mprjview);
 	SHADER_SET("mode", g_Mode);
 	static int usezpass = 1;
-	if(g_KeyboardState.keys[SDL_SCANCODE_W] & BUTTON_RELEASED)
-	{
-		usezpass = !usezpass;
-	}
+	// if(g_KeyboardState.keys[SDL_SCANCODE_W] & BUTTON_RELEASED)
+	// {
+	// 	usezpass = !usezpass;
+	// }
 
 	{
 		MICROPROFILE_SCOPEGPUI("GPU", "OBJ PASS", 0xffff77);
@@ -824,6 +887,8 @@ void UpdateCamera()
 	float fSpeed = 0.1f;
 	if((g_KeyboardState.keys[SDL_SCANCODE_RSHIFT]|g_KeyboardState.keys[SDL_SCANCODE_LSHIFT]) & BUTTON_DOWN)
 		fSpeed *= 0.2f;
+	if((g_KeyboardState.keys[SDL_SCANCODE_RCTRL]|g_KeyboardState.keys[SDL_SCANCODE_LCTRL]) & BUTTON_DOWN)
+		fSpeed *= 12.0f;
 	g_WorldState.Camera.vPosition += g_WorldState.Camera.vDir * vDir.z * fSpeed;
 	g_WorldState.Camera.vPosition += g_WorldState.Camera.vRight * vDir.x * fSpeed;
 
@@ -872,7 +937,7 @@ void UpdateCamera()
 	}
 	else
 	{
-		g_WorldState.Camera.mprj = mperspective(g_WorldState.Camera.fFovY, ((float)g_Height / (float)g_Width), g_WorldState.Camera.fNear, 100.f);
+		g_WorldState.Camera.mprj = mperspective(g_WorldState.Camera.fFovY, ((float)g_Height / (float)g_Width), g_WorldState.Camera.fNear, 2000.f);
 	}
 	
 	g_WorldState.Camera.mviewport = mviewport(0,0,g_Width, g_Height);

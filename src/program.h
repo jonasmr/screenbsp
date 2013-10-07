@@ -20,6 +20,14 @@ struct __ALIGN16 SObject
 {
 	m mObjectToWorld;
 	v3 vSize;
+
+	uint32_t nFlags;
+
+	enum
+	{
+		OCCLUDER_PLANE = 0x1,
+		OCCLUDER_BOX = 0x2,
+	};
 };
 
 struct SOccluder : SObject
@@ -28,6 +36,7 @@ struct SOccluder : SObject
 
 struct SWorldObject : SObject
 {
+
 
 };
 
