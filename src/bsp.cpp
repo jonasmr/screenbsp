@@ -14,7 +14,8 @@
 //  do box test
 //  shared priority for planes and boxes.
 //  reenable frustum
-//
+//  dont add unused/clipped planes
+//  tweakable cap on insertion. 
 //  generate test scene
 //  optimize!
 //
@@ -273,7 +274,7 @@ void BspAddPotentialOccluder(SBspPotentialOccluders& PotentialOccluders, v4* vPl
 	uint32 nIndex = PotentialOccluders.Planes.Size();
 	PotentialOccluders.Planes.PushBack(vPlanes, nNumPlanes);
 	PotentialOccluders.Corners.PushBack(vCorners, nNumPlanes);
-	SBspPotentialPoly P = { nIndex, 5, 0.f };
+	SBspPotentialPoly P = { (uint16)nIndex, 5, 0.f };
 	PotentialOccluders.PotentialPolys.PushBack(P);
 }
 
@@ -301,7 +302,7 @@ bool BspAddPotentialQuad(SOccluderBsp* pBsp, SBspPotentialOccluders& PotentialOc
 		float fMaxDot = Max(fDot0, fDot1);
 		fMaxDot = Max(fDot2, fMaxDot);
 		fMaxDot = Max(fDot3, fMaxDot);
-		uplotfnxt("MAX DOT IS %f", fMaxDot);
+		//uplotfnxt("MAX DOT IS %f", fMaxDot);
 		if(fMaxDot < 0.f) //all behind eye
 		{
 			return false;
@@ -318,7 +319,7 @@ bool BspAddPotentialQuad(SOccluderBsp* pBsp, SBspPotentialOccluders& PotentialOc
 		}
 		v3 vPointOnPlane = vOrigin - fDist * vNormalPlane.tov3();
 		float fFoo = v4dot(vNormalPlane, v4init(vPointOnPlane, 1.f));
-		ZASSERT(fabs(fFoo) < 1e-4f);
+		ZASSERT(fabs(fFoo) < 1e-2f);
 
 		if(fDist > 0)
 		{
@@ -391,7 +392,7 @@ bool BspAddPotentialBoxQuad(SOccluderBsp* pBsp, SBspPotentialOccluders& Potentia
 	}
 	else
 	{
-		uplotfnxt("REJECT BECAUSE DOT IS %f", fDot);
+	//	uplotfnxt("REJECT BECAUSE DOT IS %f", fDot);
 		return false;
 	}
 }
@@ -404,40 +405,43 @@ void BspAddPotentialBoxes(SOccluderBsp* pBsp, SBspPotentialOccluders& PotentialO
 	for(uint32 i = 0; i < nNumWorldObjects; ++i)
 	{
 		SWorldObject *pObject = i + pWorldObjects;
-		m mat = pObject->mObjectToWorld;
-		mat = mmult(mtobsp, mat);
+		if(pObject->nFlags & SObject::OCCLUDER_BOX)
+		{
+			m mat = pObject->mObjectToWorld;
+			mat = mmult(mtobsp, mat);
 
-		v3 vSize = pObject->vSize;
-		v3 vCenter = mat.trans.tov3();
-		v3 vX = mat.x.tov3();
-		v3 vY = mat.y.tov3();
-		v3 vZ = mat.z.tov3();
-		vSize *= 1.02f;
+			v3 vSize = pObject->vSize;
+			v3 vCenter = mat.trans.tov3();
+			v3 vX = mat.x.tov3();
+			v3 vY = mat.y.tov3();
+			v3 vZ = mat.z.tov3();
+			vSize *= 1.02f;
 
-		v3 vCenterX = vCenter + vX * vSize.x;
-		v3 vCenterY = vCenter + vY * vSize.y;
-		v3 vCenterZ = vCenter + vZ * vSize.z;
-		v3 vCenterXNeg = vCenter - vX * vSize.x;
-		v3 vCenterYNeg = vCenter - vY * vSize.y;
-		v3 vCenterZNeg = vCenter - vZ * vSize.z;
+			v3 vCenterX = vCenter + vX * vSize.x;
+			v3 vCenterY = vCenter + vY * vSize.y;
+			v3 vCenterZ = vCenter + vZ * vSize.z;
+			v3 vCenterXNeg = vCenter - vX * vSize.x;
+			v3 vCenterYNeg = vCenter - vY * vSize.y;
+			v3 vCenterZNeg = vCenter - vZ * vSize.z;
 
-		const v3 vToCenterX = vCenterX - vLocalOrigin;
-		const v3 vToCenterY = vCenterY - vLocalOrigin;
-		const v3 vToCenterZ = vCenterZ - vLocalOrigin;
-		bool bFrontX = v3dot(vX, vToCenterX) < 0.f;
-		bool bFrontY = v3dot(vY, vToCenterY) < 0.f;
-		bool bFrontZ = v3dot(vZ, vToCenterZ) < 0.f;
+			const v3 vToCenterX = vCenterX - vLocalOrigin;
+			const v3 vToCenterY = vCenterY - vLocalOrigin;
+			const v3 vToCenterZ = vCenterZ - vLocalOrigin;
+			bool bFrontX = v3dot(vX, vToCenterX) < 0.f;
+			bool bFrontY = v3dot(vY, vToCenterY) < 0.f;
+			bool bFrontZ = v3dot(vZ, vToCenterZ) < 0.f;
 
-		vX = bFrontX ? vX : -vX;
-		vY = bFrontY ? vY : -vY;
-		vZ = bFrontZ ? vZ : -vZ;
-		vCenterX = bFrontX ? vCenterX : vCenterXNeg;
-		vCenterY = bFrontY ? vCenterY : vCenterYNeg;
-		vCenterZ = bFrontZ ? vCenterZ : vCenterZNeg;
+			vX = bFrontX ? vX : -vX;
+			vY = bFrontY ? vY : -vY;
+			vZ = bFrontZ ? vZ : -vZ;
+			vCenterX = bFrontX ? vCenterX : vCenterXNeg;
+			vCenterY = bFrontY ? vCenterY : vCenterYNeg;
+			vCenterZ = bFrontZ ? vCenterZ : vCenterZNeg;
 
-		BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterY, vY, vZ, vSize.z, vX, vSize.x, true);
-		BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterX, vX, vY, vSize.y, vZ, vSize.z, true);
-		BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterZ, vZ, vY, vSize.y, vX, vSize.x, true);
+			BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterY, vY, vZ, vSize.z, vX, vSize.x, true);
+			BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterX, vX, vY, vSize.y, vZ, vSize.z, true);
+			BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterZ, vZ, vY, vSize.y, vX, vSize.x, true);
+		}
 	}
 }
 
@@ -641,6 +645,7 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 		uint16 nIndex = P.PotentialPolys[i].nIndex;
 		uint16 nCount = P.PotentialPolys[i].nCount;
 		P.PotentialPolys[i].fArea = BspAreaEstimate(P.Planes.Ptr() + nIndex, nCount);
+//		uplotfnxt("AREA %d is %f", i, P.PotentialPolys[i].fArea);
 	}
 	if(P.PotentialPolys.Size())
 	{
@@ -656,7 +661,7 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 		v3* vCorners = P.Corners.Ptr();
 		for(uint32 i = 0; i < P.PotentialPolys.Size(); ++i)
 		{
-			uplotfnxt("AREA %f", P.PotentialPolys[i].fArea);
+		//	uplotfnxt("AREA %f", P.PotentialPolys[i].fArea);
 			uint16 nIndex = P.PotentialPolys[i].nIndex;
 			uint16 nCount = P.PotentialPolys[i].nCount;
 			BspAddOccluderInternal(pBsp, nIndex + vPlanes, nIndex + vCorners, nCount);
@@ -922,7 +927,7 @@ float BspAreaEstimate(v4* vPlanes, uint32 nNumPlanes)
 		v4 p2 = vPlanes[(i+2)%(nNumPlanes-1)];
 		fSum += BspPlaneTestNew(p0,p1,p2);
 	}
-	return abs(fSum);
+	return fabs(fSum);
 }
 
 void BspAddOccluderInternal(SOccluderBsp *pBsp, v4 *pPlanes, v3* pCorners, uint32 nNumPlanes)
@@ -2145,8 +2150,8 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 			{
 				nExcludeMask |= (1 << i);
 				bPlaneOverlap = true;
-				uplotfnxt("PLANE OVERLAP [%5.2f,%5.2f,%5.2f]-[%5.2f,%5.2f,%5.2f]", vInner.x,
-						  vInner.y, vInner.z, vPlane.x, vPlane.y, vPlane.z);
+				// uplotfnxt("PLANE OVERLAP [%5.2f,%5.2f,%5.2f]-[%5.2f,%5.2f,%5.2f]", vInner.x,
+				// 		  vInner.y, vInner.z, vPlane.x, vPlane.y, vPlane.z);
 			}
 			char buff[64];
 			snprintf(buff, 64, "[%f,%f] ", fDot0, fDot1);
@@ -2192,7 +2197,7 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 			// todo test
 			if(bOk)
 			{
-				uplotfnxt("!!!!!!!!!!!!!!!!!LEAF_ADD!!!!!!!!!!!!!!!!!");
+				//uplotfnxt("!!!!!!!!!!!!!!!!!LEAF_ADD!!!!!!!!!!!!!!!!!");
 
 				pPolyOutside = pIndices;
 				nPolyEdgeOut = nNumIndices;
@@ -2235,8 +2240,8 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 			nPolyEdgeIn = nNumEdgeIn;
 			pPolyOutside = &ClippedPolyOut[0];
 			nPolyEdgeOut = nNumEdgeOut;
-			uplotfnxt("OVERLAP COUNT in %d .. out %d .. mask %08x %08x %d %d", nNumEdgeIn,
-					  nNumEdgeOut, nExcludeMaskIn, nExcludeMaskOut, nA, nB);
+			// uplotfnxt("OVERLAP COUNT in %d .. out %d .. mask %08x %08x %d %d", nNumEdgeIn,
+			// 		  nNumEdgeOut, nExcludeMaskIn, nExcludeMaskOut, nA, nB);
 		}
 		else
 		{
@@ -2430,7 +2435,7 @@ bool BspCullObjectR(SOccluderBsp *pBsp, uint32 Index, uint16 *Poly, uint32 nNumE
 
 bool BspCullObject(SOccluderBsp *pBsp, SWorldObject *pObject)
 {
-	//return false;
+	return false;
 	MICROPROFILE_SCOPEIC("BSP", "Cull");
 	if(!pBsp->Nodes.Size())
 		return false;
