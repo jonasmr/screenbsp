@@ -8,11 +8,6 @@
 #include "microprofileinc.h"
 
 // todo:
-//  fix precision issue as is now
-//  make box thing reuse planes
-//  fix so shared planes are not readded
-//  do box test
-//  shared priority for planes and boxes.
 //  reenable frustum
 //  dont add unused/clipped planes
 //  tweakable cap on insertion. 
@@ -247,10 +242,15 @@ void BspDebugTest(v3 vEye)
 		ZDEBUG_DRAWPLANE(vNormal2, vStart2,0xff0000ff);
 	else
 		ZDEBUG_DRAWPLANE(vNormal2, vStart2,0xffff0000);
-
-
-
 }
+
+bool BspCanAddNodes(SOccluderBsp* pBsp, uint32 nNumNodes)
+{
+	if(pBsp->Nodes.Capacity() - pBsp->Nodes.Size() < nNumNodes || pBsp->Nodes.Size() > pBsp->DescOrg.nNodeCap)
+		return false;
+	return true;
+}
+
 
 struct SBspPotentialPoly
 {
@@ -661,10 +661,12 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 		v3* vCorners = P.Corners.Ptr();
 		for(uint32 i = 0; i < P.PotentialPolys.Size(); ++i)
 		{
-		//	uplotfnxt("AREA %f", P.PotentialPolys[i].fArea);
 			uint16 nIndex = P.PotentialPolys[i].nIndex;
 			uint16 nCount = P.PotentialPolys[i].nCount;
-			BspAddOccluderInternal(pBsp, nIndex + vPlanes, nIndex + vCorners, nCount);
+			if(BspCanAddNodes(pBsp, nCount))
+			{
+				BspAddOccluderInternal(pBsp, nIndex + vPlanes, nIndex + vCorners, nCount);
+			}
 		}
 	}
 
@@ -935,7 +937,7 @@ void BspAddOccluderInternal(SOccluderBsp *pBsp, v4 *pPlanes, v3* pCorners, uint3
 	uint32 nPlaneIndex = pBsp->Planes.Size();
 	pBsp->Planes.PushBack(pPlanes, nNumPlanes);
 	pBsp->Corners.PushBack(pCorners, nNumPlanes);
-
+	uint32 nNodesSize = pBsp->Nodes.Size();
 	uint16 *nPlaneIndices = (uint16 *)alloca(sizeof(uint16) * nNumPlanes);
 	ZASSERT(nNumPlanes > 3);
 	v4 p0 = pPlanes[0];
@@ -964,6 +966,11 @@ void BspAddOccluderInternal(SOccluderBsp *pBsp, v4 *pPlanes, v3* pCorners, uint3
 	else
 	{
 		BspAddRecursive(pBsp, 0, nPlaneIndices, nNumPlanes, 0, 0);
+	}
+	if(pBsp->Nodes.Size() == nNodesSize)
+	{
+		pBsp->Planes.PopBackN(5);
+		pBsp->Corners.PopBackN(5);
 	}
 }
 
@@ -1563,6 +1570,8 @@ void BspDrawPoly2(SOccluderBsp *pBsp, uint16 *Poly, uint32 nVertices, uint32 nCo
 int BspAddInternal(SOccluderBsp *pBsp, uint16 nParent, bool bOutsideParent, uint16 *pIndices,
 				   uint16 nNumPlanes, uint32 nExcludeMask, uint32 nLevel)
 {
+	if(!BspCanAddNodes(pBsp, nNumPlanes))
+		return -1;
 	ZASSERT(nNumPlanes > 1);
 	int nCount = 0;
 	uint32 nBaseExcludeMask = nExcludeMask;
@@ -1592,11 +1601,6 @@ int BspAddInternal(SOccluderBsp *pBsp, uint16 nParent, bool bOutsideParent, uint
 				v3 vCorner = pNode->vDebugCorner;
 				vCorner = mtransform(pBsp->mfrombsp, vCorner);
 				vPlane = v4init(mrotate(pBsp->mfrombsp, vPlane.tov3()), 1.f);
-
-				// 	uplotfnxt("DEBUG PLANE %d :: %d, flip %d", Poly[i].nOccluderIndex,
-				// Poly[i].nEdge, Poly[i].nFlip);
-
-				// 	//BspDebugDrawHalfspace(vPlane.tov3(), vCorner);
 				ZDEBUG_DRAWPLANE(vPlane.tov3(), vCorner, 0xff00ff00);
 			}
 		}
@@ -1611,22 +1615,8 @@ int BspAddInternal(SOccluderBsp *pBsp, uint16 nParent, bool bOutsideParent, uint
 			pBsp->Nodes[nParent].nInside = nNewIndex;
 	}
 
-	//		BspDrawPoly(pBsp, Poly, nNumEdges, 0xff000000|randredcolor(), 0, 1);
-
 	if((int)g_nRecursiveClip < 0)
 		BspDrawPoly(pBsp, pIndices, nNumPlanes, randcolor(), randcolor(), 1);
-	// uplotfnxt("ADDING INTERNAL parent %d COUNT %d.. nIndices %d, nExcludeMask %08x level %d",
-	// 		  nParent, nCount, nNumPlanes, nBaseExcludeMask, nLevel);
-
-	//	if(g_nBspOccluderDrawOccluders)
-	//	{
-	//		if(g_nDrawCount++ == g_nDebugDrawPoly)
-	//		{
-	////			BspDrawPoly2(pBsp, pIndices, nNumPlanes, randcolor(), nNewIndex);
-	//		}
-	//
-	//	}
-
 	return nNewIndex;
 }
 #define OCCLUDER_POLY_MAX 12
