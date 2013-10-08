@@ -26,6 +26,7 @@ extern uint32_t g_Height;
 uint32 g_nUseOrtho = 0;
 float g_fOrthoScale = 10;
 SOccluderBsp* g_Bsp = 0;
+uint32_t g_nBspNodeCap = 512;
 uint32 g_nUseDebugCameraPos = 2;
 v3 vLockedCamPos = v3init(0,0,0);
 v3 vLockedCamRight = v3init(0,-1,0);
@@ -378,6 +379,13 @@ void WorldRender()
 			//locked.
 			break;
 	}
+	if(g_KeyboardState.keys[SDL_SCANCODE_Q]&BUTTON_RELEASED)
+	{
+		g_nBspNodeCap <<= 1;
+		if(g_nBspNodeCap > 1024)
+			g_nBspNodeCap = 2;
+	}
+
 		
 	
 	ZDEBUG_DRAWBOX(mid(), vPos, v3rep(0.02f), -1,1);
@@ -390,6 +398,7 @@ void WorldRender()
 	ViewDesc.fFovY = g_WorldState.Camera.fFovY;
 	ViewDesc.fAspect = (float)g_Height / (float)g_Width;
 	ViewDesc.fZNear = g_WorldState.Camera.fNear;
+	ViewDesc.nNodeCap = g_nBspNodeCap;
 	uplotfnxt("DEBUG POS %f %f %f", vPos.x, vPos.y, vPos.z);
 
 	BspBuild(g_Bsp, &g_WorldState.Occluders[0], 

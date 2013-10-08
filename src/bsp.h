@@ -14,6 +14,8 @@ struct SOccluderBspViewDesc
 	float fFovY;
 	float fAspect;
 	float fZNear;
+
+	uint32_t nNodeCap;
 };
 
 
