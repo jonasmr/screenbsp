@@ -93,21 +93,21 @@ void EditorStateInit()
 #define OCCLUSION_NUM_LARGE 10
 #define OCCLUSION_NUM_SMALL 100
 #define OCCLUSION_NUM_LONG 20
-#define OCCLUSION_NUM_OBJECTS 100
+#define OCCLUSION_NUM_OBJECTS 1000
 
-void WorldOcclusionCreate(v3 vSize)
+void WorldOcclusionCreate(v3 vSize, uint32 nFlags, v3 vColor = v3zero())
 {
 	v3 vPos = v3zero();
 	vPos.x = frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
 	vPos.z = frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
-	vPos.y = 0.8f * vSize.y;
+	vPos.y = 1.0f * vSize.y;
 
 
 	g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects].mObjectToWorld = mid();
 	g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects].mObjectToWorld.trans = v4init(vPos, 1.f);
 	g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects].vSize = vSize; 
-	g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects].nFlags = 0;
-	g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects].nFlags |= SObject::OCCLUDER_BOX; 
+	g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects].nFlags = nFlags;
+	g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects].nColor = vColor.tocolor();
 	g_WorldState.nNumWorldObjects++;
 }
 void WorldInitOcclusionTest()
@@ -118,14 +118,14 @@ void WorldInitOcclusionTest()
 		float fHeight = frandrange(50, 100);
 		float fWidth = frandrange(7, 15);
 		float fDepth = frandrange(7, 15);
-		WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth));
+		WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUDER_BOX);
 	}
 	for(int i = 0; i < OCCLUSION_NUM_SMALL; ++i)
 	{
 		float fHeight = frandrange(10, 15);
 		float fWidth = frandrange(7, 15);
 		float fDepth = frandrange(7, 15);
-		WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth));
+		WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUDER_BOX);
 	}
 	for(int i = 0; i < OCCLUSION_NUM_LONG; ++i)
 	{
@@ -136,8 +136,32 @@ void WorldInitOcclusionTest()
 		{
 			Swap(fWidth, fHeight);
 		}
-		WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth));
+		WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUDER_BOX);
 	}
+	for(int i = 0; i < OCCLUSION_NUM_LONG; ++i)
+	{
+		float fHeight = frandrange(10, 20);
+		float fWidth = frandrange(25, 50);
+		float fDepth = frandrange(7, 12);
+		if(frand() < 0.5f)
+		{
+			Swap(fWidth, fDepth);
+		}
+		WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUDER_BOX);
+	}
+
+	for(int i = 0; i < OCCLUSION_NUM_OBJECTS; ++i)
+	{
+		float fHeight = frandrange(1, 2);
+		float fWidth = frandrange(0.5f, 0.7f);
+		float fDepth = frandrange(0.5, 0.7f);
+		if(frand() < 0.5f)
+		{
+			Swap(fWidth, fHeight);
+		}
+		WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUSION_TEST, v3init(1,0,0));
+	}
+
 }
 
 void WorldInit()
@@ -416,6 +440,11 @@ void WorldRender()
 	{
 		bCulled[i] = BspCullObject(g_Bsp, &g_WorldState.WorldObjects[i]);
 	}
+	SOccluderBspStats Stats;
+	BspGetStats(g_Bsp, &Stats);
+	uplotfnxt("********************BSP STATS********************");
+	uplotfnxt("** TESTED %5d VISIBLE %5d", Stats.nNumObjectsTested, Stats.nNumObjectsTestedVisible);
+
 	static v3 LightPos = v3init(0,-2.7,0);
 	static v3 LightColor = v3init(0.9, 0.5, 0.9);
 	static v3 LightPos0 = v3init(0,-2.7,0);

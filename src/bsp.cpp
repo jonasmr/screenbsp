@@ -12,6 +12,11 @@
 //  dont add unused/clipped planes
 //  tweakable cap on insertion. 
 //  generate test scene
+//  seperate objects in test scene
+//  basic lighting
+//  object colors
+//  generate path through test scene
+//  rename cull to isvisible
 //  optimize!
 //
 
@@ -67,6 +72,8 @@ struct SOccluderBsp
 	TFixedArray<v4, MAX_PLANES> Planes;
 	TFixedArray<v3, MAX_PLANES> Corners;
 	TFixedArray<SOccluderBspNode, MAX_NODES> Nodes;
+
+	SOccluderBspStats Stats;
 };
 float BspPlaneTestNew(v4 plane0, v4 plane1, v4 ptest);
 
@@ -604,6 +611,7 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 	pBsp->Nodes.Clear();
 	pBsp->Planes.Clear();
 	pBsp->Corners.Clear();
+	memset(&pBsp->Stats, 0, sizeof(pBsp->Stats));
 	g_nFirst = 0;
 	pBsp->DescOrg = Desc;
 	m mtobsp = mcreate(Desc.vDirection, Desc.vRight, Desc.vOrigin);
@@ -639,13 +647,13 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 	BspAddPotentialOccluders(pBsp, P, pOccluderDesc, nNumOccluders);
 
 
-
+	pBsp->Stats.nNumPlanesConsidered = 0;
 	for(uint32 i = 0; i < P.PotentialPolys.Size(); ++i)
 	{
 		uint16 nIndex = P.PotentialPolys[i].nIndex;
 		uint16 nCount = P.PotentialPolys[i].nCount;
+		pBsp->Stats.nNumPlanesConsidered += nCount;
 		P.PotentialPolys[i].fArea = BspAreaEstimate(P.Planes.Ptr() + nIndex, nCount);
-//		uplotfnxt("AREA %d is %f", i, P.PotentialPolys[i].fArea);
 	}
 	if(P.PotentialPolys.Size())
 	{
@@ -669,6 +677,8 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 			}
 		}
 	}
+	pBsp->Stats.nNumNodes = pBsp->Nodes.Size();
+	pBsp->Stats.nNumPlanes = pBsp->Planes.Size();
 
 
 
@@ -2343,7 +2353,7 @@ bool BspCullObjectR(SOccluderBsp *pBsp, uint32 Index, uint16 *Poly, uint32 nNumE
 			v4 p1 = BspGetPlane(pBsp, Poly[(i + 1) % (nNumEdges - 1)]);
 			v3 vIntersect = BspPlaneIntersection(p0, p1, vNormalPlane);
 			float fDot = v4dot(v4init(vIntersect, 1.f), vPlane);
-			uplotfnxt("VISIBLE dot %f", fDot);
+//			uplotfnxt("VISIBLE dot %f", fDot);
 			bVisible = bVisible || fDot < 0.f;
 		}
 		if(bVisible)
@@ -2351,7 +2361,6 @@ bool BspCullObjectR(SOccluderBsp *pBsp, uint32 Index, uint16 *Poly, uint32 nNumE
 			if(g_nShowClipLevel < 0)
 				BspDrawPoly(pBsp, Poly, nNumEdges, 0xff000000 | randredcolor(), 0, 1);
 		}
-		uplotfnxt("VISIBLE TEST %d", bVisible);
 		return !bVisible;
 	}
 	else
@@ -2425,7 +2434,10 @@ bool BspCullObjectR(SOccluderBsp *pBsp, uint32 Index, uint16 *Poly, uint32 nNumE
 
 bool BspCullObject(SOccluderBsp *pBsp, SWorldObject *pObject)
 {
-	return false;
+	if(0 == (pObject->nFlags & SObject::OCCLUSION_TEST))
+		return false;
+	pBsp->Stats.nNumObjectsTested++;
+
 	MICROPROFILE_SCOPEIC("BSP", "Cull");
 	if(!pBsp->Nodes.Size())
 		return false;
@@ -2525,7 +2537,7 @@ bool BspCullObject(SOccluderBsp *pBsp, SWorldObject *pObject)
 		}
 		else
 		{
-			uplotfnxt("reversing input");
+//			uplotfnxt("reversing input");
 			Poly[4] = nSize + 4;
 			Poly[0] = nSize + 3;
 			Poly[1] = nSize + 2;
@@ -2540,6 +2552,8 @@ bool BspCullObject(SOccluderBsp *pBsp, SWorldObject *pObject)
 	bool bResult = BspCullObjectR(pBsp, 0, &Poly[0], 5, 0);
 	pBsp->Planes.Resize(nSize);
 	srand(seed);
+	if(!bResult)
+		pBsp->Stats.nNumObjectsTestedVisible++;
 
 	return bResult;
 }
@@ -2583,4 +2597,10 @@ void BspDebugDrawHalfspace(v3 vNormal, v3 vPosition)
 							true);
 		}
 	}
+}
+
+
+void BspGetStats(SOccluderBsp* pBsp, SOccluderBspStats* pStats)
+{
+	memcpy(pStats, &pBsp->Stats, sizeof(SOccluderBspStats));
 }
