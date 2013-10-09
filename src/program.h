@@ -6,7 +6,7 @@
 enum
 {
 	MAX_OCCLUDERS = 100,
-	MAX_WORLD_OBJECTS = 2048,
+	MAX_WORLD_OBJECTS = 10 << 10,
 	MAX_LIGHTS = 1024,
 };
 
@@ -20,13 +20,14 @@ struct __ALIGN16 SObject
 {
 	m mObjectToWorld;
 	v3 vSize;
-
+	uint32_t nColor;
 	uint32_t nFlags;
 
 	enum
 	{
 		OCCLUDER_PLANE = 0x1,
 		OCCLUDER_BOX = 0x2,
+		OCCLUSION_TEST = 0x4,
 	};
 };
 
