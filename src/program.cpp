@@ -429,7 +429,7 @@ void WorldRender()
 		nNumOccluders,
 		&g_WorldState.WorldObjects[0], 
 		g_WorldState.nNumWorldObjects, 
-		//2,
+		//0,//2,
 		ViewDesc);
 
 	uint32 nNumObjects = g_WorldState.nNumWorldObjects;
