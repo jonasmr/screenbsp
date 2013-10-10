@@ -563,12 +563,22 @@ void BspAddFrustum(SOccluderBsp *pBsp, SBspPotentialOccluders& P, v3 vLocalDirec
 			v3 vCenter = (v0 + v1 + v2) / v3init(3.f);
 			v3 vNormal = v3normalize(v3cross(v3normalize(v1 - v0), v3normalize(v2 - v0)));
 			v3 vEnd = vCenter + vNormal;
-			v4 vPlane = v4init(vNormal, 0.f);
+			v4 vPlane = v4init(-vNormal, 0.f);
 			pBsp->vFrustumPlanes[i] = vPlane;
 			pBsp->vFrustumCorners[i] = vFrustumCorners[i];
 
 			P.Planes.PushBack(vPlane);
+			pBsp->Planes.PushBack(vPlane);
 			P.Corners.PushBack(vFrustumCorners[i]);
+			pBsp->Corners.PushBack(vFrustumCorners[i]);
+
+			int nIndex = (int)pBsp->Nodes.Size();
+			SOccluderBspNode* pNode = pBsp->Nodes.PushBack();
+			pNode->nInside = OCCLUDER_LEAF;
+			pNode->nOutside = i == 3 ? OCCLUDER_EMPTY : (i+1);
+			pNode->bLeaf = false;
+			pNode->nPlaneIndex = i;
+			pNode->vDebugCorner = pBsp->Corners[i];
 	// for(uint32 i = 0; i < nNumPlanes; ++i)
 	// {
 	// 	if(0 == (nExcludeMask & 1))
@@ -1415,7 +1425,7 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 	uint32 nExcludeMaskOut = 0, nExcludeMaskIn = 0;
 
 	ClipPolyResult CR = ECPR_CLIPPED;
-	if(Node.nInside == OCCLUDER_LEAF)
+	if(Node.nInside == OCCLUDER_LEAF && vPlane.w != 0.f)
 	{
 		if(BSP_ADD_FRONT)
 		{
@@ -1582,7 +1592,7 @@ bool BspCullObjectR(SOccluderBsp *pBsp, uint32 Index, uint16 *Poly, uint32 nNumE
 
 	SOccluderBspNode Node = pBsp->Nodes[Index];
 	v4 vPlane = BspGetPlane(pBsp, Node.nPlaneIndex);
-	if(Node.nInside == OCCLUDER_LEAF)
+	if(Node.nInside == OCCLUDER_LEAF && vPlane.w != 0.f)
 	{
 		ZASSERT(vPlane.w != 0.f);
 		// v3 BspPlaneIntersection(v4 p0, v4 p1, v4 p2)
