@@ -285,6 +285,49 @@ void BspAddPotentialOccluder(SBspPotentialOccluders& PotentialOccluders, v4* vPl
 	PotentialOccluders.PotentialPolys.PushBack(P);
 }
 
+bool BspFrustumOutside(v4 vPlane, v4* vPlanes, uint32 nNumPlanes)
+{
+	bool R = true;
+	for(uint32 i = 0; i < nNumPlanes; ++i)
+	{
+		v4 p0 = vPlanes[i];
+		v4 p1 = vPlanes[(i+1)%nNumPlanes];
+		R = R && BspPlaneTestNew(p0, p1, vPlane) < 0.f;
+	}
+	return R;
+
+}
+
+bool BspFrustumDisjoint(v4* pPlanes0, uint32 nNumPlanes0, v4* pPlanes1, uint32 nNumPlanes1)
+{
+	char buffer[256];
+	char foo[100];
+	strcpy(buffer, "***FRDIST ");
+	bool bSum = false;
+	for(uint32 i = 0; i < nNumPlanes0; ++i)
+	{
+		v4 vPlane = pPlanes0[i];
+		bool bTest = BspFrustumOutside(vPlane, pPlanes1, nNumPlanes1);
+		bSum = bSum || bTest;
+
+		snprintf(foo, 100, "%d ", bTest ? 1 : 0);
+		strcat(buffer, foo);
+	}
+	for(uint32 i = 0; i < nNumPlanes1; ++i)
+	{
+		v4 vPlane = pPlanes0[i];
+		bool bTest = BspFrustumOutside(vPlane, pPlanes1, nNumPlanes1);
+		bSum = bSum || bTest;
+		snprintf(foo, 100, "%d ", bTest ? 1 : 0);
+		strcat(buffer, foo);
+	}
+	strcat(buffer, " TOTAL ");
+	strcat(buffer, bSum ? "1" : "0");
+//	uplotfnxt(buffer);
+	return bSum;
+}
+
+
 bool BspAddPotentialQuad(SOccluderBsp* pBsp, SBspPotentialOccluders& PotentialOccluders, v3 *vCorners,
 						 uint32 nNumCorners)
 {
@@ -358,6 +401,10 @@ bool BspAddPotentialQuad(SOccluderBsp* pBsp, SBspPotentialOccluders& PotentialOc
 			ZDEBUG_DRAWLINE(v1, v2, (uint32) - 1, true);
 			ZDEBUG_DRAWLINE(v2, v0, (uint32) - 1, true);
 		}
+	}
+	if(BspFrustumDisjoint(pPlanes, 4, &pBsp->vFrustumPlanes[0], 4))
+	{
+		return false;
 	}
 	BspAddPotentialOccluder(PotentialOccluders, pPlanes, pCorners, 5);
 	return true;
@@ -482,13 +529,11 @@ void BspAddPotentialOccluders(SOccluderBsp *pBsp, SBspPotentialOccluders &P, SOc
 	}
 }
 
-void BspAddFrustum(SOccluderBsp *pBsp, v3 vLocalDirection, v3 vLocalRight, v3 vLocalUp, v3 vLocalOrigin)
+void BspAddFrustum(SOccluderBsp *pBsp, SBspPotentialOccluders& P, v3 vLocalDirection, v3 vLocalRight, v3 vLocalUp, v3 vLocalOrigin)
 {
 	// FRUSTUM
 	if(USE_FRUSTUM)
 	{
-		// todo REWRITE USING INTERNAL FUNCS
-		// ZBREAK(); //todo retest this code
 		v3 vFrustumCorners[4];
 		SOccluderBspViewDesc Desc = pBsp->DescOrg;
 
@@ -509,6 +554,7 @@ void BspAddFrustum(SOccluderBsp *pBsp, v3 vLocalDirection, v3 vLocalRight, v3 vL
 		ZASSERTNORMALIZED3(vLocalRight);
 		ZASSERTNORMALIZED3(vUp);
 
+		ZASSERT(P.Planes.Size() == 0);
 		for(uint32 i = 0; i < 4; ++i)
 		{
 			v3 v0 = vFrustumCorners[i];
@@ -517,8 +563,40 @@ void BspAddFrustum(SOccluderBsp *pBsp, v3 vLocalDirection, v3 vLocalRight, v3 vL
 			v3 vCenter = (v0 + v1 + v2) / v3init(3.f);
 			v3 vNormal = v3normalize(v3cross(v3normalize(v1 - v0), v3normalize(v2 - v0)));
 			v3 vEnd = vCenter + vNormal;
-			pBsp->vFrustumPlanes[i] = v4init(vNormal, 0.f);
+			v4 vPlane = v4init(vNormal, 0.f);
+			pBsp->vFrustumPlanes[i] = vPlane;
 			pBsp->vFrustumCorners[i] = vFrustumCorners[i];
+
+			P.Planes.PushBack(vPlane);
+			P.Corners.PushBack(vFrustumCorners[i]);
+	// for(uint32 i = 0; i < nNumPlanes; ++i)
+	// {
+	// 	if(0 == (nExcludeMask & 1))
+	// 	{
+	// 		nCount++;
+	// 		int nIndex = (int)pBsp->Nodes.Size();
+	// 		SOccluderBspNode *pNode = pBsp->Nodes.PushBack();
+	// 		pNode->nOutside = OCCLUDER_EMPTY;
+	// 		pNode->nInside = OCCLUDER_LEAF;
+	// 		pNode->bLeaf = i == nNumPlanes - 1;
+	// 		pNode->nPlaneIndex = pIndices[i];
+	// 		if(nPrev >= 0)
+	// 			pBsp->Nodes[nPrev].nInside = nIndex;
+	// 		nPrev = nIndex;
+	// 		pNode->vDebugCorner = pBsp->Corners[pIndices[i]];
+
+	// 		if(g_nBspDebugPlane == g_nBspDebugPlaneCounter++)
+	// 		{
+	// 			v4 vPlane = BspGetPlane(pBsp, pIndices[i]);
+	// 			v3 vCorner = pNode->vDebugCorner;
+	// 			vCorner = mtransform(pBsp->mfrombsp, vCorner);
+	// 			vPlane = v4init(mrotate(pBsp->mfrombsp, vPlane.tov3()), 1.f);
+	// 			ZDEBUG_DRAWPLANE(vPlane.tov3(), vCorner, 0xff00ff00);
+	// 		}
+	// 	}
+	// 	nExcludeMask >>= 1;
+	// }
+
 		}
 
 		if(g_nBspOccluderDrawEdges & 2)
@@ -638,8 +716,7 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 
 	SBspPotentialOccluders P;
 
-	BspAddFrustum(pBsp, vLocalDirection, vLocalRight, vLocalUp, vLocalOrigin);
-
+	BspAddFrustum(pBsp, P, vLocalDirection, vLocalRight, vLocalUp, vLocalOrigin);
 	BspAddPotentialBoxes(pBsp, P, pWorldObjects, nNumWorldObjects);
 	BspAddPotentialOccluders(pBsp, P, pOccluderDesc, nNumOccluders);
 

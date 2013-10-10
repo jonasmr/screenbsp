@@ -426,8 +426,7 @@ void WorldRender()
 	uplotfnxt("DEBUG POS %f %f %f", vPos.x, vPos.y, vPos.z);
 
 	BspBuild(g_Bsp, &g_WorldState.Occluders[0], 
-		//nNumOccluders,
-		3,
+		nNumOccluders,
 		&g_WorldState.WorldObjects[0], 
 		g_WorldState.nNumWorldObjects, 
 		//2,
