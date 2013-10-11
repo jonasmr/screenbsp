@@ -13,12 +13,25 @@ uniform int MaxLightTileIndex;
 uniform int mode;
 uniform vec2 ScreenSize;
 uniform vec3 TileSize;
+uniform vec3 vWorldEye;
 
 
 in vec3 fNormal;
 in vec3 fWorldPos;
 out vec4 Out0;
 
+
+vec3 EvalSun()
+{
+	vec3 vToLight = vec3(0.7071067811, -0.7071067811, 0);
+	vec3 vDir = -vToLight;
+	//float fAngle = max(dot(vDir, fNormal), 0.0);
+	float fAngle = max(0.0, (0.5 + dot(vDir, fNormal) / (1.0+0.5)));
+	vec3 vDiffuse = vec3(fAngle) * 0.4;
+ 	vec3 vHalf = normalize(0.5 * (normalize(fWorldPos-vWorldEye) + vDir));
+ 	float fSpec = max(dot(vHalf, fNormal), 0.f);
+ 	return vDiffuse + vec3(min(1.0, pow(fSpec, 4.0) * 5));
+}
 
 vec3 EvalLight(vec2 tc0, vec2 tc1)
 {
@@ -108,7 +121,7 @@ void main(void)
 #endif
 		}
 	}
-	Out0.xyz = Color;
+	Out0.xyz = Color + EvalSun();
 	Out0.w = 1.0;
 }
 
