@@ -645,6 +645,7 @@ void WorldRender()
 	v3 vTileSize = v3init(g_LightTileWidth, g_LightTileHeight, TILE_SIZE);
 	SHADER_SET("TileSize", vTileSize);
 	SHADER_SET("MaxLightTileIndex", nLightIndex);
+	SHADER_SET("vWorldEye", g_WorldState.Camera.vPosition);
 	m mprjview = mmult(g_WorldState.Camera.mprj, g_WorldState.Camera.mview);
 
 	glEnable(GL_CULL_FACE);
