@@ -90,10 +90,10 @@ void EditorStateInit()
 
 #define OCCLUSION_TEST_MIN -300
 #define OCCLUSION_TEST_MAX 300
-#define OCCLUSION_NUM_LARGE 10
+#define OCCLUSION_NUM_LARGE 0
 #define OCCLUSION_NUM_SMALL 100
-#define OCCLUSION_NUM_LONG 20
-#define OCCLUSION_NUM_OBJECTS 1000
+#define OCCLUSION_NUM_LONG 0
+#define OCCLUSION_NUM_OBJECTS 0
 
 void WorldOcclusionCreate(v3 vSize, uint32 nFlags, v3 vColor = v3zero())
 {
@@ -120,13 +120,33 @@ void WorldInitOcclusionTest()
 		float fDepth = frandrange(7, 15);
 		WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUDER_BOX);
 	}
-	for(int i = 0; i < OCCLUSION_NUM_SMALL; ++i)
+	//for(int i = 0; i < OCCLUSION_NUM_SMALL; ++i)
+	float fbar = 0.f;
+	int idxx[] = 
+	{
+		//75 + 5 ,76 + 5 ,77 + 5 ,
+		75 + 15 , 76 + 15 ,
+	};
+	for(int i = 75; i < 100; ++i)
 	{
 		float fHeight = frandrange(10, 15);
 		float fWidth = frandrange(7, 15);
 		float fDepth = frandrange(7, 15);
-		WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUDER_BOX);
+		bool bSkip = true;
+		for(int x : idxx)
+			if(x == i)
+				bSkip = false;
+		if(bSkip)
+		{
+			fbar += frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
+			fbar += frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
+		}
+		else
+		{
+			WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUDER_BOX);
+		}
 	}
+	uprintf("fbar %f", fbar);
 	for(int i = 0; i < OCCLUSION_NUM_LONG; ++i)
 	{
 		float fHeight = frandrange(10, 20);
@@ -159,6 +179,7 @@ void WorldInitOcclusionTest()
 		{
 			Swap(fWidth, fHeight);
 		}
+
 		WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUSION_TEST, v3init(1,0,0));
 	}
 
@@ -178,7 +199,7 @@ void WorldInit()
 	g_WorldState.Occluders[2].mObjectToWorld = mrotatey(90*TORAD);
 	g_WorldState.Occluders[2].mObjectToWorld.trans = v4init(2.6f,0.f,-0.5f, 1.f);
 	g_WorldState.Occluders[2].vSize = v3init(0.25f, 0.25f, 0);
-	g_WorldState.nNumOccluders = 3;
+	g_WorldState.nNumOccluders = 0;
 
 
 	if(1)
@@ -368,7 +389,9 @@ void WorldRender()
 
 
 	if(incfoo)
-		foo += 0.001f;
+		foo += 0.01f;
+	foo = 3.449997;
+	uplotfnxt("foo is %f", foo);
 	//foo = 1.0f;
 
 	if(g_KeyboardState.keys[SDL_SCANCODE_L] & BUTTON_RELEASED)
