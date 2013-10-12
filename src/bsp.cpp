@@ -24,14 +24,19 @@
 #define OCCLUDER_EMPTY (0xc000)
 #define OCCLUDER_LEAF (0x8000)
 #define OCCLUDER_CLIP_MAX 0x100
-#define USE_FRUSTUM 1
+#define USE_FRUSTUM 0
 #define BSP_ADD_FRONT 1
 
 uint32 g_DEBUG =0;
+uint32 g_DEBUG2 =0;
+uint32 g_DEBUGLEVEL = 0;
+uint32 g_DEBUGLEVELSTART = 3;
 uint32 g_nBspOccluderDebugDrawClipResult = 1;
 uint32 g_nBspOccluderDrawEdges = 2;
 uint32 g_nBspOccluderDrawOccluders = 1;
 uint32 g_nBreakOnClipIndex = -1;
+
+uint32 g_nBspPlaneCap = 3;
 
 uint32 g_nBspDebugPlane = -1;
 uint32 g_nBspDebugPlaneCounter = 0;
@@ -753,12 +758,24 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 		v3* vCorners = P.Corners.Ptr();
 		for(uint32 i = 0; i < P.PotentialPolys.Size(); ++i)
 		{
+			if(i > g_nBspPlaneCap)
+				break;
+			if(i == g_nBspPlaneCap)
+			{
+				g_DEBUG2 = 1;
+				g_DEBUGLEVEL = g_DEBUGLEVELSTART;
+//uint32 g_DEBUGLEVELSTART = 1;
+
+			}
 			uint16 nIndex = P.PotentialPolys[i].nIndex;
 			uint16 nCount = P.PotentialPolys[i].nCount;
 			if(BspCanAddNodes(pBsp, nCount))
 			{
 				BspAddOccluderInternal(pBsp, nIndex + vPlanes, nIndex + vCorners, nCount);
 			}
+			g_DEBUG2 = 0;
+			g_DEBUGLEVEL = -1;
+
 		}
 	}
 	pBsp->Stats.nNumNodes = pBsp->Nodes.Size();
@@ -797,6 +814,20 @@ float BspAreaEstimate(v4* vPlanes, uint32 nNumPlanes)
 
 void BspAddOccluderInternal(SOccluderBsp *pBsp, v4 *pPlanes, v3* pCorners, uint32 nNumPlanes)
 {
+	//todo.. remove this to the potential phase
+	v4 vNormalPlane = pPlanes[nNumPlanes-1];
+	float fLen2 = vNormalPlane.x * vNormalPlane.x + vNormalPlane.y * vNormalPlane.y;
+	// uplotfnxt("ADD WITH NORMAL %f %f %f %f .. 2dlen %f", 
+	// 	vNormalPlane.x,
+	// 	vNormalPlane.y,
+	// 	vNormalPlane.z,
+	// 	vNormalPlane.w, fLen2);
+	#define LIM 0.9999
+	if(fLen2 > (LIM*LIM))
+	{
+		// uplotfnxt("REJECT");
+		return;
+	}
 	uint32 nPlaneIndex = pBsp->Planes.Size();
 	pBsp->Planes.PushBack(pPlanes, nNumPlanes);
 	pBsp->Corners.PushBack(pCorners, nNumPlanes);
@@ -850,6 +881,8 @@ void BspDrawPoly(SOccluderBsp *pBsp, uint16 *Poly, uint32 nVertices, uint32 nCol
 		uint32 i1 = (i + 1) % nPolyEdges;
 		v4 v0 = BspGetPlane(pBsp, Poly[i0]);
 		v4 v1 = BspGetPlane(pBsp, Poly[i1]);
+		// float fDot = v4dot(v0,v1);
+		// uprintf("dp is %f", fDot);
 		vCorners[i] = mtransform(pBsp->mfrombsp, BspPlaneIntersection(v0, v1, vNormalPlane));
 		if(1)
 		{
@@ -1005,6 +1038,28 @@ int BspAddInternal(SOccluderBsp *pBsp, uint16 nParent, bool bOutsideParent, uint
 	int nPrev = -1;
 	if(nLevel + nNumPlanes > pBsp->nDepth)
 		pBsp->nDepth = nLevel + nNumPlanes;
+	if(g_DEBUG2 && g_DEBUGLEVEL == 0)
+	{
+		uprintf("ADD INTERNAL\n");
+		// for(uint32 i = 0; i < nNumPlanes; ++i)
+		// {
+		// 	v4 p0 = BspGetPlane(pBsp, pIndices[i]);
+		// 	uprintf("p%d: %12.10f %12.10f %12.10f %12.10f\n", i, p0.x, p0.y, p0.z, p0.w);
+		// }
+		if(nNumPlanes>3)
+		{			
+			uint32 nCount = nNumPlanes-1;
+			for(uint32 i = 0; i < nCount; ++i)
+			{
+				v4 p0 = BspGetPlane(pBsp, pIndices[i]);
+				v4 p1 = BspGetPlane(pBsp, pIndices[(i+1)%nCount]);
+				v4 p2 = BspGetPlane(pBsp, pIndices[(i+2)%nCount]);
+				uprintf("%f ", BspPlaneTestNew(p0, p1, p2));
+			}
+		}
+		uprintf("\n");
+	}
+
 	for(uint32 i = 0; i < nNumPlanes; ++i)
 	{
 		if(0 == (nExcludeMask & 1))
@@ -1021,7 +1076,10 @@ int BspAddInternal(SOccluderBsp *pBsp, uint16 nParent, bool bOutsideParent, uint
 			nPrev = nIndex;
 			pNode->vDebugCorner = pBsp->Corners[pIndices[i]];
 
-			if(g_nBspDebugPlane == g_nBspDebugPlaneCounter++)
+			if(g_nBspDebugPlane == g_nBspDebugPlaneCounter++ ||
+				g_DEBUGLEVEL == 0
+
+				)
 			{
 				v4 vPlane = BspGetPlane(pBsp, pIndices[i]);
 				v3 vCorner = pNode->vDebugCorner;
@@ -1040,7 +1098,19 @@ int BspAddInternal(SOccluderBsp *pBsp, uint16 nParent, bool bOutsideParent, uint
 		else
 			pBsp->Nodes[nParent].nInside = nNewIndex;
 	}
-
+	// if(g_DEBUGLEVEL-- == 0)
+	// {
+	// 	if(nNumPlanes>6)
+	// 	{
+	// 		uint16 lala[32];
+	// 		memcpy(lala, pIndices, nNumPlanes*sizeof(uint16));
+	// 		lala[3] = lala[6];
+	// 		lala[4] = lala[6];
+	// 		//lala[5] = lala[6];
+	// 		//BspDrawPoly(pBsp, pIndices, nNumPlanes, randcolor(), randcolor(), 1);
+	// 		BspDrawPoly(pBsp, lala, 4, randcolor(), randcolor(), 1);
+	// 	}
+	// }
 	if((int)g_nRecursiveClip < 0)
 		BspDrawPoly(pBsp, pIndices, nNumPlanes, randcolor(), randcolor(), 1);
 	return nNewIndex;
@@ -1434,6 +1504,7 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 			{
 				{
 					ZASSERT(vPlane.w != 0.f);
+
 					v4 vNormalPlane = BspGetPlane(pBsp, pIndices[nNumIndices - 1]);
 					for(int i = 0; i < nNumIndices - 1; ++i)
 					{
