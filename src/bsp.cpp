@@ -444,7 +444,7 @@ bool BspAddPotentialBoxQuad(SOccluderBsp* pBsp, SBspPotentialOccluders& Potentia
 
 	const v3 vToCenter = vCenter; //- pBsp->vLocalOrigin;
 	const float fDot = v3dot(vToCenter, vNormal);
-	//uplotfnxt("DOT IS %f", fDot);
+	uplotfnxt("DOT IS %f", fDot);
 	if(fDot < 0.03f) // reject backfacing and gracing polygons
 	{
 		return BspAddPotentialQuad(pBsp, PotentialOccluders, &vCorners[0], 4);
@@ -817,15 +817,19 @@ void BspAddOccluderInternal(SOccluderBsp *pBsp, v4 *pPlanes, v3* pCorners, uint3
 	//todo.. remove this to the potential phase
 	v4 vNormalPlane = pPlanes[nNumPlanes-1];
 	float fLen2 = vNormalPlane.x * vNormalPlane.x + vNormalPlane.y * vNormalPlane.y;
+	uplotfnxt("NORMAL W %f", vNormalPlane.w);
 	// uplotfnxt("ADD WITH NORMAL %f %f %f %f .. 2dlen %f", 
 	// 	vNormalPlane.x,
 	// 	vNormalPlane.y,
 	// 	vNormalPlane.z,
 	// 	vNormalPlane.w, fLen2);
 	#define LIM 0.9999
-	if(fLen2 > (LIM*LIM))
+
+	//if(fLen2 > (LIM*LIM))
+	//reject if too close to origin.
+	if(fabs(vNormalPlane.w) < 0.1f)
 	{
-		// uplotfnxt("REJECT");
+		uplotfnxt("REJECT %f", vNormalPlane.w);
 		return;
 	}
 	uint32 nPlaneIndex = pBsp->Planes.Size();

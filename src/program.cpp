@@ -124,8 +124,8 @@ void WorldInitOcclusionTest()
 	float fbar = 0.f;
 	int idxx[] = 
 	{
-		//75 + 5 ,76 + 5 ,77 + 5 ,
-		75 + 15 , 76 + 15 ,
+		75 + 15 , 
+		76 + 15 ,
 	};
 	for(int i = 75; i < 100; ++i)
 	{
