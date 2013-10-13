@@ -35,9 +35,7 @@ uint32 g_nBspOccluderDebugDrawClipResult = 1;
 uint32 g_nBspOccluderDrawEdges = 2;
 uint32 g_nBspOccluderDrawOccluders = 1;
 uint32 g_nBreakOnClipIndex = -1;
-
-uint32 g_nBspPlaneCap = 3;
-
+uint32 g_nBspPlaneCap = -1;
 uint32 g_nBspDebugPlane = -1;
 uint32 g_nBspDebugPlaneCounter = 0;
 uint32 g_nRecursiveClipCounter = 0;
