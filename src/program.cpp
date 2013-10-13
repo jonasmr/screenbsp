@@ -90,9 +90,9 @@ void EditorStateInit()
 
 #define OCCLUSION_TEST_MIN -300
 #define OCCLUSION_TEST_MAX 300
-#define OCCLUSION_NUM_LARGE 0
+#define OCCLUSION_NUM_LARGE 10
 #define OCCLUSION_NUM_SMALL 100
-#define OCCLUSION_NUM_LONG 0
+#define OCCLUSION_NUM_LONG 20
 #define OCCLUSION_NUM_OBJECTS 0
 
 void WorldOcclusionCreate(v3 vSize, uint32 nFlags, v3 vColor = v3zero())
@@ -113,21 +113,43 @@ void WorldOcclusionCreate(v3 vSize, uint32 nFlags, v3 vColor = v3zero())
 void WorldInitOcclusionTest()
 {
 	g_WorldState.nNumWorldObjects = 0;
+	float fbar = 0.f;
+	int idxx_large[] = 
+	{
+		//0, 1, 2, 3, 4, 
+		//5, 6, 7, 
+		//8, 
+		//9, 10, 
+		//76 + 15,
+	};
+
 	for(int i = 0; i < OCCLUSION_NUM_LARGE; ++i)
 	{
 		float fHeight = frandrange(50, 100);
 		float fWidth = frandrange(7, 15);
 		float fDepth = frandrange(7, 15);
-		WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUDER_BOX);
+		bool bSkip = true;
+		for(int x : idxx_large)
+			if(x == i)
+				bSkip = false;
+		if(bSkip)
+		{
+			fbar += frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
+			fbar += frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
+		}
+		else
+		{
+			WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUDER_BOX);
+		}
 	}
-	//for(int i = 0; i < OCCLUSION_NUM_SMALL; ++i)
-	float fbar = 0.f;
+	
 	int idxx[] = 
 	{
-		75 + 15 , 
-		76 + 15 ,
+		// 75 + 15 , 
+		// 76 + 15 ,
 	};
-	for(int i = 75; i < 100; ++i)
+	//for(int i = 75; i < 100; ++i)
+	for(int i = 0; i < OCCLUSION_NUM_SMALL; ++i)
 	{
 		float fHeight = frandrange(10, 15);
 		float fWidth = frandrange(7, 15);
@@ -146,7 +168,28 @@ void WorldInitOcclusionTest()
 			WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUDER_BOX);
 		}
 	}
-	uprintf("fbar %f", fbar);
+//	uprintf("fbar %f", fbar);
+
+	int idxx_long[] = 
+	{
+		//0, 1, 2, 3, 4, 
+		//5, 6, 
+		7, 
+		//8, 
+		//9, 10, 
+		//76 + 15,
+	};
+
+	int idxx_long2[] = 
+	{
+		//0, 1, 2, 3, 4, 
+		5, 
+		//6, 
+		//7, 8, 
+		//9, 10, 
+		//76 + 15,
+	};
+
 	for(int i = 0; i < OCCLUSION_NUM_LONG; ++i)
 	{
 		float fHeight = frandrange(10, 20);
@@ -156,7 +199,20 @@ void WorldInitOcclusionTest()
 		{
 			Swap(fWidth, fHeight);
 		}
-		WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUDER_BOX);
+
+		bool bSkip = true;
+		for(int x : idxx_long)
+			if(x == i)
+				bSkip = false;
+		if(bSkip)
+		{
+			fbar += frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
+			fbar += frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
+		}
+		else
+		{
+			WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUDER_BOX);
+		}
 	}
 	for(int i = 0; i < OCCLUSION_NUM_LONG; ++i)
 	{
@@ -167,7 +223,19 @@ void WorldInitOcclusionTest()
 		{
 			Swap(fWidth, fDepth);
 		}
-		WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUDER_BOX);
+		bool bSkip = true;
+		for(int x : idxx_long2)
+			if(x == i)
+				bSkip = false;
+		if(bSkip)
+		{
+			fbar += frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
+			fbar += frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
+		}
+		else
+		{
+			WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUDER_BOX);
+		}
 	}
 
 	for(int i = 0; i < OCCLUSION_NUM_OBJECTS; ++i)
@@ -221,6 +289,7 @@ void WorldInit()
 		g_WorldState.WorldObjects[1].nFlags = 0; 
 		g_WorldState.WorldObjects[1].nFlags |= SObject::OCCLUDER_BOX; 
 		g_WorldState.nNumWorldObjects = 2;
+		g_WorldState.nNumWorldObjects = 0;
 	}
 	if(0)
 	{
@@ -390,7 +459,7 @@ void WorldRender()
 
 	if(incfoo)
 		foo += 0.01f;
-	foo = 3.449997;
+	foo = 10.2201;
 	uplotfnxt("foo is %f", foo);
 	//foo = 1.0f;
 

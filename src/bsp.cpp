@@ -20,11 +20,16 @@
 //  optimize!
 //
 
+// precision list:
+//   normal planes with w near 0 tend to cause precision issues
+//   clip with the front plane
+//   
+
 #include <algorithm>
 #define OCCLUDER_EMPTY (0xc000)
 #define OCCLUDER_LEAF (0x8000)
 #define OCCLUDER_CLIP_MAX 0x100
-#define USE_FRUSTUM 0
+#define USE_FRUSTUM 1
 #define BSP_ADD_FRONT 1
 
 uint32 g_DEBUG =0;
@@ -56,6 +61,7 @@ struct SOccluderBspNode
 	uint16 nInside;
 	uint16 nOutside;
 	bool bLeaf;
+	bool bSpecial;
 	v3 vDebugCorner;
 };
 
@@ -355,7 +361,6 @@ bool BspAddPotentialQuad(SOccluderBsp* pBsp, SBspPotentialOccluders& PotentialOc
 		float fMaxDot = Max(fDot0, fDot1);
 		fMaxDot = Max(fDot2, fMaxDot);
 		fMaxDot = Max(fDot3, fMaxDot);
-		//uplotfnxt("MAX DOT IS %f", fMaxDot);
 		if(fMaxDot < 0.f) //all behind eye
 		{
 			return false;
@@ -442,7 +447,7 @@ bool BspAddPotentialBoxQuad(SOccluderBsp* pBsp, SBspPotentialOccluders& Potentia
 
 	const v3 vToCenter = vCenter; //- pBsp->vLocalOrigin;
 	const float fDot = v3dot(vToCenter, vNormal);
-	uplotfnxt("DOT IS %f", fDot);
+//	uplotfnxt("DOT IS %f", fDot);
 	if(fDot < 0.03f) // reject backfacing and gracing polygons
 	{
 		return BspAddPotentialQuad(pBsp, PotentialOccluders, &vCorners[0], 4);
@@ -558,6 +563,7 @@ void BspAddFrustum(SOccluderBsp *pBsp, SBspPotentialOccluders& P, v3 vLocalDirec
 		ZASSERTNORMALIZED3(vUp);
 
 		ZASSERT(P.Planes.Size() == 0);
+		//for(uint32 i = 0; i < 4; ++i)
 		for(uint32 i = 0; i < 4; ++i)
 		{
 			v3 v0 = vFrustumCorners[i];
@@ -579,38 +585,16 @@ void BspAddFrustum(SOccluderBsp *pBsp, SBspPotentialOccluders& P, v3 vLocalDirec
 			SOccluderBspNode* pNode = pBsp->Nodes.PushBack();
 			pNode->nInside = OCCLUDER_LEAF;
 			pNode->nOutside = i == 3 ? OCCLUDER_EMPTY : (i+1);
+//			pNode->nOutside = OCCLUDER_EMPTY;
 			pNode->bLeaf = false;
+			pNode->bSpecial = true;
 			pNode->nPlaneIndex = i;
 			pNode->vDebugCorner = pBsp->Corners[i];
-	// for(uint32 i = 0; i < nNumPlanes; ++i)
-	// {
-	// 	if(0 == (nExcludeMask & 1))
-	// 	{
-	// 		nCount++;
-	// 		int nIndex = (int)pBsp->Nodes.Size();
-	// 		SOccluderBspNode *pNode = pBsp->Nodes.PushBack();
-	// 		pNode->nOutside = OCCLUDER_EMPTY;
-	// 		pNode->nInside = OCCLUDER_LEAF;
-	// 		pNode->bLeaf = i == nNumPlanes - 1;
-	// 		pNode->nPlaneIndex = pIndices[i];
-	// 		if(nPrev >= 0)
-	// 			pBsp->Nodes[nPrev].nInside = nIndex;
-	// 		nPrev = nIndex;
-	// 		pNode->vDebugCorner = pBsp->Corners[pIndices[i]];
-
-	// 		if(g_nBspDebugPlane == g_nBspDebugPlaneCounter++)
-	// 		{
-	// 			v4 vPlane = BspGetPlane(pBsp, pIndices[i]);
-	// 			v3 vCorner = pNode->vDebugCorner;
-	// 			vCorner = mtransform(pBsp->mfrombsp, vCorner);
-	// 			vPlane = v4init(mrotate(pBsp->mfrombsp, vPlane.tov3()), 1.f);
-	// 			ZDEBUG_DRAWPLANE(vPlane.tov3(), vCorner, 0xff00ff00);
-	// 		}
-	// 	}
-	// 	nExcludeMask >>= 1;
-	// }
-
+			//ZASSERT(nIndex == 0);
+		//	uplotfnxt("localdir is %f %f %f", vLocalDirection.x,vLocalDirection.y,vLocalDirection.z);
 		}
+		//pBsp->Planes[0] = v4init(vLocalDirection, 0.1f);
+
 
 		if(g_nBspOccluderDrawEdges & 2)
 		{
@@ -815,7 +799,7 @@ void BspAddOccluderInternal(SOccluderBsp *pBsp, v4 *pPlanes, v3* pCorners, uint3
 	//todo.. remove this to the potential phase
 	v4 vNormalPlane = pPlanes[nNumPlanes-1];
 	float fLen2 = vNormalPlane.x * vNormalPlane.x + vNormalPlane.y * vNormalPlane.y;
-	uplotfnxt("NORMAL W %f", vNormalPlane.w);
+//	uplotfnxt("NORMAL W %f", vNormalPlane.w);
 	// uplotfnxt("ADD WITH NORMAL %f %f %f %f .. 2dlen %f", 
 	// 	vNormalPlane.x,
 	// 	vNormalPlane.y,
@@ -1073,6 +1057,7 @@ int BspAddInternal(SOccluderBsp *pBsp, uint16 nParent, bool bOutsideParent, uint
 			pNode->nInside = OCCLUDER_LEAF;
 			pNode->bLeaf = i == nNumPlanes - 1;
 			pNode->nPlaneIndex = pIndices[i];
+			pNode->bSpecial = false;
 			if(nPrev >= 0)
 				pBsp->Nodes[nPrev].nInside = nIndex;
 			nPrev = nIndex;
