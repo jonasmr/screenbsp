@@ -123,12 +123,14 @@ void WorldInitOcclusionTest()
 		//76 + 15,
 	};
 
+	bool bSkipInit = false;
+
 	for(int i = 0; i < OCCLUSION_NUM_LARGE; ++i)
 	{
 		float fHeight = frandrange(50, 100);
 		float fWidth = frandrange(7, 15);
 		float fDepth = frandrange(7, 15);
-		bool bSkip = true;
+		bool bSkip = bSkipInit;
 		for(int x : idxx_large)
 			if(x == i)
 				bSkip = false;
@@ -154,7 +156,7 @@ void WorldInitOcclusionTest()
 		float fHeight = frandrange(10, 15);
 		float fWidth = frandrange(7, 15);
 		float fDepth = frandrange(7, 15);
-		bool bSkip = true;
+		bool bSkip = bSkipInit;
 		for(int x : idxx)
 			if(x == i)
 				bSkip = false;
@@ -200,7 +202,7 @@ void WorldInitOcclusionTest()
 			Swap(fWidth, fHeight);
 		}
 
-		bool bSkip = true;
+		bool bSkip = bSkipInit;
 		for(int x : idxx_long)
 			if(x == i)
 				bSkip = false;
@@ -223,7 +225,7 @@ void WorldInitOcclusionTest()
 		{
 			Swap(fWidth, fDepth);
 		}
-		bool bSkip = true;
+		bool bSkip = bSkipInit;
 		for(int x : idxx_long2)
 			if(x == i)
 				bSkip = false;
@@ -459,7 +461,7 @@ void WorldRender()
 
 	if(incfoo)
 		foo += 0.01f;
-	foo = 10.2201;
+	//foo = 10.2201;
 	uplotfnxt("foo is %f", foo);
 	//foo = 1.0f;
 
