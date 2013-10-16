@@ -438,14 +438,14 @@ bool BspAddPotentialBoxQuad(SOccluderBsp* pBsp, SBspPotentialOccluders& Potentia
 		vCorners[2] = vCenter - vUp * fUpSize - vLeft * fLeftSize;
 		vCorners[3] = vCenter + vUp * fUpSize - vLeft * fLeftSize;
 	}
-	v3 pos = mtransform(pBsp->mfrombsp, vCorners[0]);
-	ZDEBUG_DRAWBOX(mid(), pos, v3rep(0.03f), 0xff00ff, 1);
-	pos = mtransform(pBsp->mfrombsp, vCorners[1]);
-	ZDEBUG_DRAWBOX(mid(), pos, v3rep(0.03f), 0xff00ff, 1);
-	pos = mtransform(pBsp->mfrombsp, vCorners[2]);
-	ZDEBUG_DRAWBOX(mid(), pos, v3rep(0.03f), 0xff00ff, 1);
-	pos = mtransform(pBsp->mfrombsp, vCorners[3]);
-	ZDEBUG_DRAWBOX(mid(), pos, v3rep(0.03f), 0xff00ff, 1);
+	// v3 pos = mtransform(pBsp->mfrombsp, vCorners[0]);
+	// ZDEBUG_DRAWBOX(mid(), pos, v3rep(0.03f), 0xff00ff, 1);
+	// pos = mtransform(pBsp->mfrombsp, vCorners[1]);
+	// ZDEBUG_DRAWBOX(mid(), pos, v3rep(0.03f), 0xff00ff, 1);
+	// pos = mtransform(pBsp->mfrombsp, vCorners[2]);
+	// ZDEBUG_DRAWBOX(mid(), pos, v3rep(0.03f), 0xff00ff, 1);
+	// pos = mtransform(pBsp->mfrombsp, vCorners[3]);
+	// ZDEBUG_DRAWBOX(mid(), pos, v3rep(0.03f), 0xff00ff, 1);
 
 	const v3 vToCenter = vCenter; //- pBsp->vLocalOrigin;
 	const float fDot = v3dot(vToCenter, vNormal);
@@ -479,7 +479,7 @@ void BspAddPotentialBoxes(SOccluderBsp* pBsp, SBspPotentialOccluders& PotentialO
 			v3 vX = mat.x.tov3();
 			v3 vY = mat.y.tov3();
 			v3 vZ = mat.z.tov3();
-			vSize *= 1.02f;
+			vSize *= BSP_BOX_SCALE;
 
 			v3 vCenterX = vCenter + vX * vSize.x;
 			v3 vCenterY = vCenter + vY * vSize.y;
@@ -935,7 +935,7 @@ void BspDrawPoly(SOccluderBsp *pBsp, uint16 *Poly, uint32 nVertices, uint32 nCol
 		vCorners[i] = mtransform(pBsp->mfrombsp, BspPlaneIntersection(v0, v1, vNormalPlane));
 		if(1)
 		{
-			ZDEBUG_DRAWBOX(mid(), vCorners[i], v3rep(0.01f), 0xffff0000, 1);
+			//ZDEBUG_DRAWBOX(mid(), vCorners[i], v3rep(0.01f), 0xffff0000, 1);
 		}
 	}
 	if(nPolyEdges)
@@ -943,9 +943,9 @@ void BspDrawPoly(SOccluderBsp *pBsp, uint16 *Poly, uint32 nVertices, uint32 nCol
 		v3 foo = v3init(0.01f, 0.01f, 0.01f);
 		for(uint32 i = 0; i < nPolyEdges; ++i)
 		{
-			{
-				ZDEBUG_DRAWLINE(vCorners[i], vCorners[(i + 1) % nPolyEdges], nColorEdges, true);
-			}
+			// {
+			// 	ZDEBUG_DRAWLINE(vCorners[i], vCorners[(i + 1) % nPolyEdges], nColorEdges, true);
+			// }
 		}
 		ZDEBUG_DRAWPOLY(&vCorners[0], nPolyEdges, nColorPoly);
 	}
@@ -1505,7 +1505,7 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 
 	if(g_nRecursiveClipCounter == g_nRecursiveClip)
 	{
-		uprintf("lala\n");
+		//uprintf("lala\n");
 		g_DEBUG = 1;
 	}
 

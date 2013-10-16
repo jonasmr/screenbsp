@@ -93,7 +93,7 @@ void EditorStateInit()
 #define OCCLUSION_NUM_LARGE 10
 #define OCCLUSION_NUM_SMALL 100
 #define OCCLUSION_NUM_LONG 20
-#define OCCLUSION_NUM_OBJECTS 0
+#define OCCLUSION_NUM_OBJECTS 500
 
 void WorldOcclusionCreate(v3 vSize, uint32 nFlags, v3 vColor = v3zero())
 {
@@ -465,9 +465,17 @@ void WorldRender()
 	uplotfnxt("foo is %f", foo);
 	//foo = 1.0f;
 
+	bool bShift = 0 != ((g_KeyboardState.keys[SDL_SCANCODE_RSHIFT]|g_KeyboardState.keys[SDL_SCANCODE_LSHIFT]) & BUTTON_DOWN);
 	if(g_KeyboardState.keys[SDL_SCANCODE_L] & BUTTON_RELEASED)
 	{
-		g_WorldState.Camera.vPosition = v3init(0,sin(foo), 0);;
+		if(bShift)
+		{
+			g_WorldState.Camera.vPosition = vLockedCamPos;
+			g_WorldState.Camera.vDir = vLockedCamDir;
+			g_WorldState.Camera.vRight = vLockedCamRight;
+		}
+		else
+			g_WorldState.Camera.vPosition = v3init(0,sin(foo), 0);;
 	}
 
 
@@ -528,8 +536,13 @@ void WorldRender()
 
 	uint32 nNumObjects = g_WorldState.nNumWorldObjects;
 	bool* bCulled = (bool*)alloca(nNumObjects);
+	bool* bCulledRef = (bool*)alloca(nNumObjects);
+	int* nCulledRef = (int*)alloca(nNumObjects*4);
 	bCulled[0] = false;
-	for(uint32 i = 2; i < nNumObjects; ++i)
+	memset(bCulled, 0, nNumObjects);
+	memset(bCulledRef, 0, nNumObjects);
+	memset(nCulledRef, 0, nNumObjects*4);
+	for(uint32 i = 0; i < nNumObjects; ++i)
 	{
 		bCulled[i] = BspCullObject(g_Bsp, &g_WorldState.WorldObjects[i]);
 	}
@@ -741,18 +754,124 @@ void WorldRender()
 	SHADER_SET("MaxLightTileIndex", nLightIndex);
 	SHADER_SET("vWorldEye", g_WorldState.Camera.vPosition);
 	m mprjview = mmult(g_WorldState.Camera.mprj, g_WorldState.Camera.mview);
+	SHADER_SET("ProjectionMatrix", mprjview);
+	SHADER_SET("mode", g_Mode);
+	#define MAX_FAIL 32
+	static SWorldObject* pFailObjects[MAX_FAIL];
+	static int nNumFail = 0;
+	if(g_nUseDebugCameraPos == 0)
+	{
+		glEnable(GL_CULL_FACE);
+		glEnable(GL_DEPTH_TEST);
+		glDepthMask(1);
+		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+		int nLocSize = ShaderGetLocation("Size");
+		int nLocModelView = ShaderGetLocation("ModelViewMatrix");
+		for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
+		{
+			SWorldObject* pObject = g_WorldState.WorldObjects + i;
+			if(pObject->nFlags & SObject::OCCLUDER_BOX)
+			{
+				v3 vSizeScaled = pObject->vSize;
+				vSizeScaled *= BSP_BOX_SCALE;
+				ShaderSetUniform(nLocSize, vSizeScaled);
+				ShaderSetUniform(nLocModelView, pObject->mObjectToWorld);
+				MeshDraw(GetBaseMesh(MESH_BOX_FLAT));
+			}
+		}
+		glDepthMask(0);
+		enum{MAX_QUERIES=10<<10,};
+		static GLuint Queries[MAX_QUERIES] = {0};
+		ZASSERT(10<<10 > g_WorldState.nNumWorldObjects);
+		if(!Queries[0])
+		{
+			glGenQueries(MAX_QUERIES, &Queries[0]);
+			uprintf("Generated Queries\n");
+		}
+		for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
+		{
+			SWorldObject* pObject = g_WorldState.WorldObjects + i;
+			if(pObject->nFlags & SObject::OCCLUSION_TEST)
+			{
+				ShaderSetUniform(nLocSize, pObject->vSize);
+				ShaderSetUniform(nLocModelView, pObject->mObjectToWorld);
+
+				glBeginQuery(GL_SAMPLES_PASSED, Queries[i]);
+
+				MeshDraw(GetBaseMesh(MESH_BOX_FLAT));
+
+				glEndQuery(GL_SAMPLES_PASSED);
+			}
+		}
+		for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
+		{
+			SWorldObject* pObject = g_WorldState.WorldObjects + i;
+			if(pObject->nFlags & SObject::OCCLUSION_TEST)
+			{
+				int result, result0;
+				glGetQueryObjectiv(Queries[i], GL_QUERY_RESULT, &result0);
+				glGetQueryObjectiv(Queries[i], GL_QUERY_RESULT, &result);
+				ZASSERT(result == result0);
+				bCulledRef[i] = 0 == result;
+				nCulledRef[i] = result;
+
+			}
+		}
+		nNumFail = 0;
+		uint32 nAgree = 0, nFailCull = 0, nFalsePositives = 0;
+		for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
+		{
+
+			SWorldObject* pObject = g_WorldState.WorldObjects + i;
+			if(pObject->nFlags & SObject::OCCLUSION_TEST)
+			{
+				if(bCulled[i] && !bCulledRef[i])
+				{
+					++nFailCull;
+					uprintf("FAIL CULL %d .. count %d\n", i, nCulledRef[i]);
+					if(nNumFail < MAX_FAIL)
+						pFailObjects[nNumFail++] = pObject;
+
+				}
+				else if(bCulledRef[i] && !bCulled[i])
+				{
+					++nFalsePositives;
+					uprintf("FALSE CULL %d\n", i);
+				}
+				else
+				{
+					++nAgree;
+				}
+			}
+		}	
+		uplotfnxt("FAIL %d  FALSE %d AGREE %d", nFailCull, nFalsePositives, nAgree);
+		if(nNumFail)
+		{
+			uprintf("FAIL %d  FALSE %d AGREE %d\n", nFailCull, nFalsePositives, nAgree);
+			uprintf("locking camera\n");
+			g_nUseDebugCameraPos = 1;
+		}
+	}
+
+	static float fub = 0;
+	fub += 0.1f;
+	float fMult = 1.3f + cos(fub) * 0.3f;
+	if(nNumFail)
+		uplotfnxt("DRAWING FAIL %d", nNumFail);
+	for(int i = 0; i < nNumFail; ++i)
+	{
+		SWorldObject* pObject = pFailObjects[i];
+		ZDEBUG_DRAWBOX(pObject->mObjectToWorld, pObject->mObjectToWorld.trans.tov3(), fMult * pObject->vSize, 0xffffff00, 0);
+
+	}
+
 
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
-
-	SHADER_SET("ProjectionMatrix", mprjview);
-	SHADER_SET("mode", g_Mode);
+	glDepthMask(1);
+	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 	static int usezpass = 1;
-	// if(g_KeyboardState.keys[SDL_SCANCODE_W] & BUTTON_RELEASED)
-	// {
-	// 	usezpass = !usezpass;
-	// }
-
 	{
 		MICROPROFILE_SCOPEGPUI("GPU", "OBJ PASS", 0xffff77);
 		if(usezpass)
@@ -826,7 +945,9 @@ void UpdateEditorState()
 	{
 		g_EditorState.pSelected = 0;
 	}
-	if(g_KeyboardState.keys[SDL_SCANCODE_SPACE] & BUTTON_RELEASED)
+	bool bShift = 0 != ((g_KeyboardState.keys[SDL_SCANCODE_RSHIFT]|g_KeyboardState.keys[SDL_SCANCODE_LSHIFT]) & BUTTON_DOWN);
+
+	if(bShift && (g_KeyboardState.keys[SDL_SCANCODE_SPACE] & BUTTON_RELEASED))
 	{
 		if(g_EditorState.pSelected)
 		{
@@ -1089,7 +1210,7 @@ void UpdateCamera()
 }
 void foo()
 {
-	uprintf("lala\n");
+	//uprintf("lala\n");
 	ZBREAK();
 }
 
