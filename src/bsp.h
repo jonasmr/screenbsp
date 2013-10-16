@@ -2,7 +2,7 @@
 #include "base.h"
 #include "program.h"
 
-
+#define BSP_BOX_SCALE 1.02f
 struct SOccluderBsp;
 SOccluderBsp* BspCreate();
 

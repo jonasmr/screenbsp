@@ -361,7 +361,42 @@ void DebugDrawFlush(m mprj)
 
 
 
+		glEnable(GL_DEPTH_TEST);
+		glDepthMask(1);
+		ShaderUse(VS_DEBUG, PS_DEBUG);
+		SHADER_SET("Color", v4init(1,0,0,0));
+		SHADER_SET("ProjectionMatrix", mprj);
+		SHADER_SET("ModelViewMatrix", mid());
+		SHADER_SET("UseVertexColor", 1.f);
+		SHADER_SET("Size", v3init(1,1,1));
 
+		// glPolygonOffset(-2.f,-2.f);
+		// glEnable(GL_POLYGON_OFFSET_FILL);
+		v4* pVert = g_DebugDrawState.PolyVert.Ptr();
+		for(uint32 i = 0; i < g_DebugDrawState.Poly.Size(); ++i)
+		{
+			uint32_t nColor = g_DebugDrawState.Poly[i].nColor;
+			uint32 nVertices = g_DebugDrawState.Poly[i].nVertices;
+			uint32 nStart = g_DebugDrawState.Poly[i].nStart;
+			if(nVertices < 3)
+			{
+				uprintf("empty poly!\n");
+				continue;
+			}
+			Vertex0* pVertices = (Vertex0*)VertexBufferPushVertices(pPushBuffer, 3 *(nVertices-2), EDM_TRIANGLES);
+			for(uint32 j = 1; j < nVertices-1; ++j)
+			{
+				v4 v0 = pVert[nStart];
+				v4 v1 = pVert[nStart+j];
+				v4 v2 = pVert[nStart+j+1];
+				*pVertices++ = Vertex0(v0.x, v0.y, v0.z, nColor, 0.f, 0.f);
+				*pVertices++ = Vertex0(v1.x, v1.y, v1.z, nColor, 0.f, 0.f);
+				*pVertices++ = Vertex0(v2.x, v2.y, v2.z, nColor, 0.f, 0.f);
+			}
+		}
+		VertexBufferPushFlush(pPushBuffer);
+		// glPolygonOffset(0,0);
+		// glDisable(GL_POLYGON_OFFSET_FILL);
 
 
 		//DISABLE DEPTH
@@ -420,30 +455,6 @@ void DebugDrawFlush(m mprj)
 
 		glEnable(GL_DEPTH_TEST);
 		glDepthMask(1);
-
-		v4* pVert = g_DebugDrawState.PolyVert.Ptr();
-		for(uint32 i = 0; i < g_DebugDrawState.Poly.Size(); ++i)
-		{
-			uint32_t nColor = g_DebugDrawState.Poly[i].nColor;
-			uint32 nVertices = g_DebugDrawState.Poly[i].nVertices;
-			uint32 nStart = g_DebugDrawState.Poly[i].nStart;
-			if(nVertices < 3)
-			{
-				uprintf("empty poly!\n");
-				continue;
-			}
-			Vertex0* pVertices = (Vertex0*)VertexBufferPushVertices(pPushBuffer, 3 *(nVertices-2), EDM_TRIANGLES);
-			for(uint32 j = 1; j < nVertices-1; ++j)
-			{
-				v4 v0 = pVert[nStart];
-				v4 v1 = pVert[nStart+j];
-				v4 v2 = pVert[nStart+j+1];
-				*pVertices++ = Vertex0(v0.x, v0.y, v0.z, nColor, 0.f, 0.f);
-				*pVertices++ = Vertex0(v1.x, v1.y, v1.z, nColor, 0.f, 0.f);
-				*pVertices++ = Vertex0(v2.x, v2.y, v2.z, nColor, 0.f, 0.f);
-			}
-		}
-		VertexBufferPushFlush(pPushBuffer);
 
 		CheckGLError();
 		{
