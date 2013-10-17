@@ -30,7 +30,7 @@ vec3 EvalSun()
 	vec3 vDiffuse = vec3(fAngle) * 0.4;
  	vec3 vHalf = normalize(0.5 * (normalize(fWorldPos-vWorldEye) + vDir));
  	float fSpec = max(dot(vHalf, fNormal), 0.f);
- 	return vDiffuse + vec3(min(1.0, pow(fSpec, 4.0) * 5));
+ 	return vDiffuse;//r + vec3(min(1.0, pow(fSpec, 4.0) * 5));
 }
 
 vec3 EvalLight(vec2 tc0, vec2 tc1)

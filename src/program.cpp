@@ -88,12 +88,26 @@ void EditorStateInit()
 	g_EditorState.Manipulators[1] = new ManipulatorRotate();
 }
 
-#define OCCLUSION_TEST_MIN -300
-#define OCCLUSION_TEST_MAX 300
+#define OCCLUSION_TEST_HALF_SIZE 300
+#define OCCLUSION_TEST_MIN (-OCCLUSION_TEST_HALF_SIZE)
+#define OCCLUSION_TEST_MAX OCCLUSION_TEST_HALF_SIZE
 #define OCCLUSION_NUM_LARGE 10
 #define OCCLUSION_NUM_SMALL 100
 #define OCCLUSION_NUM_LONG 20
 #define OCCLUSION_NUM_OBJECTS 500
+#define OCCLUSION_USE_GROUND 1
+#define OCCLUSION_GROUND_Y 0.f
+
+void WorldOcclusionCreate(v3 vSize, uint32 nFlags, v3 vColor, v3 vPos)
+{
+	g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects].mObjectToWorld = mid();
+	g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects].mObjectToWorld.trans = v4init(vPos, 1.f);
+	g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects].vSize = vSize; 
+	g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects].nFlags = nFlags;
+	g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects].nColor = vColor.tocolor();
+	g_WorldState.nNumWorldObjects++;
+}
+
 
 void WorldOcclusionCreate(v3 vSize, uint32 nFlags, v3 vColor = v3zero())
 {
@@ -101,14 +115,8 @@ void WorldOcclusionCreate(v3 vSize, uint32 nFlags, v3 vColor = v3zero())
 	vPos.x = frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
 	vPos.z = frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
 	vPos.y = 1.0f * vSize.y;
+	WorldOcclusionCreate(vSize, nFlags, vColor, vPos);
 
-
-	g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects].mObjectToWorld = mid();
-	g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects].mObjectToWorld.trans = v4init(vPos, 1.f);
-	g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects].vSize = vSize; 
-	g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects].nFlags = nFlags;
-	g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects].nColor = vColor.tocolor();
-	g_WorldState.nNumWorldObjects++;
 }
 void WorldInitOcclusionTest()
 {
@@ -124,6 +132,16 @@ void WorldInitOcclusionTest()
 	};
 
 	bool bSkipInit = false;
+
+	//void WorldOcclusionCreate(v3 vSize, uint32 nFlags, v3 vColor, v3 vPos)
+	if(OCCLUSION_USE_GROUND)
+	{
+		WorldOcclusionCreate(v3init(OCCLUSION_TEST_HALF_SIZE*2, 1.0f, OCCLUSION_TEST_HALF_SIZE*2),
+			SObject::OCCLUDER_BOX,
+			v3init(1,1,1),
+			v3init(0,OCCLUSION_GROUND_Y, 0));
+	}
+
 
 	for(int i = 0; i < OCCLUSION_NUM_LARGE; ++i)
 	{
