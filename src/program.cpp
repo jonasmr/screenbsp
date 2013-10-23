@@ -23,6 +23,10 @@ extern uint32_t g_Height;
 //tile calc
 //debug render fixing + color
 
+
+void WorldDrawObjects(bool* bCulled);
+
+
 uint32 g_nUseOrtho = 0;
 float g_fOrthoScale = 10;
 SOccluderBsp* g_Bsp = 0;
@@ -36,6 +40,9 @@ v3 vLockedCamDir = v3init(1,0,0);
 #define TILE_SIZE 8
 #define MAX_WIDTH 1920
 #define MAX_HEIGHT 1080
+
+#define SHADOWMAP_SIZE 512
+
 #define MAX_LIGHT_INDEX (32<<10)
 #define LIGHT_INDEX_SIZE 1024
 //#define TILE_HEIGHT 8
@@ -86,6 +93,109 @@ void EditorStateInit()
 	memset(&g_EditorState, 0, sizeof(g_EditorState));
 	g_EditorState.Manipulators[0] = new ManipulatorTranslate();
 	g_EditorState.Manipulators[1] = new ManipulatorRotate();
+}
+
+struct ShadowMap
+{
+	GLuint FrameBufferId;
+	GLuint TextureId;
+	m mprjview;
+};
+
+ShadowMap g_SM;
+
+ShadowMap AllocateShadowMap()
+{
+	CheckGLError();
+	ShadowMap r;
+	glGenTextures(1, &r.TextureId);
+	glBindTexture(GL_TEXTURE_2D, r.TextureId);
+	CheckGLError();
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	CheckGLError();
+
+	CheckGLError();
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	CheckGLError();
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+
+	
+	CheckGLError();
+	
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOWMAP_SIZE, SHADOWMAP_SIZE, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glGenFramebuffers(1, &r.FrameBufferId);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, r.FrameBufferId);
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+	CheckGLError();
+
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, r.TextureId, 0);
+
+
+
+	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if(status != GL_FRAMEBUFFER_COMPLETE)
+	{
+		uprintf("STATUS IS %d\n", status);
+
+
+		ZBREAK();
+	}
+
+
+	CheckGLError();
+	return r;
+}
+
+
+void RenderShadowMap(ShadowMap& SM)
+{
+	MICROPROFILE_SCOPEGPUI("GPU", "Shadowmap", 0xff0099);
+	v3 vDirection = v3normalize(v3init(0.7071067811, -0.7071067811, 0));
+	v3 vRight = v3normalize(v3cross(v3init(0,1,0), vDirection));
+	v3 vUp = v3normalize(v3cross(vRight, vDirection));
+	m mview = mcreate(vDirection, vRight, v3zero());
+	m mprj = morthogl(-100, 100, -100, 100, -100.f, 100.f);
+	m moffset = mid();
+	moffset.x = v4init(0.5, 0.0, 0.0, 0.0f);
+	moffset.y = v4init(0.0, 0.5, 0.0, 0.0f);
+	moffset.z = v4init(0.0, 0.0, 0.5, 0.0f);
+
+	moffset.trans.x = 0.5f;
+	moffset.trans.y = 0.5f;
+	moffset.trans.z = 0.5f;
+	SM.mprjview = mmult(moffset, mmult(mprj, mview));
+
+
+	CheckGLError();
+	uplotfnxt("render shadowmap");
+	glBindFramebuffer(GL_FRAMEBUFFER, SM.FrameBufferId);
+	glViewport(0, 0, SHADOWMAP_SIZE, SHADOWMAP_SIZE);
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(1);
+	glColorMask(0,0,0,0);
+	glClear(GL_DEPTH_BUFFER_BIT);
+
+
+	ShaderUse(VS_SHADOWMAP, PS_SHADOWMAP);
+	SHADER_SET("ProjectionMatrix", SM.mprjview);
+
+	WorldDrawObjects(nullptr);
+
+	CheckGLError();
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glColorMask(1,1,1,1);
+	glDepthMask(1);
+	glViewport(0, 0, g_Width, g_Height);
+	CheckGLError();
 }
 
 #define OCCLUSION_TEST_HALF_SIZE 300
@@ -431,15 +541,23 @@ void WorldDrawObjects(bool* bCulled)
 	int nLocModelView = ShaderGetLocation("ModelViewMatrix");
 	for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
 	{
-
-		if(bCulled[i])
+		if(bCulled)
 		{
-			ZDEBUG_DRAWBOX(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].mObjectToWorld.trans.tov3(), g_WorldState.WorldObjects[i].vSize, 0xffff0000, 0);
+			if(bCulled[i])
+			{
+				ZDEBUG_DRAWBOX(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].mObjectToWorld.trans.tov3(), g_WorldState.WorldObjects[i].vSize, 0xffff0000, 0);
+			}
+			else
+			{
+				// SHADER_SET("Size", g_WorldState.WorldObjects[i].vSize);
+				// SHADER_SET("ModelViewMatrix", g_WorldState.WorldObjects[i].mObjectToWorld);
+				ShaderSetUniform(nLocSize, g_WorldState.WorldObjects[i].vSize);
+				ShaderSetUniform(nLocModelView, g_WorldState.WorldObjects[i].mObjectToWorld);
+				MeshDraw(GetBaseMesh(MESH_BOX_FLAT));
+			}
 		}
 		else
 		{
-			// SHADER_SET("Size", g_WorldState.WorldObjects[i].vSize);
-			// SHADER_SET("ModelViewMatrix", g_WorldState.WorldObjects[i].mObjectToWorld);
 			ShaderSetUniform(nLocSize, g_WorldState.WorldObjects[i].vSize);
 			ShaderSetUniform(nLocModelView, g_WorldState.WorldObjects[i].mObjectToWorld);
 			MeshDraw(GetBaseMesh(MESH_BOX_FLAT));
@@ -720,6 +838,19 @@ void WorldRender()
 		g_LightBuffer[i].Color[2] = col.z;
 		g_LightBuffer[i].Color[3] = g_WorldState.Lights[i].fRadius;
 	}
+
+
+
+	RenderShadowMap(g_SM);
+
+
+
+
+
+
+
+
+
 	int nNumLights = g_WorldState.nNumLights;
 	{
 		MICROPROFILE_SCOPEI("MAIN", "UpdateTexture", 0xff44dd44);
@@ -742,12 +873,16 @@ void WorldRender()
 	}
 
 
+
+
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, g_LightTexture);
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, g_LightTileTexture);
 	glActiveTexture(GL_TEXTURE3);
 	glBindTexture(GL_TEXTURE_2D, g_LightIndexTexture);
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D, g_SM.TextureId);
 	glActiveTexture(GL_TEXTURE0);
 	static int g_Mode = 0;
 	uplotfnxt("mode is %d", g_Mode);
@@ -762,6 +897,7 @@ void WorldRender()
 	SHADER_SET("texLight", 1);
 	SHADER_SET("texLightTile", 2);
 	SHADER_SET("texLightIndex", 3);
+	SHADER_SET("texDepth", 4);
 	SHADER_SET("NumLights", nNumLights);
 	//g_WorldState.nNumLights 
 	SHADER_SET("lightDelta", 1.f / (2*MAX_NUM_LIGHTS));
@@ -773,6 +909,7 @@ void WorldRender()
 	SHADER_SET("vWorldEye", g_WorldState.Camera.vPosition);
 	m mprjview = mmult(g_WorldState.Camera.mprj, g_WorldState.Camera.mview);
 	SHADER_SET("ProjectionMatrix", mprjview);
+	SHADER_SET("ShadowMatrix", g_SM.mprjview);
 	SHADER_SET("mode", g_Mode);
 	#define MAX_FAIL 32
 	static SWorldObject* pFailObjects[MAX_FAIL];
@@ -831,7 +968,7 @@ void WorldRender()
 				glGetQueryObjectiv(Queries[i], GL_QUERY_RESULT, &result0);
 				glGetQueryObjectiv(Queries[i], GL_QUERY_RESULT, &result);
 				ZASSERT(result == result0);
-				bCulledRef[i] = 0 == result;
+				bCulledRef[i] = 10 > result;
 				nCulledRef[i] = result;
 
 			}
@@ -918,7 +1055,16 @@ void WorldRender()
 	glDisable(GL_CULL_FACE);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, 0);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D, 0);
 	glActiveTexture(GL_TEXTURE0);
+	CheckGLError();
+
+
 	
 
 }
@@ -1244,6 +1390,9 @@ void ProgramInit()
 	g_Bsp = BspCreate();
 	WorldInit();
 	EditorStateInit();
+
+
+	g_SM = AllocateShadowMap();
 
 }
 

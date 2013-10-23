@@ -34,6 +34,7 @@ struct MicroProfileVertex
 };
 
 
+void CheckGLError();
 #define MICROPROFILE_MAX_VERTICES (64<<10)
 #define MICROPROFILE_NUM_QUERIES (8<<10)
 #define MAX_FONT_CHARS 256
@@ -156,27 +157,35 @@ void main(void)   \
 	void DumpGlLog(GLuint handle)
 	{
 		int nLogLen = 0;
-		glGetObjectParameterivARB(handle, GL_OBJECT_INFO_LOG_LENGTH_ARB, &nLogLen);
+		glGetShaderiv(handle, GL_COMPILE_STATUS, &nLogLen);
+		printf("compile status %d\n", nLogLen);
+
+		glGetShaderiv(handle, GL_INFO_LOG_LENGTH, &nLogLen);
+		CheckGLError();
 		if(nLogLen > 0)
 		{
 			char* pChars = (char*)malloc(nLogLen);
 			int nLen = 0;
-			glGetInfoLogARB(handle, nLogLen, &nLen, pChars);
-
+			glGetShaderInfoLog(handle, nLogLen, &nLen, pChars);
+CheckGLError();
 			printf("COMPILE MESSAGE\n%s\n\n", pChars);
 
 			free(pChars);
 			MP_BREAK();
 		}
+		CheckGLError();
 	}
 
 	GLuint CreateProgram(int nType, const char* pShader)
 	{
 		GLuint handle = glCreateShaderObjectARB(nType);
 		glShaderSource(handle, 1, (const char**)&pShader, 0);
+		CheckGLError();
 		glCompileShader(handle);
+		CheckGLError();
 		DumpGlLog(handle);
 		MP_ASSERT(handle);	
+		CheckGLError();
 		return handle;
 	}
 }
@@ -185,6 +194,7 @@ void main(void)   \
 
 void MicroProfileDrawInit()
 {
+	CheckGLError();
 	glGenBuffers(1, &g_VertexBuffer);
 	glGenVertexArrays(1, &g_VAO);
 	g_PixelShader = CreateProgram(GL_FRAGMENT_SHADER_ARB, g_PixelShaderCode);
@@ -201,8 +211,9 @@ void MicroProfileDrawInit()
 	glBindAttribLocation(g_Program, g_LocVertexIn, "VertexIn");
 	glBindAttribLocation(g_Program, g_LocTC0In, "TC0In");
 	glLinkProgramARB(g_Program);
-	DumpGlLog(g_Program);
+	//DumpGlLog(g_Program);
 
+	CheckGLError();
 	g_LocTex = glGetUniformLocation(g_Program, "tex");
 	g_LocProjectionMatrix = glGetUniformLocation(g_Program, "ProjectionMatrix");
 
@@ -264,6 +275,7 @@ void MicroProfileDrawInit()
     }
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, FONT_TEX_X, FONT_TEX_Y, 0, GL_RGBA, GL_UNSIGNED_BYTE, &p4[0]);
 	glBindTexture(GL_TEXTURE_2D, 0);
+	CheckGLError();
 }
 
 void MicroProfileBeginDraw(uint32_t nWidth, uint32_t nHeight, float* prj)
