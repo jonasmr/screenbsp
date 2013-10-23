@@ -41,7 +41,7 @@ v3 vLockedCamDir = v3init(1,0,0);
 #define MAX_WIDTH 1920
 #define MAX_HEIGHT 1080
 
-#define SHADOWMAP_SIZE 512
+#define SHADOWMAP_SIZE 2048
 
 #define MAX_LIGHT_INDEX (32<<10)
 #define LIGHT_INDEX_SIZE 1024
@@ -100,6 +100,7 @@ struct ShadowMap
 	GLuint FrameBufferId;
 	GLuint TextureId;
 	m mprjview;
+	m mprjviewtex;
 };
 
 ShadowMap g_SM;
@@ -158,11 +159,11 @@ ShadowMap AllocateShadowMap()
 void RenderShadowMap(ShadowMap& SM)
 {
 	MICROPROFILE_SCOPEGPUI("GPU", "Shadowmap", 0xff0099);
-	v3 vDirection = v3normalize(v3init(0.7071067811, -0.7071067811, 0));
+	v3 vDirection = v3normalize(v3init(0.7071067811, -0.7071067811, 0.3));
 	v3 vRight = v3normalize(v3cross(v3init(0,1,0), vDirection));
 	v3 vUp = v3normalize(v3cross(vRight, vDirection));
 	m mview = mcreate(vDirection, vRight, v3zero());
-	m mprj = morthogl(-100, 100, -100, 100, -100.f, 100.f);
+	m mprj = morthogl(-200, 200, -200, 200, -200.f, 100.f);
 	m moffset = mid();
 	moffset.x = v4init(0.5, 0.0, 0.0, 0.0f);
 	moffset.y = v4init(0.0, 0.5, 0.0, 0.0f);
@@ -171,7 +172,8 @@ void RenderShadowMap(ShadowMap& SM)
 	moffset.trans.x = 0.5f;
 	moffset.trans.y = 0.5f;
 	moffset.trans.z = 0.5f;
-	SM.mprjview = mmult(moffset, mmult(mprj, mview));
+	SM.mprjview = mmult(mprj, mview);
+	SM.mprjviewtex = mmult(moffset, mmult(mprj, mview));
 
 
 	CheckGLError();
@@ -909,7 +911,7 @@ void WorldRender()
 	SHADER_SET("vWorldEye", g_WorldState.Camera.vPosition);
 	m mprjview = mmult(g_WorldState.Camera.mprj, g_WorldState.Camera.mview);
 	SHADER_SET("ProjectionMatrix", mprjview);
-	SHADER_SET("ShadowMatrix", g_SM.mprjview);
+	SHADER_SET("ShadowMatrix", g_SM.mprjviewtex);
 	SHADER_SET("mode", g_Mode);
 	#define MAX_FAIL 32
 	static SWorldObject* pFailObjects[MAX_FAIL];
