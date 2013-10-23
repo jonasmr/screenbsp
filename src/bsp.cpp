@@ -8,9 +8,9 @@
 #include "microprofileinc.h"
 
 // todo:
-//  reenable frustum
 //  dont add unused/clipped planes
-//  tweakable cap on insertion. 
+//  prioritize after clipping vs frustum
+//  make prioritization use proper area
 //  generate test scene
 //  seperate objects in test scene
 //  basic lighting

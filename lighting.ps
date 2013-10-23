@@ -5,6 +5,7 @@
 uniform sampler2D texLight;
 uniform sampler2D texLightTile;
 uniform sampler2D texLightIndex;
+uniform sampler2D texDepth;
 
 uniform float lightDelta;
 uniform int NumLights;
@@ -16,13 +17,37 @@ uniform vec3 TileSize;
 uniform vec3 vWorldEye;
 
 
+
+
+
 in vec3 fNormal;
 in vec3 fWorldPos;
+in vec4 fShadowCoords;
 out vec4 Out0;
 
 
+float EvalShadow()
+{
+	vec4 fShadowPrj = fShadowCoords / fShadowCoords.w;
+	fShadowPrj.z += 0.0005;
+	float Dist = texture(texDepth,fShadowPrj.st).x;
+	
+	
+ 	float shadow = 1.0;
+ 	if (fShadowCoords.w > 0.0)
+ 		shadow = Dist < fShadowPrj.z ? 0.2 : 10.0 ;
+ 	if(fShadowPrj.x>= 0 && fShadowPrj.x<=1.f && 
+ 		fShadowPrj.y>= 0 && fShadowPrj.y<=1.f)
+ 	{
+ 		return Dist;
+ 	}
+	return 0.0;
+}
+
 vec3 EvalSun()
 {
+
+	float fShadow = EvalShadow();
 	vec3 vToLight = vec3(0.7071067811, -0.7071067811, 0);
 	vec3 vDir = -vToLight;
 	//float fAngle = max(dot(vDir, fNormal), 0.0);
@@ -30,7 +55,7 @@ vec3 EvalSun()
 	vec3 vDiffuse = vec3(fAngle) * 0.4;
  	vec3 vHalf = normalize(0.5 * (normalize(fWorldPos-vWorldEye) + vDir));
  	float fSpec = max(dot(vHalf, fNormal), 0.f);
- 	return vDiffuse;//r + vec3(min(1.0, pow(fSpec, 4.0) * 5));
+ 	return vDiffuse * fShadow;//r + vec3(min(1.0, pow(fSpec, 4.0) * 5));
 }
 
 vec3 EvalLight(vec2 tc0, vec2 tc1)
@@ -121,7 +146,8 @@ void main(void)
 #endif
 		}
 	}
-	Out0.xyz = Color + EvalSun();
+	//Out0.xyz = Color + EvalSun();
+	Out0.xyz =  EvalSun();
 	Out0.w = 1.0;
 }
 

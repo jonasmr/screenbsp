@@ -47,13 +47,12 @@ char* ReadTextFile(const char *file_)
 static void DumpGlLog(GLuint handle)
 {
 	int nLogLen = 0;
-	glGetObjectParameterivARB(handle, GL_OBJECT_INFO_LOG_LENGTH_ARB, &nLogLen);
+	glGetShaderiv(handle, GL_INFO_LOG_LENGTH, &nLogLen);
 	if(nLogLen > 0)
 	{
 		char* pChars = (char*)malloc(nLogLen);
 		int nLen = 0;
-		glGetInfoLogARB(handle, nLogLen, &nLen, pChars);
-
+		glGetShaderInfoLog(handle, nLogLen, &nLen, pChars);
 		uprintf("COMPILE MESSAGE\n%s\n\n", pChars);
 #ifndef _WIN32
 		if(strcasestr(pChars, "error"))
@@ -103,6 +102,10 @@ void ShaderInit()
 	g_ShaderState.PS[PS_LIGHTING] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "lighting.ps");
 	g_ShaderState.PS[PS_LIGHTING2] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "lighting2.ps");
 	g_ShaderState.VS[VS_LIGHTING] = CreateProgram(GL_VERTEX_SHADER_ARB, "lighting.vs");
+
+	g_ShaderState.VS[VS_SHADOWMAP] = CreateProgram(GL_VERTEX_SHADER_ARB, "shadowmap.vs");
+	g_ShaderState.PS[PS_SHADOWMAP] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "shadowmap.ps");
+
 	g_ShaderState.PS[PS_DEBUG] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "debug.ps");
 	g_ShaderState.VS[VS_DEBUG] = CreateProgram(GL_VERTEX_SHADER_ARB, "debug.vs");
 	g_ShaderState.PS[PS_TEXT] = CreateProgram(GL_FRAGMENT_SHADER_ARB, "text.ps");
@@ -143,7 +146,7 @@ void ShaderUse(EShaderVS vs, EShaderPS ps)
 
 		
 		CheckGLError();
-		DumpGlLog(prg);
+		//DumpGlLog(prg);
 		CheckGLError();
 
 		if(glGetAttribLocation(prg, "VertexIn")>=0)
@@ -164,7 +167,7 @@ void ShaderUse(EShaderVS vs, EShaderPS ps)
 		ZASSERT(glGetAttribLocation(prg, "VertexIn") == -1 || glGetAttribLocation(prg, "VertexIn") == LOC_POSITION);
 
 		CheckGLError();
-		DumpGlLog(prg);
+		//DumpGlLog(prg);
 
 
 
