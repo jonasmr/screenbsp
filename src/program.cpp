@@ -383,7 +383,7 @@ void WorldInitOcclusionTest()
 		}
 		//if(1||i == 512)
 		//if(i > 16 && i < 20)
-			if(i == 20)
+		if(i >= 57 && i < 58)
 		{
 			WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUSION_TEST, v3init(1,0,0));
 		}
@@ -411,6 +411,7 @@ void WorldInit()
 	g_WorldState.Occluders[2].mObjectToWorld = mrotatey(90*TORAD);
 	g_WorldState.Occluders[2].mObjectToWorld.trans = v4init(2.6f,0.f,-0.5f, 1.f);
 	g_WorldState.Occluders[2].vSize = v3init(0.25f, 0.25f, 0);
+	g_WorldState.nNumOccluders = 3;
 	g_WorldState.nNumOccluders = 0;
 
 
@@ -431,9 +432,9 @@ void WorldInit()
 		g_WorldState.WorldObjects[1].mObjectToWorld.trans = v4init(3.f,0.f,-1.5f, 1.f);
 		g_WorldState.WorldObjects[1].vSize = v3init(0.25f, 0.2f, 0.2f)* 0.5f; 
 		g_WorldState.WorldObjects[1].nFlags = 0; 
-		g_WorldState.WorldObjects[1].nFlags |= SObject::OCCLUDER_BOX; 
+		g_WorldState.WorldObjects[1].nFlags |= SObject::OCCLUSION_TEST; 
 		g_WorldState.nNumWorldObjects = 2;
-		g_WorldState.nNumWorldObjects = 0;
+	//	g_WorldState.nNumWorldObjects = 0;
 	}
 	if(0)
 	{
@@ -1410,6 +1411,18 @@ void ProgramInit()
 	g_WorldState.Camera.vPosition = v3init(133.308350,116.412315,111.912018);
 	g_WorldState.Camera.vDir = v3init(-0.690784,-0.394744,-0.605801);
 	g_WorldState.Camera.vRight = v3init(0.659345,0.000000,-0.751839);
+
+	g_WorldState.Camera.vPosition = v3init(159.291046,139.451385,93.022232);
+	g_WorldState.Camera.vDir = v3init(-0.639705,-0.636078,0.431487);
+	g_WorldState.Camera.vRight = v3init(-0.559192,0.000000,-0.829037);
+
+	g_WorldState.Camera.vPosition = v3init(-0.681794,2.844925,2.245514);
+	g_WorldState.Camera.vDir = v3init(0.558653,-0.573573,-0.599083);
+	g_WorldState.Camera.vRight = v3init(0.731347,0.000000,0.681993);
+
+	g_WorldState.Camera.vPosition = v3init(-138.117203,110.280533,88.949966);
+	g_WorldState.Camera.vDir = v3init(0.734251,-0.678798,-0.009613);
+	g_WorldState.Camera.vRight = v3init(0.013089,0.000000,0.999906);
 #endif
 	g_WorldState.Camera.fFovY = 45.f;
 	g_WorldState.Camera.fNear = 0.1f;
