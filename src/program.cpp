@@ -163,7 +163,7 @@ void RenderShadowMap(ShadowMap& SM)
 	v3 vRight = v3normalize(v3cross(v3init(0,1,0), vDirection));
 	v3 vUp = v3normalize(v3cross(vRight, vDirection));
 	m mview = mcreate(vDirection, vRight, v3zero());
-	m mprj = morthogl(-200, 200, -200, 200, -200.f, 100.f);
+	m mprj = morthogl(-500, 500, -500, 500, -500.f, 500.f);
 	m moffset = mid();
 	moffset.x = v4init(0.5, 0.0, 0.0, 0.0f);
 	moffset.y = v4init(0.0, 0.5, 0.0, 0.0f);
