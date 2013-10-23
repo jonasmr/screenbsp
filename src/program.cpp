@@ -236,6 +236,7 @@ void WorldInitOcclusionTest()
 	float fbar = 0.f;
 	int idxx_large[] = 
 	{
+		-1,
 		//0, 1, 2, 3, 4, 
 		//5, 6, 7, 
 		//8, 
@@ -277,6 +278,7 @@ void WorldInitOcclusionTest()
 	
 	int idxx[] = 
 	{
+		-1,
 		// 75 + 15 , 
 		// 76 + 15 ,
 	};
@@ -611,6 +613,9 @@ void WorldRender()
 			g_WorldState.Camera.vPosition = vLockedCamPos;
 			g_WorldState.Camera.vDir = vLockedCamDir;
 			g_WorldState.Camera.vRight = vLockedCamRight;
+			uprintf("g_WorldState.Camera.vPosition = v3init(%f,%f,%f);\n", vLockedCamPos.x, vLockedCamPos.y, vLockedCamPos.z);
+			uprintf("g_WorldState.Camera.vDir = v3init(%f,%f,%f);\n", vLockedCamDir.x, vLockedCamDir.y, vLockedCamDir.z);
+			uprintf("g_WorldState.Camera.vRight = v3init(%f,%f,%f)\n;", vLockedCamRight.x, vLockedCamRight.y, vLockedCamRight.z);
 		}
 		else
 			g_WorldState.Camera.vPosition = v3init(0,sin(foo), 0);;
@@ -1013,7 +1018,7 @@ void WorldRender()
 
 	static float fub = 0;
 	fub += 0.1f;
-	float fMult = 1.3f + cos(fub) * 0.3f;
+	float fMult = 2.2f + cos(fub) * 5.3f;
 	if(nNumFail)
 		uplotfnxt("DRAWING FAIL %d", nNumFail);
 	for(int i = 0; i < nNumFail; ++i)
@@ -1384,9 +1389,15 @@ void foo()
 void ProgramInit()
 {
 	m mroty = mrotatey(45.f * TORAD);
+#if 0
 	g_WorldState.Camera.vDir = mtransform(mroty, v3init(0,0,-1));
 	g_WorldState.Camera.vRight = mtransform(mroty, v3init(1,0,0));
 	g_WorldState.Camera.vPosition = g_WorldState.Camera.vDir * -5.f;
+#else
+	g_WorldState.Camera.vPosition = v3init(133.101120,116.293892,111.730286);
+	g_WorldState.Camera.vDir = v3init(-0.690784,-0.394744,-0.605801);
+	g_WorldState.Camera.vRight = v3init(0.659345,0.000000,-0.751839);
+#endif
 	g_WorldState.Camera.fFovY = 45.f;
 	g_WorldState.Camera.fNear = 0.1f;
 	g_Bsp = BspCreate();
