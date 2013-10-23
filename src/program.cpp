@@ -203,7 +203,7 @@ void RenderShadowMap(ShadowMap& SM)
 #define OCCLUSION_TEST_HALF_SIZE 300
 #define OCCLUSION_TEST_MIN (-OCCLUSION_TEST_HALF_SIZE)
 #define OCCLUSION_TEST_MAX OCCLUSION_TEST_HALF_SIZE
-#define OCCLUSION_NUM_LARGE 10
+#define OCCLUSION_NUM_LARGE 0
 #define OCCLUSION_NUM_SMALL 100
 #define OCCLUSION_NUM_LONG 20
 #define OCCLUSION_NUM_OBJECTS 500
@@ -381,8 +381,18 @@ void WorldInitOcclusionTest()
 		{
 			Swap(fWidth, fHeight);
 		}
+		//if(1||i == 512)
+		//if(i > 16 && i < 20)
+			if(i == 20)
+		{
+			WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUSION_TEST, v3init(1,0,0));
+		}
+		else
+		{
+			fbar += frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
+			fbar += frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
 
-		WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUSION_TEST, v3init(1,0,0));
+		}
 	}
 
 }
@@ -1395,6 +1405,9 @@ void ProgramInit()
 	g_WorldState.Camera.vPosition = g_WorldState.Camera.vDir * -5.f;
 #else
 	g_WorldState.Camera.vPosition = v3init(133.101120,116.293892,111.730286);
+	g_WorldState.Camera.vDir = v3init(-0.690784,-0.394744,-0.605801);
+	g_WorldState.Camera.vRight = v3init(0.659345,0.000000,-0.751839);
+	g_WorldState.Camera.vPosition = v3init(133.308350,116.412315,111.912018);
 	g_WorldState.Camera.vDir = v3init(-0.690784,-0.394744,-0.605801);
 	g_WorldState.Camera.vRight = v3init(0.659345,0.000000,-0.751839);
 #endif
