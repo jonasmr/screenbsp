@@ -1669,7 +1669,7 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 
 
 	}
-	if(!bOk);//uplotfnxt("%s AREA %7.4f %7.4f %7.4f", bOk ? "  " : "**", fArea0, fArea1, fArea2);
+	//if(!bOk)//uplotfnxt("%s AREA %7.4f %7.4f %7.4f", bOk ? "  " : "**", fArea0, fArea1, fArea2);
 	ZASSERT(Node.nInside != OCCLUDER_EMPTY);
 	ZASSERT(Node.nOutside != OCCLUDER_LEAF);
 	//uplotfnxt("ADD p[%d] IN[%d] OUT[%d]", nBspIndex, nPolyEdgeIn, nPolyEdgeOut);
