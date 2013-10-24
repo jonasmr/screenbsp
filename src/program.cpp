@@ -359,7 +359,11 @@ void WorldInitOcclusionTest()
 		}
 		else
 		{
-			WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUDER_BOX);
+			WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUDER_BOX
+				|SObject::OCCLUSION_BOX_SKIP_X
+				|SObject::OCCLUSION_BOX_SKIP_Y
+				//|SObject::OCCLUSION_BOX_SKIP_Z
+				);
 			nadd++;
 		}
 	}
@@ -383,7 +387,13 @@ void WorldInitOcclusionTest()
 		}
 		else
 		{
-			WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUDER_BOX);
+			WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUDER_BOX
+
+				|SObject::OCCLUSION_BOX_SKIP_X
+				|SObject::OCCLUSION_BOX_SKIP_Y
+				//|SObject::OCCLUSION_BOX_SKIP_Z
+
+				);
 			nadd++;
 		}
 	}
