@@ -47,6 +47,7 @@ uint32 g_nRecursiveClipCounter = 0;
 uint32 g_nRecursiveClip = -1;
 uint32 g_nInsideOutSide = 0x3;
 uint32 g_nCheck = 0;
+uint32 g_nDumpFrame = 0;
 int g_nShowClipLevel = -1;
 int g_EdgeMask = 0xff;
 
@@ -502,9 +503,18 @@ void BspAddPotentialBoxes(SOccluderBsp* pBsp, SBspPotentialOccluders& PotentialO
 			vCenterY = bFrontY ? vCenterY : vCenterYNeg;
 			vCenterZ = bFrontZ ? vCenterZ : vCenterZNeg;
 
-			BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterY, vY, vZ, vSize.z, vX, vSize.x, true);
-			BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterX, vX, vY, vSize.y, vZ, vSize.z, true);
-			BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterZ, vZ, vY, vSize.y, vX, vSize.x, true);
+			if(0 == (pObject->nFlags & SObject::OCCLUSION_BOX_SKIP_X))
+			{
+				BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterY, vY, vZ, vSize.z, vX, vSize.x, true);
+			}
+			if(0 == (pObject->nFlags & SObject::OCCLUSION_BOX_SKIP_Y))
+			{
+				BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterX, vX, vY, vSize.y, vZ, vSize.z, true);
+			}
+			if(0 == (pObject->nFlags & SObject::OCCLUSION_BOX_SKIP_Z))
+			{
+				BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterZ, vZ, vY, vSize.y, vX, vSize.x, true);
+			}
 		}
 	}
 }
@@ -683,7 +693,7 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 
 	long seed = rand();
 	srand(42);
-
+	g_nDumpFrame = 0;
 	pBsp->nDepth = 0;
 	pBsp->Nodes.Clear();
 	pBsp->Planes.Clear();
@@ -775,6 +785,7 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 	g_nCheck = 1;
 	if(g_KeyboardState.keys[SDL_SCANCODE_F10] & BUTTON_RELEASED)
 	{
+		g_nDumpFrame = 1;
 		BspDump(pBsp, 0, 0);
 	}
 
@@ -1719,19 +1730,19 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 }
 
 ///// TODO TEST MED KUN 1 NIVEAU
-
+#define BSP_DUMP_PRINTF(...) do{if(g_nDumpFrame){ uprintf(__VA_ARGS__); } }while(0)
 bool BspCullObjectR(SOccluderBsp *pBsp, uint32 Index, uint16 *Poly, uint32 nNumEdges,
 					int nClipLevel)
 {
-	// if(g_nBspDebugPlane == g_nBspDebugPlaneCounter)
-	// {
-	// 	BspDrawPoly(pBsp, Poly, nNumEdges, 0xff000000|randredcolor(), 0, 1);
-	// 	if(g_nBreakOnClipIndex && g_nBspDebugPlane == g_nBspDebugPlaneCounter)
-	// 	{
-	// 		//uprintf("BREAK\n");
-	// 	}
-	// }
-	//	g_nBspDebugPlaneCounter++;
+	if(g_nBspDebugPlane == g_nBspDebugPlaneCounter)
+	{
+		BspDrawPoly(pBsp, Poly, nNumEdges, 0xff000000|randredcolor(), 0, 1);
+		if(g_nBreakOnClipIndex && g_nBspDebugPlane == g_nBspDebugPlaneCounter)
+		{
+			//uprintf("BREAK\n");
+		}
+	}
+		g_nBspDebugPlaneCounter++;
 
 	SOccluderBspNode Node = pBsp->Nodes[Index];
 	v4 vPlane = BspGetPlane(pBsp, Node.nPlaneIndex);
@@ -1758,6 +1769,7 @@ bool BspCullObjectR(SOccluderBsp *pBsp, uint32 Index, uint16 *Poly, uint32 nNumE
 			if(g_nShowClipLevel < 0)
 				BspDrawPoly(pBsp, Poly, nNumEdges, 0xff000000 | randredcolor(), 0, 1);
 		}
+		BSP_DUMP_PRINTF("LEAF_TEST %08x CULLED %d\n", Index, bVisible ? 0 : 1);
 		return !bVisible;
 		//return bCulled;
 	}
