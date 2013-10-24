@@ -204,9 +204,9 @@ void RenderShadowMap(ShadowMap& SM)
 #define OCCLUSION_TEST_MIN (-OCCLUSION_TEST_HALF_SIZE)
 #define OCCLUSION_TEST_MAX OCCLUSION_TEST_HALF_SIZE
 #define OCCLUSION_NUM_LARGE 0
-#define OCCLUSION_NUM_SMALL 100
+#define OCCLUSION_NUM_SMALL 0
 #define OCCLUSION_NUM_LONG 20
-#define OCCLUSION_NUM_OBJECTS 500
+#define OCCLUSION_NUM_OBJECTS 1000
 #define OCCLUSION_USE_GROUND 1
 #define OCCLUSION_GROUND_Y 0.f
 
@@ -247,7 +247,7 @@ void WorldInitOcclusionTest()
 	bool bSkipInit = false;
 
 	//void WorldOcclusionCreate(v3 vSize, uint32 nFlags, v3 vColor, v3 vPos)
-	if(OCCLUSION_USE_GROUND)
+	if(0)//if(OCCLUSION_USE_GROUND)
 	{
 		WorldOcclusionCreate(v3init(OCCLUSION_TEST_HALF_SIZE*2, 1.0f, OCCLUSION_TEST_HALF_SIZE*2),
 			SObject::OCCLUDER_BOX,
@@ -306,9 +306,15 @@ void WorldInitOcclusionTest()
 
 	int idxx_long[] = 
 	{
-		//0, 1, 2, 3, 4, 
+		0,
+		1,2,3,4,5,6,7,8,9,
+		10,11,12,13,14,
+		15,
+		//16,
+		17,18,19,20,21
+		// 0, 1, 2, 3, 4, 
 		//5, 6, 
-		7, 
+		// 7, 
 		//8, 
 		//9, 10, 
 		//76 + 15,
@@ -316,14 +322,22 @@ void WorldInitOcclusionTest()
 
 	int idxx_long2[] = 
 	{
+		0,
+		1,2,3,4,5,6,7,8,9,
+		//10,
+		11,
+		12,13,14,
+		15,16,
+		17,18,19,20,21
 		//0, 1, 2, 3, 4, 
-		5, 
+		//5, 
 		//6, 
 		//7, 8, 
 		//9, 10, 
 		//76 + 15,
 	};
-
+	//bool bSkipInitLong = true;
+	uint32 nadd = 0;
 	for(int i = 0; i < OCCLUSION_NUM_LONG; ++i)
 	{
 		float fHeight = frandrange(10, 20);
@@ -337,7 +351,7 @@ void WorldInitOcclusionTest()
 		bool bSkip = bSkipInit;
 		for(int x : idxx_long)
 			if(x == i)
-				bSkip = false;
+				bSkip = true;
 		if(bSkip)
 		{
 			fbar += frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
@@ -346,6 +360,7 @@ void WorldInitOcclusionTest()
 		else
 		{
 			WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUDER_BOX);
+			nadd++;
 		}
 	}
 	for(int i = 0; i < OCCLUSION_NUM_LONG; ++i)
@@ -360,7 +375,7 @@ void WorldInitOcclusionTest()
 		bool bSkip = bSkipInit;
 		for(int x : idxx_long2)
 			if(x == i)
-				bSkip = false;
+				bSkip = true;
 		if(bSkip)
 		{
 			fbar += frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
@@ -369,9 +384,10 @@ void WorldInitOcclusionTest()
 		else
 		{
 			WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUDER_BOX);
+			nadd++;
 		}
 	}
-
+	uprintf("TOTAL ADD LONG %d\n", nadd);
 	for(int i = 0; i < OCCLUSION_NUM_OBJECTS; ++i)
 	{
 		float fHeight = frandrange(1, 2);
@@ -383,7 +399,8 @@ void WorldInitOcclusionTest()
 		}
 		//if(1||i == 512)
 		//if(i > 16 && i < 20)
-		if(i >= 57 && i < 58)
+		//if(0||(i >= 168 && i < 16))
+		if(i == 169)
 		{
 			WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUSION_TEST, v3init(1,0,0));
 		}
@@ -1423,6 +1440,14 @@ void ProgramInit()
 	g_WorldState.Camera.vPosition = v3init(-138.117203,110.280533,88.949966);
 	g_WorldState.Camera.vDir = v3init(0.734251,-0.678798,-0.009613);
 	g_WorldState.Camera.vRight = v3init(0.013089,0.000000,0.999906);
+
+#ifndef _WIN32
+	g_WorldState.Camera.vPosition = v3init(-20.517357,74.954018,237.506470);
+	g_WorldState.Camera.vDir = v3init(0.686040,-0.300704,-0.662503);
+	g_WorldState.Camera.vRight = v3init(0.694652,0.000000,0.719334);
+#endif
+
+
 #endif
 	g_WorldState.Camera.fFovY = 45.f;
 	g_WorldState.Camera.fNear = 0.1f;
