@@ -233,10 +233,10 @@ void WorldOcclusionCreate(v3 vSize, uint32 nFlags, v3 vColor = v3zero())
 void WorldInitOcclusionTest()
 {
 	g_WorldState.nNumWorldObjects = 0;
-	bool bSkipInitLong = true;
-	bool bSkipInitLarge = true;
-	bool bSkipInitSmall = true;
-	bool bSkipInitGround = true;
+	bool bSkipInitLong = false;
+	bool bSkipInitLarge = false;
+	bool bSkipInitSmall = false;
+	bool bSkipInitGround = false;
 	float fbar = 0.f;
 	int idxx_large[] = 
 	{
@@ -252,7 +252,7 @@ void WorldInitOcclusionTest()
 
 	//void WorldOcclusionCreate(v3 vSize, uint32 nFlags, v3 vColor, v3 vPos)
 	if(OCCLUSION_USE_GROUND && !bSkipInitGround)
-	if(0)
+//	if(0)
 	{
 		WorldOcclusionCreate(v3init(OCCLUSION_TEST_HALF_SIZE*2, 1.0f, OCCLUSION_TEST_HALF_SIZE*2),
 			SObject::OCCLUDER_BOX,
@@ -419,6 +419,7 @@ void WorldInitOcclusionTest()
 		}
 	}
 	uprintf("TOTAL ADD LONG %d\n", nadd);
+	uint32 nNumObjects = g_WorldState.nNumWorldObjects;
 	for(int i = 0; i < OCCLUSION_NUM_OBJECTS; ++i)
 	{
 		float fHeight = frandrange(1, 2);
@@ -432,6 +433,7 @@ void WorldInitOcclusionTest()
 		//if(i > 16 && i < 20)
 		//if(0||(i >= 168 && i < 16))
 		//if(i == 169)
+		//if(i + nNumObjects == 78)
 		if(1)
 		{
 			WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUSION_TEST, v3init(1,0,0));
