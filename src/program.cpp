@@ -203,10 +203,10 @@ void RenderShadowMap(ShadowMap& SM)
 #define OCCLUSION_TEST_HALF_SIZE 300
 #define OCCLUSION_TEST_MIN (-OCCLUSION_TEST_HALF_SIZE)
 #define OCCLUSION_TEST_MAX OCCLUSION_TEST_HALF_SIZE
-#define OCCLUSION_NUM_LARGE 0
-#define OCCLUSION_NUM_SMALL 0
+#define OCCLUSION_NUM_LARGE 10
+#define OCCLUSION_NUM_SMALL 100
 #define OCCLUSION_NUM_LONG 20
-#define OCCLUSION_NUM_OBJECTS 1000
+#define OCCLUSION_NUM_OBJECTS 500
 #define OCCLUSION_USE_GROUND 1
 #define OCCLUSION_GROUND_Y 0.f
 
@@ -233,6 +233,10 @@ void WorldOcclusionCreate(v3 vSize, uint32 nFlags, v3 vColor = v3zero())
 void WorldInitOcclusionTest()
 {
 	g_WorldState.nNumWorldObjects = 0;
+	bool bSkipInitLong = true;
+	bool bSkipInitLarge = true;
+	bool bSkipInitSmall = true;
+	bool bSkipInitGround = true;
 	float fbar = 0.f;
 	int idxx_large[] = 
 	{
@@ -247,7 +251,8 @@ void WorldInitOcclusionTest()
 	bool bSkipInit = false;
 
 	//void WorldOcclusionCreate(v3 vSize, uint32 nFlags, v3 vColor, v3 vPos)
-	if(0)//if(OCCLUSION_USE_GROUND)
+	if(OCCLUSION_USE_GROUND && !bSkipInitGround)
+	if(0)
 	{
 		WorldOcclusionCreate(v3init(OCCLUSION_TEST_HALF_SIZE*2, 1.0f, OCCLUSION_TEST_HALF_SIZE*2),
 			SObject::OCCLUDER_BOX,
@@ -261,7 +266,7 @@ void WorldInitOcclusionTest()
 		float fHeight = frandrange(50, 100);
 		float fWidth = frandrange(7, 15);
 		float fDepth = frandrange(7, 15);
-		bool bSkip = bSkipInit;
+		bool bSkip = bSkipInitLarge;
 		for(int x : idxx_large)
 			if(x == i)
 				bSkip = false;
@@ -279,16 +284,42 @@ void WorldInitOcclusionTest()
 	int idxx[] = 
 	{
 		-1,
+			// 0,1,2,3,4,5,6,7,8,9,
+			// 10,11,12,13,14,15,16,17,18,19,
+			// 20,21,22,23,24,25,26,27,28,29,
+		
+		//30,31,32,33,34,35,36,37,38,39,
+		
+
+		//40,
+		//42,
+
+		41,
+		44,
+
+		//43,
+		
+		
+
+		//45,46,47,48,49,
+		
+
+		//50,51,52,53,54,55,56,57,58,59,
+		//60,61,62,63,64,65,66,67,68,69,
+		//70,71,72,73,74,75,76,77,78,79,
+
+
 		// 75 + 15 , 
 		// 76 + 15 ,
 	};
 	//for(int i = 75; i < 100; ++i)
+
 	for(int i = 0; i < OCCLUSION_NUM_SMALL; ++i)
 	{
 		float fHeight = frandrange(10, 15);
 		float fWidth = frandrange(7, 15);
 		float fDepth = frandrange(7, 15);
-		bool bSkip = bSkipInit;
+		bool bSkip = bSkipInitSmall;
 		for(int x : idxx)
 			if(x == i)
 				bSkip = false;
@@ -306,47 +337,29 @@ void WorldInitOcclusionTest()
 
 	int idxx_long[] = 
 	{
-		0,
-		1,2,3,4,5,6,7,8,9,
-		10,11,12,13,14,
-		15,
-		//16,
-		17,18,19,20,21
-		// 0, 1, 2, 3, 4, 
-		//5, 6, 
-		// 7, 
-		//8, 
-		//9, 10, 
-		//76 + 15,
+		-1,
+		// 0,
+		// 1,2,3,4,5,6,7,8,9,
+		// 10,11,12,13,14,
+		// 15,
+		// //16,
+		// 17,18,19,20,21
 	};
 
 	int idxx_long2[] = 
 	{
-		0,
-		1,2,3,4,5,6,7,8,9,
-
-
-
-		//10,
-		
-
-
-
-
-
-		11,
-		12,13,14,
-		15,16,
-		17,18,19,20,21
-		//0, 1, 2, 3, 4, 
-		//5, 
-		//6, 
-		//7, 8, 
-		//9, 10, 
-		//76 + 15,
+		-1,
+		// 0,
+		// 1,2,3,4,5,6,7,8,9,
+		// //10,
+		// 11,
+		// 12,13,14,
+		// 15,16,
+		// 17,18,19,20,21
 	};
 	//bool bSkipInitLong = true;
 	uint32 nadd = 0;
+
 	for(int i = 0; i < OCCLUSION_NUM_LONG; ++i)
 	{
 		float fHeight = frandrange(10, 20);
@@ -357,7 +370,7 @@ void WorldInitOcclusionTest()
 			Swap(fWidth, fHeight);
 		}
 
-		bool bSkip = bSkipInit;
+		bool bSkip = bSkipInitLong;
 		for(int x : idxx_long)
 			if(x == i)
 				bSkip = true;
@@ -369,8 +382,8 @@ void WorldInitOcclusionTest()
 		else
 		{
 			WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUDER_BOX
-				|SObject::OCCLUSION_BOX_SKIP_X
-				|SObject::OCCLUSION_BOX_SKIP_Y
+				// |SObject::OCCLUSION_BOX_SKIP_X
+				// |SObject::OCCLUSION_BOX_SKIP_Y
 				//|SObject::OCCLUSION_BOX_SKIP_Z
 				);
 			nadd++;
@@ -385,7 +398,7 @@ void WorldInitOcclusionTest()
 		{
 			Swap(fWidth, fDepth);
 		}
-		bool bSkip = bSkipInit;
+		bool bSkip = bSkipInitLong;
 		for(int x : idxx_long2)
 			if(x == i)
 				bSkip = true;
@@ -397,9 +410,8 @@ void WorldInitOcclusionTest()
 		else
 		{
 			WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUDER_BOX
-
-				|SObject::OCCLUSION_BOX_SKIP_X
-				|SObject::OCCLUSION_BOX_SKIP_Y
+				// |SObject::OCCLUSION_BOX_SKIP_X
+				// |SObject::OCCLUSION_BOX_SKIP_Y
 				//|SObject::OCCLUSION_BOX_SKIP_Z
 
 				);
@@ -419,7 +431,8 @@ void WorldInitOcclusionTest()
 		//if(1||i == 512)
 		//if(i > 16 && i < 20)
 		//if(0||(i >= 168 && i < 16))
-		if(i == 169)
+		//if(i == 169)
+		if(1)
 		{
 			WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUSION_TEST, v3init(1,0,0));
 		}
@@ -1464,6 +1477,12 @@ void ProgramInit()
 	g_WorldState.Camera.vPosition = v3init(-20.517357,74.954018,237.506470);
 	g_WorldState.Camera.vDir = v3init(0.686040,-0.300704,-0.662503);
 	g_WorldState.Camera.vRight = v3init(0.694652,0.000000,0.719334);
+#endif
+
+#if __APPLE__
+g_WorldState.Camera.vPosition = v3init(43.465141,0.424568,-110.558350);
+g_WorldState.Camera.vDir = v3init(0.722574,0.263033,-0.639282);
+g_WorldState.Camera.vRight = v3init(0.662614,0.000000,0.748949);
 #endif
 
 

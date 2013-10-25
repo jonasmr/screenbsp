@@ -29,7 +29,7 @@
 #define OCCLUDER_EMPTY (0xc000)
 #define OCCLUDER_LEAF (0x8000)
 #define OCCLUDER_CLIP_MAX 0x100
-#define USE_FRUSTUM 0
+#define USE_FRUSTUM 1
 #define BSP_ADD_FRONT 1
 #define PLANE_TEST_EPSILON 0.0001f
 #define USE_EXCLUDE_MASK 1
@@ -1202,7 +1202,7 @@ int BspAddInternal(SOccluderBsp *pBsp, uint16 nParent, bool bOutsideParent, uint
 		}
 		else
 		{
-			uplotfnxt("EXCLUDE %x", pIndices[i]&(~0x8000));
+			//uplotfnxt("EXCLUDE %x", pIndices[i]&(~0x8000));
 		}
 		nExcludeMask >>= 1;
 	}
