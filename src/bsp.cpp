@@ -29,9 +29,10 @@
 #define OCCLUDER_EMPTY (0xc000)
 #define OCCLUDER_LEAF (0x8000)
 #define OCCLUDER_CLIP_MAX 0x100
-#define USE_FRUSTUM 1
+#define USE_FRUSTUM 0
 #define BSP_ADD_FRONT 1
 #define PLANE_TEST_EPSILON 0.0001f
+#define USE_EXCLUDE_MASK 1
 uint32 g_DEBUG = 0;
 uint32 g_DEBUG2 = 0;
 uint32 g_DEBUGLEVEL = 0;
@@ -48,6 +49,11 @@ uint32 g_nRecursiveClip = -1;
 uint32 g_nInsideOutSide = 0x3;
 uint32 g_nCheck = 0;
 uint32 g_nDumpFrame = 0;
+uint32 g_nDumpAdd = -1;
+
+
+uint32 g_nShowClipLevelSubCounter = 0;
+uint32 g_nShowClipLevelSub = 0;
 int g_nShowClipLevel = -1;
 int g_EdgeMask = 0xff;
 
@@ -100,6 +106,30 @@ inline v4 BspGetPlane(SOccluderBsp *pBsp, uint16 nIndex)
 	else
 		return vPlane;
 }
+
+inline v3 BspGetCorner(SOccluderBsp *pBsp, uint16 nIndex)
+{
+	v3 vCorner = pBsp->Corners[nIndex & ~SOccluderBsp::PLANE_FLIP_BIT];
+	return vCorner;
+}
+
+inline v4 BspGetPlaneFromNode(SOccluderBsp *pBsp, uint16 nNodeIndex)
+{
+	uint16 nIndex = pBsp->Nodes[nNodeIndex].nPlaneIndex;
+	v4 vPlane = pBsp->Planes[nIndex & ~SOccluderBsp::PLANE_FLIP_BIT];
+	if(SOccluderBsp::PLANE_FLIP_BIT & nIndex)
+		return v4neg(vPlane);
+	else
+		return vPlane;
+}
+
+inline v3 BspGetCornerFromNode(SOccluderBsp *pBsp, uint16 nNodeIndex)
+{
+	uint16 nIndex = pBsp->Nodes[nNodeIndex].nPlaneIndex;
+	v3 vCorner = pBsp->Corners[nIndex & ~SOccluderBsp::PLANE_FLIP_BIT];
+	return vCorner;
+}
+
 
 inline uint16 BspMakePlaneIndex(uint16 nIndex, bool bFlip)
 {
@@ -689,7 +719,23 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 	if(g_KeyboardState.keys[SDL_SCANCODE_F6] & BUTTON_RELEASED)
 		g_nShowClipLevel--;
 	if((int)g_nShowClipLevel >= 0)
-		uplotfnxt("BSP Debug clip level %d", g_nShowClipLevel);
+	{
+
+		bool bShift = 0 != ((g_KeyboardState.keys[SDL_SCANCODE_RSHIFT]|g_KeyboardState.keys[SDL_SCANCODE_LSHIFT]) & BUTTON_DOWN);
+
+		if(!bShift && (g_KeyboardState.keys[SDL_SCANCODE_F4] & BUTTON_RELEASED))
+			g_nShowClipLevelSub++;
+		if(bShift && 0 != (g_KeyboardState.keys[SDL_SCANCODE_F4] & BUTTON_RELEASED))
+		{
+			g_nShowClipLevelSub--;
+		}
+
+		uplotfnxt("**BSPShowClipLevel: level %d SUB %d ", g_nShowClipLevel, g_nShowClipLevelSub);
+
+	// uint32 g_nShowClipLevelSubCounter = 0;
+	// uint32 g_nShowClipLevelSub = 0
+	// uint32 g_nShowClipLevelMax = 0;
+	}
 
 	long seed = rand();
 	srand(42);
@@ -759,10 +805,10 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 			{
 				g_DEBUG2 = 1;
 				g_DEBUGLEVEL = g_DEBUGLEVELSTART;
-				//ZBREAK();
-
-//uint32 g_DEBUGLEVELSTART = 1;
-
+			}
+			if(g_nDumpAdd == i)
+			{
+				BspDump(pBsp, 0, 0);
 			}
 			uint16 nIndex = P.PotentialPolys[i].nIndex;
 			uint16 nCount = P.PotentialPolys[i].nCount;
@@ -1122,7 +1168,11 @@ int BspAddInternal(SOccluderBsp *pBsp, uint16 nParent, bool bOutsideParent, uint
 
 	for(uint32 i = 0; i < nNumPlanes; ++i)
 	{
+#if USE_EXCLUDE_MASK
 		if(0 == (nExcludeMask & 1))
+#else
+		if(1)
+#endif
 		{
 			nCount++;
 			int nIndex = (int)pBsp->Nodes.Size();
@@ -1135,12 +1185,13 @@ int BspAddInternal(SOccluderBsp *pBsp, uint16 nParent, bool bOutsideParent, uint
 			if(nPrev >= 0)
 				pBsp->Nodes[nPrev].nInside = nIndex;
 			nPrev = nIndex;
-			pNode->vDebugCorner = pBsp->Corners[pIndices[i]];
+			pNode->vDebugCorner = pBsp->Corners[pIndices[i]&(~0x8000)];
 
-			if(g_nBspDebugPlane == g_nBspDebugPlaneCounter++ ||
-				g_DEBUGLEVEL == 0
+			// if(0 && g_nBspDebugPlane == g_nBspDebugPlaneCounter++ ||
+			// 	g_DEBUGLEVEL == 0
 
-				)
+			// 	)
+			if(0)
 			{
 				v4 vPlane = BspGetPlane(pBsp, pIndices[i]);
 				v3 vCorner = pNode->vDebugCorner;
@@ -1148,6 +1199,10 @@ int BspAddInternal(SOccluderBsp *pBsp, uint16 nParent, bool bOutsideParent, uint
 				vPlane = v4init(mrotate(pBsp->mfrombsp, vPlane.tov3()), 1.f);
 				ZDEBUG_DRAWPLANE(vPlane.tov3(), vCorner, 0xff00ff00);
 			}
+		}
+		else
+		{
+			uplotfnxt("EXCLUDE %x", pIndices[i]&(~0x8000));
 		}
 		nExcludeMask >>= 1;
 	}
@@ -1599,6 +1654,7 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 		// uint32 nExcludeMaskOut_ = 0;
 		int nA = 0;
 		int nB = 0;
+		float fDotSum = 0.f;
 
 		// ZASSERT(vPlane.w != 0.f);
 		v4 vNormalPlane = BspGetPlane(pBsp, pIndices[nNumIndices - 1]);
@@ -1613,6 +1669,7 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 				nA++;
 			if(fDot > 0.001f)
 				nB++;
+			fDotSum += fDot;
 			// bOk = bOk || fDot < 0.f;
 		}
 
@@ -1631,14 +1688,15 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 		else
 		{
 			//uplotfnxt("A %d B %d", nA, nB);
-			if(nA > nB)
+			//if(nA > nB)
+			if(fDotSum < -0.001f)
 			{
 				pPolyOutside = pIndices;
 				nPolyEdgeOut = nNumIndices;
 				nExcludeMaskOut = nExcludeMask;
 				CR = ECPR_OUTSIDE;
 			}
-			else if(nB)
+			else if(fDotSum > 0.001f)
 			{
 				pPolyInside = pIndices;
 				nPolyEdgeIn = nNumIndices;
@@ -1736,13 +1794,29 @@ bool BspCullObjectR(SOccluderBsp *pBsp, uint32 Index, uint16 *Poly, uint32 nNumE
 {
 	if(g_nBspDebugPlane == g_nBspDebugPlaneCounter)
 	{
+		uplotfnxt("debug testing %d", nNumEdges);
 		BspDrawPoly(pBsp, Poly, nNumEdges, 0xff000000|randredcolor(), 0, 1);
+		int iParent = Index;
+		uint32 nColor = 0xff00ff00;
+		do
+		{
+
+			v4 vPlane = BspGetPlaneFromNode(pBsp, iParent);
+			v3 vCorner = BspGetCornerFromNode(pBsp, iParent);
+			vCorner = mtransform(pBsp->mfrombsp, vCorner);
+			vPlane = v4init(mrotate(pBsp->mfrombsp, vPlane.tov3()), 1.f);
+			ZDEBUG_DRAWPLANE(vPlane.tov3(), vCorner, nColor);
+			nColor = 0xffff0000;
+			iParent = BspFindParent(pBsp, iParent);
+		}while(iParent != -1);
+
+
+
 		if(g_nBreakOnClipIndex && g_nBspDebugPlane == g_nBspDebugPlaneCounter)
 		{
 			//uprintf("BREAK\n");
 		}
 	}
-		g_nBspDebugPlaneCounter++;
 
 	SOccluderBspNode Node = pBsp->Nodes[Index];
 	v4 vPlane = BspGetPlane(pBsp, Node.nPlaneIndex);
@@ -1788,8 +1862,22 @@ bool BspCullObjectR(SOccluderBsp *pBsp, uint32 Index, uint16 *Poly, uint32 nNumE
 	// 	uint16 nNumPlanes, uint32 nExcludeMask, uint16* pPolyIn, uint16* pPolyOut,
 	// 	uint32& nEdgesIn_, uint32& nEdgesOut_, uint32& nMaskIn_, uint32& nMaskOut_)
 
+	// v4 vPlane1 = BspGetPlane(pBsp, pBsp->Nodes[Index].nPlaneIndex);
+	// v4 vPlane2 = pBsp->Planes[Node.nPlaneIndex];
+	// uplotfnxt("CLIPPED AGAINST %d", Node.nPlaneIndex);
+	// uplotfnxt("CAG1 %f %f %f %f", vPlane1.x, vPlane1.y, vPlane1.z, vPlane1.w);
+	// uplotfnxt("CAG2 %f %f %f %f", vPlane2.x, vPlane2.y, vPlane2.z, vPlane2.w);
 	ClipPolyResult CR = BspClipPoly(pBsp, Node.nPlaneIndex, Poly, nNumEdges, 0, ClippedPolyIn,
 									ClippedPolyOut, nIn, nOut, nExclusionIn, nExclusionOut);
+
+	if(g_nBspDebugPlane == g_nBspDebugPlaneCounter)
+	{
+		uplotfnxt("debug test in %d out %d", nIn, nOut);
+	}
+
+
+	g_nBspDebugPlaneCounter++;
+
 
 	// ClippedPolyIn, ClippedPolyOut,
 	// nIn, nOut,
@@ -1797,12 +1885,33 @@ bool BspCullObjectR(SOccluderBsp *pBsp, uint32 Index, uint16 *Poly, uint32 nNumE
 	bool bFail = false;
 	if(g_nShowClipLevel == nClipLevel)
 	{
+		if(g_nShowClipLevelSubCounter++ == (g_nShowClipLevelSub))
 		{
-			uplotfnxt("debug drawing %d.. child in %d out %d", Index, Node.nInside, Node.nOutside);
+			uplotfnxt("**BSPShowClipLevel: Drawing %d.. child in %d out %d", Index, Node.nInside, Node.nOutside);
+			uplotfnxt("**BSPShowClipLevel: INSIDE %d OUTSIDE %d", nIn, nOut);
+
 			if(nOut)
-				BspDrawPoly(pBsp, ClippedPolyOut, nOut, 0xff00ff00, 0, 1);
+				BspDrawPoly(pBsp, ClippedPolyOut, nOut, 0xffff0000, 0, 1);
 			if(nIn)
 				BspDrawPoly(pBsp, ClippedPolyIn, nIn, 0xffffffff, 0, 1);
+
+
+
+			int iParent = Index;
+			uint32 nColor = 0xff00ff00;
+			do
+			{
+				uplotfnxt("**BSPShowClipLevel: IDX %d, plane idx %d", iParent, pBsp->Nodes[iParent].nPlaneIndex);
+				v4 vPlane = BspGetPlaneFromNode(pBsp, iParent);
+				v3 vCorner = BspGetCornerFromNode(pBsp, iParent);
+				vCorner = mtransform(pBsp->mfrombsp, vCorner);
+				vPlane = v4init(mrotate(pBsp->mfrombsp, vPlane.tov3()), 1.f);
+				ZDEBUG_DRAWPLANE(vPlane.tov3(), vCorner, nColor);
+				nColor = 0xffff0000;
+				iParent = BspFindParent(pBsp, iParent);
+			}while(iParent != -1);
+
+
 			return false;
 		}
 	}
@@ -1854,6 +1963,12 @@ bool BspCullObject(SOccluderBsp *pBsp, SWorldObject *pObject)
 	g_nBspDebugPlaneCounter = 0;
 	long seed = rand();
 	srand((int)(uintptr)pObject);
+
+
+	g_nShowClipLevelSubCounter = 0;
+
+
+
 
 	// SBspEdgeIndex Poly[5];
 	uint16_t Poly[5];

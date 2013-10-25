@@ -138,8 +138,8 @@ void DebugDrawPoly(v4* pVertex, uint32 nNumVertex, uint32_t nColor)
 
 
 #define PLANE_DEBUG_TESSELATION 20
-#define PLANE_DEBUG_SIZE 5
-
+#define PLANE_DEBUG_SIZE 50
+#define PLANE_NORMAL_SIZE 3.03f
 
 void DebugDrawPlane(SDebugDrawPlane& Plane)
 {
@@ -180,7 +180,7 @@ void DebugDrawPlane(SDebugDrawPlane& Plane)
 			v3 p2 = vPoints[(1+i)*PLANE_DEBUG_TESSELATION+j];
 			v3 p3 = vPoints[i*PLANE_DEBUG_TESSELATION+j];
 			v3 p4 = vPoints[i*PLANE_DEBUG_TESSELATION+j];
-			v3 p5 = vPoints[i*PLANE_DEBUG_TESSELATION+j] + vNormal * 0.03f;
+			v3 p5 = vPoints[i*PLANE_DEBUG_TESSELATION+j] + vNormal * PLANE_NORMAL_SIZE;
 			*pLines++ = Vertex0(p0.x, p0.y, p0.z, color, 0.f, 0.f);
 			*pLines++ = Vertex0(p1.x, p1.y, p1.z, color, 0.f, 0.f);
 			*pLines++ = Vertex0(p2.x, p2.y, p2.z, color, 0.f, 0.f);
