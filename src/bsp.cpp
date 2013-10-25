@@ -1589,6 +1589,7 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 			{
 				nExcludeMask |= (1 << i);
 				bPlaneOverlap = true;
+				//uplotfnxt("plane overlap %f %f", fDot0, fDot1);
 				// uplotfnxt("PLANE OVERLAP [%5.2f,%5.2f,%5.2f]-[%5.2f,%5.2f,%5.2f]", vInner.x,
 				// 		  vInner.y, vInner.z, vPlane.x, vPlane.y, vPlane.z);
 			}
@@ -1655,6 +1656,7 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 		int nA = 0;
 		int nB = 0;
 		float fDotSum = 0.f;
+		float fMaxDot = 0.f;
 
 		// ZASSERT(vPlane.w != 0.f);
 		v4 vNormalPlane = BspGetPlane(pBsp, pIndices[nNumIndices - 1]);
@@ -1670,6 +1672,10 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 			if(fDot > 0.001f)
 				nB++;
 			fDotSum += fDot;
+			fMaxDot = Max(fMaxDot, fDot);
+			float fAbsDot = fabs(fDot);
+			fMaxDot = Max(fMaxDot, fAbsDot);
+			//, fabs(fDot)));
 			// bOk = bOk || fDot < 0.f;
 		}
 
@@ -1689,19 +1695,26 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 		{
 			//uplotfnxt("A %d B %d", nA, nB);
 			//if(nA > nB)
-			if(fDotSum < -0.001f)
+			if(fMaxDot>1.f)
 			{
-				pPolyOutside = pIndices;
-				nPolyEdgeOut = nNumIndices;
-				nExcludeMaskOut = nExcludeMask;
-				CR = ECPR_OUTSIDE;
+				if(fDotSum < -0.001f)
+				{
+					pPolyOutside = pIndices;
+					nPolyEdgeOut = nNumIndices;
+					nExcludeMaskOut = nExcludeMask;
+					CR = ECPR_OUTSIDE;
+				}
+				else if(fDotSum > 0.001f)
+				{
+					pPolyInside = pIndices;
+					nPolyEdgeIn = nNumIndices;
+					nExcludeMaskIn = nExcludeMask;
+					CR = ECPR_INSIDE;
+				}
 			}
-			else if(fDotSum > 0.001f)
+			else
 			{
-				pPolyInside = pIndices;
-				nPolyEdgeIn = nNumIndices;
-				nExcludeMaskIn = nExcludeMask;
-				CR = ECPR_INSIDE;
+				uplotfnxt("MAX DOT IS %f, so reject", fMaxDot);
 			}
 		}
 	}
@@ -1844,6 +1857,32 @@ bool BspCullObjectR(SOccluderBsp *pBsp, uint32 Index, uint16 *Poly, uint32 nNumE
 				BspDrawPoly(pBsp, Poly, nNumEdges, 0xff000000 | randredcolor(), 0, 1);
 		}
 		BSP_DUMP_PRINTF("LEAF_TEST %08x CULLED %d\n", Index, bVisible ? 0 : 1);
+
+
+		if(g_nShowClipLevel == nClipLevel)
+		{
+			if(g_nShowClipLevelSubCounter++ == (g_nShowClipLevelSub))
+			{
+				uplotfnxt("**BSPShowClipLevel: LEAF TEST  %d.. child in %d out %d", Index, Node.nInside, Node.nOutside);
+				uplotfnxt("**BSPShowClipLevel: bVisible %d ", bVisible);
+				int iParent = Index;
+				uint32 nColor = 0xff00ff00;
+				do
+				{
+					uplotfnxt("**BSPShowClipLevel: IDX %d, plane idx %d", iParent, pBsp->Nodes[iParent].nPlaneIndex);
+					v4 vPlane = BspGetPlaneFromNode(pBsp, iParent);
+					v3 vCorner = BspGetCornerFromNode(pBsp, iParent);
+					vCorner = mtransform(pBsp->mfrombsp, vCorner);
+					vPlane = v4init(mrotate(pBsp->mfrombsp, vPlane.tov3()), 1.f);
+					ZDEBUG_DRAWPLANE(vPlane.tov3(), vCorner, nColor);
+					nColor = 0xffff0000;
+					iParent = BspFindParent(pBsp, iParent);
+				}while(iParent != -1);
+
+			}
+		}
+
+
 		return !bVisible;
 		//return bCulled;
 	}
