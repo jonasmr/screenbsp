@@ -19,6 +19,7 @@
 //  rename cull to isvisible
 //  optimize!
 //
+//  add objects below ground
 
 // precision list:
 //   normal planes with w near 0 tend to cause precision issues
