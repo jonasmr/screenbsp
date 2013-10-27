@@ -15,6 +15,7 @@
 #include "shader.h"
 #include "physics.h"
 #include "microprofile.h"
+#include <functional>
 
 uint32_t g_nDump = 0;
 extern uint32_t g_Width;
@@ -32,6 +33,32 @@ float g_fOrthoScale = 10;
 SOccluderBsp* g_Bsp = 0;
 uint32_t g_nBspNodeCap = 512;
 uint32 g_nUseDebugCameraPos = 2;
+
+
+
+uint32 g_nRunTest = 0;
+FILE* g_TestOut = 0;
+FILE* g_TestFailOut = 0;
+
+int32 g_nTestIndex = 0; //0:bsp, 1:software occl
+int32 g_nSubTestIndex = 0; //number of sub tests [paths through scene]
+int32 g_nTestSettingIndex = 0; //tweakable param of test (depth for bsp, resolution for software occl)
+int32 g_nTestInnerIndex = 0;
+int32 g_nTestInnerIndexEnd = 0;
+int32 g_nTestFail = 0;
+int32 g_nTestTotalFail = 0;
+int32 g_nTestMaxFail = 0;
+int32 g_nTestTotalFailFrames = 0;
+int32 g_nTestFalsePositives = 0;
+int32 g_nTestTotalFalsePositives = 0;
+int32 g_nTestMaxFalsePositives = 0;
+int32 g_nTestFrames;
+float g_fTestTime;
+float g_fTestMaxFrameTime;
+
+
+
+
 v3 vLockedCamPos = v3init(0,0,0);
 v3 vLockedCamRight = v3init(0,-1,0);
 v3 vLockedCamDir = v3init(1,0,0);
@@ -631,6 +658,258 @@ void WorldDrawObjects(bool* bCulled)
 	}
 }
 
+void TestClear()
+{
+	g_nTestTotalFail = 0;
+	g_nTestMaxFail = 0;
+	g_nTestFail = 0;
+	g_nTestTotalFailFrames = 0;
+	g_nTestFalsePositives = 0;
+	g_nTestTotalFalsePositives = 0;
+	g_nTestFrames = 0;
+ 	g_fTestTime = 0;	
+ 	g_fTestMaxFrameTime = 0;
+	g_nTestInnerIndex = 0;
+	g_nTestInnerIndexEnd = -1;
+}
+void StartTest()
+{
+	g_TestOut = fopen("test.txt", "w");
+	g_TestFailOut = fopen("test.fail.txt", "w");
+	g_nUseDebugCameraPos = 0;
+
+	g_nTestIndex = -1; //0:bsp, 1:software occl
+	g_nSubTestIndex = 0; //number of sub tests [paths through scene]
+	g_nTestSettingIndex = 0; //tweakable param of test (depth for bsp, resolution for software occl)
+	g_nTestInnerIndex = -1;
+	g_nTestInnerIndexEnd = -1;
+	g_nTestTotalFail = 0;
+	g_nTestMaxFail = 0;
+	g_nTestFail = 0;
+	g_nTestTotalFailFrames = 0;
+	g_nTestFalsePositives = 0;
+	g_nTestTotalFalsePositives = 0;
+	g_nRunTest = 1;
+
+	fprintf(g_TestOut, "%10s, %6s, %7s, %10s, %10s, %10s, %10s, %10s, %13s, %13s, %13s, %13s\n", 
+		"", 
+		"Sett",
+		"frames",
+		"failframes",
+		"maxfail",
+		"totalfail",
+		"false max",
+		"false tot",
+		"false avg",
+		"Time",
+		"Time max",
+		"Time avg"
+		);
+	uprintf("%10s, %6s, %7s, %10s, %10s, %10s, %10s, %10s, %13s, %13s, %13s, %13s\n", 
+		"", 
+		"Sett",
+		"frames",
+		"failframes",
+		"maxfail",
+		"totalfail",
+		"false max",
+		"false tot",
+		"false avg",
+		"Time",
+		"Time max",
+		"Time avg"
+		);
+
+
+
+
+	MICROPROFILE_FORCEENABLECPUGROUP("CullTest");
+}
+
+void StopTest()
+{
+	ZASSERT(g_TestOut);
+	fclose(g_TestOut);
+	ZASSERT(g_TestFailOut);
+	fclose(g_TestFailOut);
+	g_TestOut = 0;
+	g_TestFailOut = 0;
+	g_nRunTest = 0;
+	MICROPROFILE_FORCEDISABLECPUGROUP("CullTest");
+}
+
+int nSettingsBsp[] = 
+{
+	//10, 20, 
+	32,
+	64, 
+	128, 200, 256, 386, 
+	512, 
+	//1024,
+};
+const uint32 nNumSettingsBsp = sizeof(nSettingsBsp)/sizeof(nSettingsBsp[0]);
+const uint32 nNumSettingsSO = 0;
+
+
+void TestWrite()
+{
+	const char* pTestName = g_nTestIndex == 0 ? "ScreenBsp" : "INTEL_SWO";			
+	int nSettingValue = 0;
+	if(g_nTestIndex == 0)
+		nSettingValue = nSettingsBsp[g_nTestSettingIndex];
+	else
+		nSettingValue = 42;
+
+	fprintf(g_TestOut, "%10s, %6d, %7d, %10d, %10d, %10d, %10d, %10d, %13.4f, %13.4f, %13.4f, %13.4f\n", 
+		pTestName, 
+		nSettingValue,
+		g_nTestFrames,
+		g_nTestTotalFailFrames,
+		g_nTestMaxFail,
+		g_nTestTotalFail,
+		g_nTestMaxFalsePositives,
+		g_nTestTotalFalsePositives,
+		(float)g_nTestTotalFalsePositives / g_nTestFrames,
+		g_fTestTime,
+		g_fTestMaxFrameTime,
+		g_fTestTime / g_nTestFrames
+		);
+	uprintf("%10s, %6d, %7d, %10d, %10d, %10d, %10d, %10d, %13.4f, %13.4f, %13.4f, %13.4f\n", 
+		pTestName, 
+		nSettingValue,
+		g_nTestFrames,
+		g_nTestTotalFailFrames,
+		g_nTestMaxFail,
+		g_nTestTotalFail,
+		g_nTestMaxFalsePositives,
+		g_nTestTotalFalsePositives,
+		(float)g_nTestTotalFalsePositives / g_nTestFrames,
+		g_fTestTime,
+		g_fTestMaxFrameTime,
+		g_fTestTime / g_nTestFrames
+		);
+}
+
+void RunTest(v3& vPos_, v3& vDir_, v3& vRight_)
+{
+#define NUM_TESTS 1
+	std::function<int (int, v3&, v3&, v3&)> TestFuncs[] = 
+	{
+		[] (int index, v3& vPos, v3& vDir, v3& vUp) -> int{
+			vUp = v3init(0, 1, 0);
+			const int CIRCLE_TOTAL_STEPS = (8<<10);
+			const int CIRCLE_REVOLUTIONS = 4;
+			const int CIRCLE_INNER_RADIUS = 50;
+			const int CIRCLE_OUTER_RADIUS = 600;
+			float fAngle = TWOPI * float(index) / (CIRCLE_TOTAL_STEPS/CIRCLE_REVOLUTIONS);
+			float fDist = CIRCLE_INNER_RADIUS + (CIRCLE_OUTER_RADIUS-CIRCLE_INNER_RADIUS) * float(index) / CIRCLE_TOTAL_STEPS;
+			float fX = sinf(fAngle) * fDist;
+			float fZ = cosf(fAngle) * fDist;
+			vPos = v3init(fX, 10, fZ);
+			vDir = -v3normalize(vPos);
+			uplotfnxt("test run %d... pos %f %f %f", index, vPos.x, vPos.y, vPos.z);
+
+			return CIRCLE_TOTAL_STEPS;
+		},
+		[] (int index, v3& vPos, v3& vDir, v3& vUp) -> int{
+			vUp = v3init(0, 1, 0);
+			const int CIRCLE_TOTAL_STEPS = (1<<5);
+			const int CIRCLE_REVOLUTIONS = 3;
+			const int CIRCLE_INNER_RADIUS = 50;
+			const int CIRCLE_OUTER_RADIUS = 800;
+			float fAngle = TWOPI * float(index) / (CIRCLE_TOTAL_STEPS/CIRCLE_REVOLUTIONS);
+			float fDist = CIRCLE_INNER_RADIUS + (CIRCLE_OUTER_RADIUS-CIRCLE_INNER_RADIUS) * float(index) / CIRCLE_TOTAL_STEPS;
+			float fX = sinf(fAngle) * fDist;
+			float fZ = cosf(fAngle) * fDist;
+			vPos = v3init(fX, 10, fZ);
+			vDir = -v3normalize(vPos);
+			uplotfnxt("test run %d... pos %f %f %f", index, vPos.x, vPos.y, vPos.z);
+
+			return CIRCLE_TOTAL_STEPS;
+		}
+	};
+
+	if(g_nTestInnerIndex>=0)
+	{
+		g_nTestTotalFail += g_nTestFail;
+		g_nTestMaxFail = Max(g_nTestFail, g_nTestMaxFail);
+		if(g_nTestFail)
+			g_nTestTotalFailFrames++;
+		g_nTestTotalFalsePositives += g_nTestFalsePositives;
+		g_nTestMaxFalsePositives = Max(g_nTestFalsePositives, g_nTestMaxFalsePositives);
+
+		float fTimeCull = MicroProfileGetTime("CullTest", "Cull");
+		float fTimeBuild = MicroProfileGetTime("CullTest", "Build");
+		float fTotalTime = fTimeCull + fTimeBuild;		
+		g_fTestTime += fTotalTime;
+		g_fTestMaxFrameTime = Max(g_fTestMaxFrameTime, fTotalTime);
+
+	}
+
+	if(g_nTestInnerIndex == g_nTestInnerIndexEnd)
+	{
+		if(g_nTestIndex == -1)
+		{
+			g_nTestIndex = 0;
+			g_nSubTestIndex = 0;
+			g_nTestSettingIndex = 0;
+			fprintf(g_TestOut, "\n\n*** ScreenBSP\n\n");
+			TestClear();
+			g_nBspNodeCap = nSettingsBsp[g_nTestSettingIndex];
+		}
+		else
+		{
+			if(g_nTestIndex == 0)
+			{
+				TestWrite();
+				TestClear();
+				g_nTestSettingIndex++;
+				if(g_nTestSettingIndex == nNumSettingsBsp)
+				{
+					fprintf(g_TestOut, "\n\n*** SOFTWARE OCCLUSION\n\n");
+					g_nTestIndex = 1;
+					g_nTestSettingIndex = 0;
+					StopTest();
+					return;
+				}
+				else
+				{
+					g_nBspNodeCap = nSettingsBsp[g_nTestSettingIndex];
+				}
+			}
+			else if(g_nTestIndex == 1)
+			{
+				TestWrite();
+				TestClear();
+				g_nTestSettingIndex++;
+				if(g_nTestSettingIndex == nNumSettingsBsp)
+				{
+					fprintf(g_TestOut, "\n\nAll Done\n");
+					uprintf("ALL DONE\n");
+					g_nTestIndex = 1;
+					g_nTestSettingIndex = 0;
+					StopTest();
+					return;
+				}
+			}
+		}
+	}
+
+
+	g_nTestFail = 0;
+	g_nTestFalsePositives = 0;
+	g_nTestFrames++;
+
+	ZASSERT(g_nTestIndex>=0 && g_nTestIndex<2);
+
+	v3 vPos, vDir, vUp;
+	g_nTestInnerIndexEnd = TestFuncs[g_nTestIndex](g_nTestInnerIndex, vPos, vDir, vUp);
+	g_nTestInnerIndex++;
+	vPos_ = vPos;
+	vDir_ = vDir;
+	vRight_ = v3normalize(v3cross(vDir, vUp));
+}
+
 
 int g_nSimulate = 0;
 void WorldRender()
@@ -732,12 +1011,15 @@ void WorldRender()
 	ViewDesc.nNodeCap = g_nBspNodeCap;
 	uplotfnxt("DEBUG POS %f %f %f", vPos.x, vPos.y, vPos.z);
 
-	BspBuild(g_Bsp, &g_WorldState.Occluders[0], 
-		nNumOccluders,
-		&g_WorldState.WorldObjects[0], 
-		g_WorldState.nNumWorldObjects, 
-		//0,//2,
-		ViewDesc);
+	{
+		MICROPROFILE_SCOPEI("CullTest", "Build", 0xff00ff00);
+		BspBuild(g_Bsp, &g_WorldState.Occluders[0], 
+			nNumOccluders,
+			&g_WorldState.WorldObjects[0], 
+			g_WorldState.nNumWorldObjects, 
+			//0,//2,
+			ViewDesc);
+	}
 
 	uint32 nNumObjects = g_WorldState.nNumWorldObjects;
 	bool* bCulled = (bool*)alloca(nNumObjects);
@@ -747,9 +1029,12 @@ void WorldRender()
 	memset(bCulled, 0, nNumObjects);
 	memset(bCulledRef, 0, nNumObjects);
 	memset(nCulledRef, 0, nNumObjects*4);
-	for(uint32 i = 0; i < nNumObjects; ++i)
 	{
-		bCulled[i] = BspCullObject(g_Bsp, &g_WorldState.WorldObjects[i]);
+		MICROPROFILE_SCOPEI("CullTest", "Cull", 0xff00ff00);
+		for(uint32 i = 0; i < nNumObjects; ++i)
+		{
+			bCulled[i] = BspCullObject(g_Bsp, &g_WorldState.WorldObjects[i]);
+		}
 	}
 	SOccluderBspStats Stats;
 	BspGetStats(g_Bsp, &Stats);
@@ -1011,7 +1296,6 @@ void WorldRender()
 		if(!Queries[0])
 		{
 			glGenQueries(MAX_QUERIES, &Queries[0]);
-			uprintf("Generated Queries\n");
 		}
 		for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
 		{
@@ -1053,6 +1337,7 @@ void WorldRender()
 				if(bCulled[i] && !bCulledRef[i])
 				{
 					++nFailCull;
+					++g_nTestFail;
 					uprintf("FAIL CULL %d .. count %d\n", i, nCulledRef[i]);
 					if(nNumFail < MAX_FAIL)
 						pFailObjects[nNumFail++] = pObject;
@@ -1061,7 +1346,8 @@ void WorldRender()
 				else if(bCulledRef[i] && !bCulled[i])
 				{
 					++nFalsePositives;
-					uprintf("FALSE CULL %d\n", i);
+					g_nTestFalsePositives++;
+					//uprintf("FALSE CULL %d\n", i);
 				}
 				else
 				{
@@ -1073,8 +1359,22 @@ void WorldRender()
 		if(nNumFail)
 		{
 			uprintf("FAIL %d  FALSE %d AGREE %d\n", nFailCull, nFalsePositives, nAgree);
-			uprintf("locking camera\n");
-			g_nUseDebugCameraPos = 1;
+			if(g_nRunTest)
+			{
+				uprintf("g_WorldState.Camera.vPosition = v3init(%f,%f,%f);\n", vLockedCamPos.x, vLockedCamPos.y, vLockedCamPos.z);
+				uprintf("g_WorldState.Camera.vDir = v3init(%f,%f,%f);\n", vLockedCamDir.x, vLockedCamDir.y, vLockedCamDir.z);
+				uprintf("g_WorldState.Camera.vRight = v3init(%f,%f,%f)\n;", vLockedCamRight.x, vLockedCamRight.y, vLockedCamRight.z);
+				fprintf(g_TestFailOut, "g_WorldState.Camera.vPosition = v3init(%f,%f,%f);\n", vLockedCamPos.x, vLockedCamPos.y, vLockedCamPos.z);
+				fprintf(g_TestFailOut, "g_WorldState.Camera.vDir = v3init(%f,%f,%f);\n", vLockedCamDir.x, vLockedCamDir.y, vLockedCamDir.z);
+				fprintf(g_TestFailOut, "g_WorldState.Camera.vRight = v3init(%f,%f,%f)\n;", vLockedCamRight.x, vLockedCamRight.y, vLockedCamRight.z);
+
+			}
+			else
+			{
+				uprintf("locking camera\n");
+				g_nUseDebugCameraPos = 1;
+
+			}
 		}
 	}
 
@@ -1375,39 +1675,59 @@ void UpdateCamera()
 		fSpeed *= 0.2f;
 	if((g_KeyboardState.keys[SDL_SCANCODE_RCTRL]|g_KeyboardState.keys[SDL_SCANCODE_LCTRL]) & BUTTON_DOWN)
 		fSpeed *= 12.0f;
-	g_WorldState.Camera.vPosition += g_WorldState.Camera.vDir * vDir.z * fSpeed;
-	g_WorldState.Camera.vPosition += g_WorldState.Camera.vRight * vDir.x * fSpeed;
 
-
-	// static int mousex, mousey;
-	// if(g_MouseState.button[1] & BUTTON_PUSHED)
-	// {
-	// 	mousex = g_MouseState.position[0];
-	// 	mousey = g_MouseState.position[1];
-	// }
-
-	//if(g_MouseState.button[1] & BUTTON_DOWN)
+	if(g_KeyboardState.keys[SDL_SCANCODE_BACKSPACE] & BUTTON_RELEASED)
 	{
-		int dx = g_WorldState.vCameraRotate.x;//g_MouseState.position[0] - mousex;
-		int dy = g_WorldState.vCameraRotate.y;//g_MouseState.position[1] - mousey;
-		// mousex = g_MouseState.position[0];
-		// mousey = g_MouseState.position[1];
+		
+		if(!g_nRunTest)
+			StartTest();
+		else
+			StopTest();
+	}
 
-		float fRotX = dy * 0.25f;
-		float fRotY = dx * -0.25f;
-		m mrotx = mrotatex(fRotX*TORAD);
-		m mroty = mrotatey(fRotY*TORAD);
-		g_WorldState.Camera.vDir = mtransform(mroty, g_WorldState.Camera.vDir);
-		g_WorldState.Camera.vRight = mtransform(mroty, g_WorldState.Camera.vRight);
 
-		m mview = mcreate(g_WorldState.Camera.vDir, g_WorldState.Camera.vRight, v3init(0,0,0));
-		m mviewinv = minverserotation(mview);
-		v3 vNewDir = mtransform(mrotx, v3init(0,0,-1));
-		g_WorldState.Camera.vDir = mtransform(mviewinv, vNewDir);
+	if(g_nRunTest)
+	{
+		
+		RunTest(g_WorldState.Camera.vPosition, g_WorldState.Camera.vDir, g_WorldState.Camera.vRight);
 
 	}
-	ZASSERTNORMALIZED3(g_WorldState.Camera.vDir);
-	ZASSERTNORMALIZED3(g_WorldState.Camera.vRight);
+	else
+	{
+		g_WorldState.Camera.vPosition += g_WorldState.Camera.vDir * vDir.z * fSpeed;
+		g_WorldState.Camera.vPosition += g_WorldState.Camera.vRight * vDir.x * fSpeed;
+
+
+		// static int mousex, mousey;
+		// if(g_MouseState.button[1] & BUTTON_PUSHED)
+		// {
+		// 	mousex = g_MouseState.position[0];
+		// 	mousey = g_MouseState.position[1];
+		// }
+
+		//if(g_MouseState.button[1] & BUTTON_DOWN)
+		{
+			int dx = g_WorldState.vCameraRotate.x;//g_MouseState.position[0] - mousex;
+			int dy = g_WorldState.vCameraRotate.y;//g_MouseState.position[1] - mousey;
+			// mousex = g_MouseState.position[0];
+			// mousey = g_MouseState.position[1];
+
+			float fRotX = dy * 0.25f;
+			float fRotY = dx * -0.25f;
+			m mrotx = mrotatex(fRotX*TORAD);
+			m mroty = mrotatey(fRotY*TORAD);
+			g_WorldState.Camera.vDir = mtransform(mroty, g_WorldState.Camera.vDir);
+			g_WorldState.Camera.vRight = mtransform(mroty, g_WorldState.Camera.vRight);
+
+			m mview = mcreate(g_WorldState.Camera.vDir, g_WorldState.Camera.vRight, v3init(0,0,0));
+			m mviewinv = minverserotation(mview);
+			v3 vNewDir = mtransform(mrotx, v3init(0,0,-1));
+			g_WorldState.Camera.vDir = mtransform(mviewinv, vNewDir);
+
+		}
+		ZASSERTNORMALIZED3(g_WorldState.Camera.vDir);
+		ZASSERTNORMALIZED3(g_WorldState.Camera.vRight);
+	}
 
 
 
