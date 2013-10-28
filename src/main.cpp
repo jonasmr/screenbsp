@@ -50,7 +50,7 @@ void usleep(__int64 usec)
 #endif
 
 //SDL_Surface* g_Surface;
-#ifdef _WIN32
+#if 0 //#ifdef _WIN32
 #define START_WIDTH 1280
 #define START_HEIGHT 720
 #else

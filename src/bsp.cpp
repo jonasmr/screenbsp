@@ -740,6 +740,7 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 
 	long seed = rand();
 	srand(42);
+	randseed(0xed32babe, 0xdeadf39c);
 	g_nDumpFrame = 0;
 	pBsp->nDepth = 0;
 	pBsp->Nodes.Clear();
@@ -2012,6 +2013,7 @@ bool BspCullObject(SOccluderBsp *pBsp, SWorldObject *pObject)
 	g_nBspDebugPlaneCounter = 0;
 	long seed = rand();
 	srand((int)(uintptr)pObject);
+	randseed(0xed32babe, 0xdeadf39c);
 
 
 	g_nShowClipLevelSubCounter = 0;
