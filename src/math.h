@@ -341,6 +341,11 @@ uint32 randredcolor();
 uint64_t rand64();
 uint64_t rand64(uint64_t nPrev);
 
+uint32_t rand32();
+void randseed(uint32_t k, uint32_t j);
+
+
+
 #define ZASSERTNORMALIZED2(v) ZASSERT(fabs(v2length(v)-1.f) < 1e-4f)
 #define ZASSERTNORMALIZED3(v) ZASSERT(fabs(v3length(v)-1.f) < 1e-4f)
 #define ZASSERTNORMALIZED4(v) ZASSERT(fabs(v4length(v)-1.f) < 1e-4f)

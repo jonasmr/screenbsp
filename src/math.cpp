@@ -1391,6 +1391,26 @@ float rayboxintersect(v3 r0, v3 rdir, m boxtransform, v3 boxsize)
 	// float tzmax = rayplaneintersect(r0, rdir, v3init(0, 0, -boxsize.z) * m.z + m.trans, m.z);
 }
 
+namespace
+{
+	uint32_t g_k = 0xed32babe;
+	uint32_t g_j = 0xdeadf39c;
+}
+
+void randseed(uint32_t k, uint32_t j)
+{
+	g_k = k;
+	g_j = j;
+}
+uint32_t rand32()
+{
+	g_k=30345*(g_k&65535)+(g_k>>16);
+	g_j=18000*(g_j&65535)+(g_j>>16);
+	return (((g_k << 16) | (g_k >> 16)) + g_j) % RAND_MAX;
+}
+
+
+
 v2 v2randir()
 {
 	v2 v;
@@ -1410,13 +1430,13 @@ v2 v2randdisc()
 int32_t randrange(int32_t nmin, int32_t nmax)
 {
 	if(nmin == nmax) return nmin;
-	int r = rand();
+	int r = rand32();
 	return nmin + (r % (nmax-nmin));
 }
 
 float frand()
 {
-	return (float)rand() / RAND_MAX;
+	return (float)rand32() / RAND_MAX;
 }
 
 float frandrange(float fmin, float fmax)
@@ -1427,12 +1447,12 @@ float frandrange(float fmin, float fmax)
 uint64_t rand64()
 {
 	//todo add better rand
-	return rand();
+	return rand32()| (((uint64)rand32())<<32);
 }
 uint64_t rand64(uint64_t)
 {
 	//todo: borken
-	return rand();
+	return rand32()| (((uint64)rand32())<<32);
 }
 
 v3 hsvtorgb(v3 hsv)

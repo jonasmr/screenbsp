@@ -17,7 +17,7 @@
 #include "microprofile.h"
 #include <functional>
 
-#include <fenv.h>
+//#include <fenv.h>
 
 uint32_t g_nDump = 0;
 extern uint32_t g_Width;
@@ -262,8 +262,11 @@ void WorldOcclusionCreate(v3 vSize, uint32 nFlags, v3 vColor = v3zero())
 	WorldOcclusionCreate(vSize, nFlags, vColor, vPos);
 
 }
+
+
 void WorldInitOcclusionTest()
 {
+	randseed(0xed32babe, 0xdeadf39c);
 	g_WorldState.nNumWorldObjects = 0;
 	bool bSkipInitLong = false;
 	bool bSkipInitLarge = false;
