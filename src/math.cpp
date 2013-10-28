@@ -1406,7 +1406,7 @@ uint32_t rand32()
 {
 	g_k=30345*(g_k&65535)+(g_k>>16);
 	g_j=18000*(g_j&65535)+(g_j>>16);
-	return (((g_k << 16) | (g_k >> 16)) + g_j) % RAND_MAX;
+	return (((g_k << 16) | (g_k >> 16)) + g_j) % 0x7fff;
 }
 
 
@@ -1436,7 +1436,7 @@ int32_t randrange(int32_t nmin, int32_t nmax)
 
 float frand()
 {
-	return (float)rand32() / RAND_MAX;
+	return (float)rand32() / 0x7fff;
 }
 
 float frandrange(float fmin, float fmax)
