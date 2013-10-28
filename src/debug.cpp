@@ -6,7 +6,7 @@
 #include "buffer.h"
 #include "microprofile.h"
 
-
+#if ZDEBUG_DRAW_ENABLED
 namespace
 {
 	SVertexBufferDynamic* pPushBuffer = 0;
@@ -520,3 +520,5 @@ void DebugDrawFlush(m mprj)
 	glDepthMask(1);
 	CheckGLError();
 }
+
+#endif

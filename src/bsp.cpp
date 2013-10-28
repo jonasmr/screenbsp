@@ -169,7 +169,7 @@ uint32_t g_nDebugDrawPoly = 1;
 
 v3 BspPlaneIntersection(v4 p0, v4 p1, v4 p2)
 {
-	MICROPROFILE_SCOPEIC("BSP", "BspPlaneIntersect");
+//	MICROPROFILE_SCOPEIC("BSP", "BspPlaneIntersect");
 	float x = -(-p0.w * p1.y * p2.z + p0.w * p2.y * p1.z + p1.w * p0.y * p2.z - p1.w * p2.y * p0.z -
 				p2.w * p0.y * p1.z + p2.w * p1.y * p0.z) /
 			  (-p0.x * p1.y * p2.z + p0.x * p2.y * p1.z + p1.x * p0.y * p2.z - p1.x * p2.y * p0.z -
@@ -771,22 +771,29 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 	}
 
 	SBspPotentialOccluders P;
-
-	BspAddFrustum(pBsp, P, vLocalDirection, vLocalRight, vLocalUp, vLocalOrigin);
-	BspAddPotentialBoxes(pBsp, P, pWorldObjects, nNumWorldObjects);
-	BspAddPotentialOccluders(pBsp, P, pOccluderDesc, nNumOccluders);
+	{
+		MICROPROFILE_SCOPEIC("BSP", "Build_AddPotential");
+		BspAddFrustum(pBsp, P, vLocalDirection, vLocalRight, vLocalUp, vLocalOrigin);
+		BspAddPotentialBoxes(pBsp, P, pWorldObjects, nNumWorldObjects);
+		BspAddPotentialOccluders(pBsp, P, pOccluderDesc, nNumOccluders);
+	}
 
 
 	pBsp->Stats.nNumPlanesConsidered = 0;
-	for(uint32 i = 0; i < P.PotentialPolys.Size(); ++i)
 	{
-		uint16 nIndex = P.PotentialPolys[i].nIndex;
-		uint16 nCount = P.PotentialPolys[i].nCount;
-		pBsp->Stats.nNumPlanesConsidered += nCount;
-		P.PotentialPolys[i].fArea = BspAreaEstimate(P.Planes.Ptr() + nIndex, nCount);
+		MICROPROFILE_SCOPEIC("BSP", "Build_Estimate");
+
+		for(uint32 i = 0; i < P.PotentialPolys.Size(); ++i)
+		{
+			uint16 nIndex = P.PotentialPolys[i].nIndex;
+			uint16 nCount = P.PotentialPolys[i].nCount;
+			pBsp->Stats.nNumPlanesConsidered += nCount;
+			P.PotentialPolys[i].fArea = BspAreaEstimate(P.Planes.Ptr() + nIndex, nCount);
+		}
 	}
 	if(P.PotentialPolys.Size())
 	{
+		MICROPROFILE_SCOPEIC("BSP", "Build_Sort");
 		std::sort(&P.PotentialPolys[0], P.PotentialPolys.Size() + &P.PotentialPolys[0],
 			[](const SBspPotentialPoly& l, const SBspPotentialPoly& r) -> bool
 			{
@@ -795,6 +802,7 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 		);
 	}
 	{
+		MICROPROFILE_SCOPEIC("BSP", "Build_Add");
 		v4* vPlanes = P.Planes.Ptr();
 		v3* vCorners = P.Corners.Ptr();
 		for(uint32 i = 0; i < P.PotentialPolys.Size(); ++i)
@@ -966,6 +974,7 @@ void BspAddOccluderInternal(SOccluderBsp *pBsp, v4 *pPlanes, v3* pCorners, uint3
 	}
 	else
 	{
+		MICROPROFILE_SCOPEIC("BSP", "Build_AddRecursive");
 		BspAddRecursive(pBsp, 0, nPlaneIndices, nNumPlanes, 0, 0);
 	}
 	if(pBsp->Nodes.Size() == nNodesSize)
