@@ -196,7 +196,7 @@ void uplotfnxt_inner(const char* s, uint32_t nX, uint32_t nY)
 #define vsprintf_s vsprintf
 #endif
 
-
+#if ZDEBUG_DRAW_ENABLED
 void uplotfnxt(const char* fmt, ...)
 {
 	char buffer[1024];
@@ -217,7 +217,7 @@ void uplotf(uint32_t nX, uint32_t nY, const char* fmt, ...)
 	uplotfnxt_inner(buffer, nX, nY);
 	va_end (args);
 }
-
+#endif
 
 
 void TextBegin()

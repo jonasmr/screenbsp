@@ -56,6 +56,9 @@ int32 g_nTestTotalFalsePositives = 0;
 int32 g_nTestMaxFalsePositives = 0;
 int32 g_nTestFrames;
 float g_fTestTime;
+float g_fPrepareTime;
+float g_fBuildTime;
+float g_fCullTime;
 float g_fTestMaxFrameTime;
 
 
@@ -669,7 +672,10 @@ void TestClear()
 	g_nTestFalsePositives = 0;
 	g_nTestTotalFalsePositives = 0;
 	g_nTestFrames = 0;
- 	g_fTestTime = 0;	
+ 	g_fTestTime = 0;
+ 	g_fPrepareTime = 0;
+ 	g_fBuildTime = 0;
+ 	g_fCullTime = 0;
  	g_fTestMaxFrameTime = 0;
 	g_nTestInnerIndex = 0;
 	g_nTestInnerIndexEnd = -1;
@@ -693,39 +699,46 @@ void StartTest()
 	g_nTestTotalFalsePositives = 0;
 	g_nRunTest = 1;
 
-	fprintf(g_TestOut, "%10s, %6s, %7s, %10s, %10s, %10s, %10s, %10s, %13s, %13s, %13s, %13s\n", 
+	fprintf(g_TestOut, "%10s %6s %7s %7s %7s %7s %7s %7s %7s %7s %7s %7s %7s %7s %7s\n", 
 		"", 
 		"Sett",
 		"frames",
-		"failframes",
+		"frafail",
 		"maxfail",
-		"totalfail",
-		"false max",
-		"false tot",
-		"false avg",
-		"Time",
-		"Time max",
-		"Time avg"
-		);
-	uprintf("%10s, %6s, %7s, %10s, %10s, %10s, %10s, %10s, %13s, %13s, %13s, %13s\n", 
-		"", 
-		"Sett",
-		"frames",
-		"failframes",
-		"maxfail",
-		"totalfail",
-		"false max",
-		"false tot",
-		"false avg",
-		"Time",
-		"Time max",
-		"Time avg"
+		"totfail",
+		"maxfals",
+		"totfals",
+		"avgfals",
+		"time",
+		"maxtime",
+		"avgtime",
+		"preptim",
+		"buildti",
+		"culltim"
 		);
 
+	uprintf("%10s %6s %7s %7s %7s %7s %7s %7s %7s %7s %7s %7s %7s %7s %7s\n", 
+		"", 
+		"Sett",
+		"frames",
+		"frafail",
+		"maxfail",
+		"totfail",
+		"maxfals",
+		"totfals",
+		"avgfals",
+		"time",
+		"maxtime",
+		"avgtime",
+		"preptim",
+		"buildti",
+		"culltim"
+		);
 
 
 
 	MICROPROFILE_FORCEENABLECPUGROUP("CullTest");
+	MICROPROFILE_FORCEENABLECPUGROUP("Bsp");
 }
 
 void StopTest()
@@ -742,14 +755,14 @@ void StopTest()
 
 int nSettingsBsp[] = 
 {
-	//10, 20, 
+	// 10, 20, 
 	// 32,
 	// 64, 
-	// 128, 
-	//200, 
-	256, 
-	//386, 
-	//512, 
+	//128, 
+	200, 
+	// 256, 
+	// //386, 
+	// 512, 
 	//1024,
 };
 const uint32 nNumSettingsBsp = sizeof(nSettingsBsp)/sizeof(nSettingsBsp[0]);
@@ -765,7 +778,7 @@ void TestWrite()
 	else
 		nSettingValue = 42;
 
-	fprintf(g_TestOut, "%10s, %6d, %7d, %10d, %10d, %10d, %10d, %10d, %13.4f, %13.4f, %13.4f, %13.4f\n", 
+	fprintf(g_TestOut, "%10s %6d %7d %7d %7d %7d %7d %7d %7.2f %7.2f %7.2f %7.2f %7.2f %7.2f %7.2f\n", 
 		pTestName, 
 		nSettingValue,
 		g_nTestFrames,
@@ -777,9 +790,13 @@ void TestWrite()
 		(float)g_nTestTotalFalsePositives / g_nTestFrames,
 		g_fTestTime,
 		g_fTestMaxFrameTime,
-		g_fTestTime / g_nTestFrames
+		g_fTestTime / g_nTestFrames,
+		g_fPrepareTime / g_nTestFrames,
+		g_fBuildTime / g_nTestFrames,
+ 		g_fCullTime / g_nTestFrames
+
 		);
-	uprintf("%10s, %6d, %7d, %10d, %10d, %10d, %10d, %10d, %13.4f, %13.4f, %13.4f, %13.4f\n", 
+	fprintf(g_TestFailOut, "%10s %6d %7d %7d %7d %7d %7d %7d %7.2f %7.2f %7.2f %7.2f %7.2f %7.2f %7.2f\n", 
 		pTestName, 
 		nSettingValue,
 		g_nTestFrames,
@@ -791,7 +808,32 @@ void TestWrite()
 		(float)g_nTestTotalFalsePositives / g_nTestFrames,
 		g_fTestTime,
 		g_fTestMaxFrameTime,
-		g_fTestTime / g_nTestFrames
+		g_fTestTime / g_nTestFrames,
+		g_fPrepareTime / g_nTestFrames,
+		g_fBuildTime / g_nTestFrames,
+ 		g_fCullTime / g_nTestFrames
+
+		);
+
+
+
+	uprintf("%10s %6d %7d %7d %7d %7d %7d %7d %7.2f %7.2f %7.2f %7.2f %7.2f %7.2f %7.2f\n", 
+		pTestName, 
+		nSettingValue,
+		g_nTestFrames,
+		g_nTestTotalFailFrames,
+		g_nTestMaxFail,
+		g_nTestTotalFail,
+		g_nTestMaxFalsePositives,
+		g_nTestTotalFalsePositives,
+		(float)g_nTestTotalFalsePositives / g_nTestFrames,
+		g_fTestTime,
+		g_fTestMaxFrameTime,
+		g_fTestTime / g_nTestFrames,
+		g_fPrepareTime / g_nTestFrames,
+		g_fBuildTime / g_nTestFrames,
+ 		g_fCullTime / g_nTestFrames
+
 		);
 }
 
@@ -802,7 +844,7 @@ void RunTest(v3& vPos_, v3& vDir_, v3& vRight_)
 	{
 		[] (int index, v3& vPos, v3& vDir, v3& vUp) -> int{
 			vUp = v3init(0, 1, 0);
-			const int CIRCLE_TOTAL_STEPS = (1<<8);
+			const int CIRCLE_TOTAL_STEPS = (1<<6);
 			const int CIRCLE_REVOLUTIONS = 1;
 			const int CIRCLE_INNER_RADIUS = 50;
 			const int CIRCLE_OUTER_RADIUS = 600;
@@ -845,8 +887,12 @@ void RunTest(v3& vPos_, v3& vDir_, v3& vRight_)
 
 		float fTimeCull = MicroProfileGetTime("CullTest", "Cull");
 		float fTimeBuild = MicroProfileGetTime("CullTest", "Build");
+		float fTimeBuildPrepare = MicroProfileGetTime("Bsp", "CullPrepare");
 		float fTotalTime = fTimeCull + fTimeBuild;		
 		g_fTestTime += fTotalTime;
+		g_fPrepareTime += fTimeBuildPrepare;
+		g_fBuildTime += fTimeBuild;
+		g_fCullTime += fTimeCull;
 		g_fTestMaxFrameTime = Max(g_fTestMaxFrameTime, fTotalTime);
 
 	}
@@ -1144,7 +1190,7 @@ void WorldRender()
 				}
 			}
 			// if(Index.nCount)
-			// 	uprintf("INDEX AT %d, %d has %d\n", i, j, Index.nCount);
+			// 	uprintf("INDEX AT %d %d has %d\n", i, j, Index.nCount);
 			nMaxTileLights = Max((int)Index.nCount, nMaxTileLights);
 			//Index.nCount = j % 1;
 //			Index.nBase = i % 10;

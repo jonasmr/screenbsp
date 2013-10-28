@@ -16,8 +16,8 @@ extern SFontDescription g_FontDescription;
 void TextInit();
 void TextFlush();
 
-void uplotfnxt(const char* pfmt, ...);
-void uplotf(uint32_t nX, uint32_t nY, const char* pfmt, ...);
+// void uplotfnxt(const char* pfmt, ...);
+// void uplotf(uint32_t nX, uint32_t nY, const char* pfmt, ...);
 
 void TextBegin();
 void TextEnd();
