@@ -16,7 +16,7 @@
 #include "physics.h"
 #include "microprofile.h"
 #include <functional>
-
+#include <xmmintrin.h>
 //#include <fenv.h>
 
 uint32_t g_nDump = 0;
@@ -847,7 +847,7 @@ void RunTest(v3& vPos_, v3& vDir_, v3& vRight_)
 	{
 		[] (int index, v3& vPos, v3& vDir, v3& vUp) -> int{
 			vUp = v3init(0, 1, 0);
-			const int CIRCLE_TOTAL_STEPS = (1<<6);
+			const int CIRCLE_TOTAL_STEPS = (1<<8);
 			const int CIRCLE_REVOLUTIONS = 1;
 			const int CIRCLE_INNER_RADIUS = 50;
 			const int CIRCLE_OUTER_RADIUS = 600;
@@ -1065,7 +1065,9 @@ void WorldRender()
 	ViewDesc.nNodeCap = g_nBspNodeCap;
 	uplotfnxt("DEBUG POS %f %f %f", vPos.x, vPos.y, vPos.z);
 
-	//fesetenv(FE_DFL_DISABLE_SSE_DENORMS_ENV);
+	//fesetenv(FE_DFL_DISABLE_SSE_DENORMS_ENV)
+	
+	_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 
 	{
 		MICROPROFILE_SCOPEI("CullTest", "Build", 0xff00ff00);

@@ -1,4 +1,5 @@
 solution "bsp"
+   platforms { "x64" }
    configurations { "Debug", "Release" }
    location "build/" 
    -- A project defines one build target
@@ -9,7 +10,7 @@ solution "bsp"
       includedirs {"sdl2/include/", "glew/", "bullet-2.81/src" } 
       defines {"GLEW_STATIC"} 
       
-      libdirs {"sdl2/VisualC/SDL/Win32/Release/", "sdl2/VisualC/SDLmain/Release/", "bullet-2.81/lib/"}
+      libdirs {"sdl2/VisualC/SDL/x64/Release/", "sdl2/VisualC/SDLmain/Release/", "bullet-2.81/lib/"}
 
       links {"SDL2"}
 
@@ -20,12 +21,12 @@ solution "bsp"
 
 
       configuration "Debug"
-         links {"BulletCollision_vs2010_debug", "BulletDynamics_vs2010_debug", "LinearMath_vs2010_debug"}         
+         links {"BulletCollision_vs2010_x64_debug", "BulletDynamics_vs2010_x64_debug", "LinearMath_vs2010_x64_debug"}         
          defines { "DEBUG" }
          flags { "Symbols", "StaticRuntime" }
  
       configuration "Release"
-         links {"BulletCollision_vs2010", "BulletDynamics_vs2010", "LinearMath_vs2010"}         
+         links {"BulletCollision_vs2010_x64_release", "BulletDynamics_vs2010_x64_release", "LinearMath_vs2010_x64_release"}         
          defines { "NDEBUG" }
          flags { "Optimize", "Symbols", "StaticRuntime" }   
 
