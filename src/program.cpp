@@ -17,6 +17,8 @@
 #include "microprofile.h"
 #include <functional>
 
+#include <fenv.h>
+
 uint32_t g_nDump = 0;
 extern uint32_t g_Width;
 extern uint32_t g_Height;
@@ -741,10 +743,13 @@ void StopTest()
 int nSettingsBsp[] = 
 {
 	//10, 20, 
-	32,
-	64, 
-	128, 200, 256, 386, 
-	512, 
+	// 32,
+	// 64, 
+	// 128, 
+	//200, 
+	256, 
+	//386, 
+	//512, 
 	//1024,
 };
 const uint32 nNumSettingsBsp = sizeof(nSettingsBsp)/sizeof(nSettingsBsp[0]);
@@ -797,8 +802,8 @@ void RunTest(v3& vPos_, v3& vDir_, v3& vRight_)
 	{
 		[] (int index, v3& vPos, v3& vDir, v3& vUp) -> int{
 			vUp = v3init(0, 1, 0);
-			const int CIRCLE_TOTAL_STEPS = (8<<10);
-			const int CIRCLE_REVOLUTIONS = 4;
+			const int CIRCLE_TOTAL_STEPS = (1<<8);
+			const int CIRCLE_REVOLUTIONS = 1;
 			const int CIRCLE_INNER_RADIUS = 50;
 			const int CIRCLE_OUTER_RADIUS = 600;
 			float fAngle = TWOPI * float(index) / (CIRCLE_TOTAL_STEPS/CIRCLE_REVOLUTIONS);
@@ -1010,6 +1015,8 @@ void WorldRender()
 	ViewDesc.fZNear = g_WorldState.Camera.fNear;
 	ViewDesc.nNodeCap = g_nBspNodeCap;
 	uplotfnxt("DEBUG POS %f %f %f", vPos.x, vPos.y, vPos.z);
+
+	//fesetenv(FE_DFL_DISABLE_SSE_DENORMS_ENV);
 
 	{
 		MICROPROFILE_SCOPEI("CullTest", "Build", 0xff00ff00);
@@ -1819,10 +1826,10 @@ g_WorldState.Camera.vRight = v3init(0.662614,0.000000,0.748949);
 	g_SM = AllocateShadowMap();
 
 }
-
 int ProgramMain()
 {
 
+	//fesetenv(FE_DFL_DISABLE_SSE_DENORMS_ENV);
 	if(g_KeyboardState.keys[SDL_SCANCODE_ESCAPE] & BUTTON_RELEASED)
 		return 1;
 
