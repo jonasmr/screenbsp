@@ -415,7 +415,7 @@ struct
 	uint64_t nMenuActiveGroup;
 	uint32_t nMenuAllGroups;
 	uint32_t nMenuAllThreads;
-	uint32_t nHoverToken;
+	uint64_t nHoverToken;
 	uint32_t nHoverTime;
 	uint32_t nOverflow;
 
@@ -563,8 +563,8 @@ void MicroProfileInit()
 		S.nBarHeight = MICROPROFILE_TEXT_HEIGHT;
 		S.nActiveGroup = 0;
 		S.nForceGroup = 0;
-		S.nMenuAllGroups = 1;
-		S.nMenuActiveGroup = 1;
+		S.nMenuAllGroups = 0;
+		S.nMenuActiveGroup = 0;
 		S.nMenuAllThreads = 1;
 		S.nAggregateFlip = 30;
 		S.nTotalTimers = 0;
@@ -1380,7 +1380,7 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 
 	float fMouseX = S.nMouseX;
 	float fMouseY = S.nMouseY;
-	uint32_t nHoverToken = -1;
+	uint64_t nHoverToken = MICROPROFILE_INVALID_TOKEN;
 	uint64_t nHoverTime = 0;
 	float fHoverDist = 0.5f;
 	float fBestDist = 100000.f;
@@ -1488,7 +1488,7 @@ void MicroProfileDrawDetailedView(uint32_t nWidth, uint32_t nHeight)
 		}
 		f = fNext;
 	}
-	if(nHoverToken != (uint32_t)-1 && nHoverTime)
+	if(nHoverToken != MICROPROFILE_INVALID_TOKEN && nHoverTime)
 	{
 		S.nHoverToken = nHoverToken;
 		S.nHoverTime = nHoverTime;
@@ -2274,8 +2274,6 @@ void MicroProfileDraw(uint32_t nWidth, uint32_t nHeight)
 					MicroProfileToggleGraph(S.nHoverToken);
 			}
 		}
-		//S.nActiveGroup = S.nMenuAllGroups ? (S.nGroupMask & (uint64_t)-1) : S.nMenuActiveGroup;
-		//S.nActiveGroup |= S.nForceGroup;
 	}
 	S.nMouseLeft = S.nMouseRight = 0;
 	S.nMouseWheelDelta = 0;
@@ -2568,7 +2566,6 @@ void MicroProfileForceEnableGroup(const char* pGroup, MicroProfileTokenType Type
 	std::lock_guard<std::recursive_mutex> Lock(MicroProfileMutex());
 	uint16_t nGroup = MicroProfileGetGroup(pGroup, Type);
 	S.nForceGroup |= (1ll << nGroup);
-	printf("FORCE ENABLE OF %s\n", pGroup);
 }
 
 void MicroProfileForceDisableGroup(const char* pGroup, MicroProfileTokenType Type)
