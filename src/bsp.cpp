@@ -1567,19 +1567,19 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 	{
 
 		MICROPROFILE_SCOPEIC("BSP", "Build_Test0");
-		for(int i = 0; i < nNumIndices-1; ++i)
-		{
-			v4 p0 = BspGetPlane(pBsp, pIndices[i]);
-			v4 p1 = BspGetPlane(pBsp, pIndices[(i+1)%(nNumIndices-1)]);
-			v4 p2 = BspGetPlane(pBsp, pIndices[(i+2)%(nNumIndices-1)]);
-			if(pIndices[i] < pBsp->Corners.Size() && g_DEBUG)
-			{
-				float fSignTest = BspPlaneTestNew(p0,p1,p2);
-				uplotfnxt("SIGN TEST IS %f", fSignTest);
-				if(fSignTest<0)
-					ZBREAK();
-			}
-		}
+		//for(int i = 0; i < nNumIndices-1; ++i)
+		//{
+		//	v4 p0 = BspGetPlane(pBsp, pIndices[i]);
+		//	v4 p1 = BspGetPlane(pBsp, pIndices[(i+1)%(nNumIndices-1)]);
+		//	v4 p2 = BspGetPlane(pBsp, pIndices[(i+2)%(nNumIndices-1)]);
+		//	if(pIndices[i] < pBsp->Corners.Size() && g_DEBUG)
+		//	{
+		//		float fSignTest = BspPlaneTestNew(p0,p1,p2);
+		//		uplotfnxt("SIGN TEST IS %f", fSignTest);
+		//		if(fSignTest<0)
+		//			ZBREAK();
+		//	}
+		//}
 
 
 
@@ -1592,7 +1592,7 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 		}
 
 	
-		char pTest[256] = "Test ";
+		//char pTest[256] = "Test ";
 		MICROPROFILE_SCOPEIC("BSP", "Build_Test1");
 		for(int i = 0; i < nNumIndices - 1; ++i)
 		{
@@ -1610,8 +1610,8 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 					// 		  vInner.y, vInner.z, vPlane.x, vPlane.y, vPlane.z);
 				}
 				char buff[64];
-				snprintf(buff, 64, "[%f,%f] ", fDot0, fDot1);
-				strcat(pTest, buff);
+				//snprintf(buff, 64, "[%f,%f] ", fDot0, fDot1);
+				//strcat(pTest, buff);
 			}
 		}
 		MICROPROFILE_SCOPEIC("BSP", "Build_Test3");
