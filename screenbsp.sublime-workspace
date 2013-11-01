@@ -4,6 +4,14 @@
 		"selected_items":
 		[
 			[
+				"BspPlan",
+				"BspPlaneTestNew"
+			],
+			[
+				"g_Test",
+				"g_TestFailOut"
+			],
+			[
 				"nBaseTi",
 				"nBaseTicksCpu"
 			],
@@ -99,7 +107,7 @@
 			"file": "screenbsp.sublime-project",
 			"settings":
 			{
-				"buffer_size": 49,
+				"buffer_size": 149,
 				"line_ending": "Unix"
 			}
 		},
@@ -107,24 +115,15 @@
 			"file": "premake4.lua",
 			"settings":
 			{
-				"buffer_size": 1050,
+				"buffer_size": 1139,
 				"line_ending": "Windows"
-			}
-		},
-		{
-			"contents": "#pragma once\n\n\n\nvoid CreateMesh(",
-			"settings":
-			{
-				"buffer_size": 32,
-				"line_ending": "Unix",
-				"name": "#pragma once"
 			}
 		},
 		{
 			"file": ".hgignore",
 			"settings":
 			{
-				"buffer_size": 56,
+				"buffer_size": 71,
 				"line_ending": "Windows",
 				"name": ".depend"
 			}
@@ -149,8 +148,8 @@
 			"file": "src/microprofile.h",
 			"settings":
 			{
-				"buffer_size": 78072,
-				"line_ending": "Unix"
+				"buffer_size": 83769,
+				"line_ending": "Windows"
 			}
 		},
 		{
@@ -173,7 +172,7 @@
 			"file": "src/microprofile.cpp",
 			"settings":
 			{
-				"buffer_size": 19342,
+				"buffer_size": 19598,
 				"line_ending": "Unix"
 			}
 		},
@@ -181,7 +180,7 @@
 			"file": "src/text.cpp",
 			"settings":
 			{
-				"buffer_size": 6504,
+				"buffer_size": 6533,
 				"line_ending": "Windows"
 			}
 		},
@@ -190,6 +189,121 @@
 			"settings":
 			{
 				"buffer_size": 302,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/program.cpp",
+			"settings":
+			{
+				"buffer_size": 53786,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"contents": "med Exclude\n\n             Sett  frames frafail maxfail totfail maxfals totfals avgfals    time maxtime avgtime preptim buildti culltim\n ScreenBsp     32     512       0       0       0     648   98877  193.12 1464.21    6.32    2.86    0.54    0.76    2.10\n ScreenBsp     64     512       0       0       0     648   67355  131.55 1564.90    5.33    3.06    0.54    0.89    2.17\n ScreenBsp    128     512       0       0       0     648   42097   82.22 1602.72    4.92    3.13    0.51    1.01    2.12\n ScreenBsp    256     512       0       0       0     648   24230   47.32 1782.79    7.33    3.48    0.50    1.33    2.16\n ScreenBsp    512     512       0       0       0     648   17480   34.14 2068.38    7.57    4.04    0.51    1.83    2.21\n ScreenBsp   1024     512       0       0       0     648   17162   33.52 2246.60    9.54    4.39    0.51    2.19    2.19\n\n\n             Sett  frames frafail maxfail totfail maxfals totfals avgfals    time maxtime avgtime preptim buildti culltim\n ScreenBsp     32     512       0       0       0     694  120976  236.28 1544.90    6.46    3.02    0.54    0.73    2.28\n ScreenBsp     64     512       0       0       0     694   87831  171.54 1602.21    6.03    3.13    0.51    0.79    2.34\n ScreenBsp    128     512       0       0       0     694   62367  121.81 1743.89    6.54    3.41    0.50    0.93    2.48\n ScreenBsp    256     512       0       0       0     694   39430   77.01 1944.83    7.02    3.80    0.50    1.19    2.61\n ScreenBsp    512     512       0       0       0     694   24738   48.32 2247.13    9.54    4.39    0.51    1.65    2.74\n ScreenBsp   1024     512       0       0       0     694   18120   35.39 2619.09   11.28    5.12    0.51    2.32    2.79\n\n\n\n UDEN\n\n",
+			"settings":
+			{
+				"buffer_size": 1733,
+				"line_ending": "Unix",
+				"name": "med Exclude"
+			}
+		},
+		{
+			"contents": "****3626",
+			"settings":
+			{
+				"buffer_size": 8,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/program.h",
+			"settings":
+			{
+				"buffer_size": 1827,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/debug.h",
+			"settings":
+			{
+				"buffer_size": 1855,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/text.h",
+			"settings":
+			{
+				"buffer_size": 527,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "src/debug.cpp",
+			"settings":
+			{
+				"buffer_size": 15024,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/main.cpp",
+			"settings":
+			{
+				"buffer_size": 13983,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/bsp.cpp",
+			"settings":
+			{
+				"buffer_size": 65711,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "src/borken",
+			"settings":
+			{
+				"buffer_size": 57,
+				"line_ending": "Unix",
+				"name": "expr SkipClear();SkipAddRange(12,200);SkipAddRange"
+			}
+		},
+		{
+			"contents": "broken\nD0x0000: plane[0000]   [i:8000,o:0001] parent ffffffff\nD   0x8000\nD   0x0001: plane[0001]   [i:8000,o:0002] parent 0000\nD      0x8000\nD      0x0002: plane[0002]   [i:8000,o:0003] parent 0001\nD         0x8000\nD         0x0003: plane[0003]   [i:8000,o:0004] parent 0002\nD            0x8000\nD            0x0004: plane[0004]   [i:0005,o:c000] parent 0003\nD               0x0005: plane[0005]   [i:0006,o:0010] parent 0004\nD                  0x0006: plane[0006]   [i:0007,o:000f] parent 0005 <<-- den her\nD                     0x0007: plane[0007]   [i:0008,o:000e] parent 0006\nD                        0x0008: plane[0008]   [i:8000,o:0009] parent 0007\nD                           0x8000\nD                           0x0009: plane[000c]   [i:000a,o:c000] parent 0008\nD                              0x000a: plane[000b]   [i:000b,o:c000] parent 0009\nD                                 0x000b: plane[000a]   [i:000c,o:c000] parent 000a\nD                                    0x000c: plane[0009]   [i:000d,o:c000] parent 000b\nD                                       0x000d: plane[000d]   [i:8000,o:c000] parent 000c\nD                                          0x8000\nD                                          0xc000\nD                                       0xc000\nD                                    0xc000\nD                                 0xc000\nD                              0xc000\nD                        0x000e: plane[000d]   [i:8000,o:c000] parent 0007\nD                           0x8000\nD                           0xc000\nD                     0x000f: plane[000d]   [i:8000,o:c000] parent 0006\nD                        0x8000\nD                        0xc000\nD                  0x0010: plane[000b]   [i:0011,o:c000] parent 0005\nD                     0x0011: plane[000d]   [i:8000,o:c000] parent 0010\nD                        0x8000\nD                        0xc000\nD                     0xc000\nD               0xc000\nCULLR 00000000 P[   5] In[00008000] Out[00000001]\n  CULLR 00000001 P[   5] In[00008000] Out[00000002]\n    CULLR 00000002 P[   5] In[00008000] Out[00000003]\n      CULLR 00000003 P[   5] In[00008000] Out[00000004]\n        CULLR 00000004 P[   5] In[00000005] Out[0000c000]\n          CULLR 00000005 P[   5] In[00000006] Out[00000010]\n            CULLR 00000006 P[   5] In[00000007] Out[0000000f]\n              CULLR 0000000f P[   5] In[00008000] Out[0000c000]\n                LEAF_TEST 0000000f CULLED 1\n\n\nD0x0000: plane[0000]   [i:8000,o:0001] parent ffffffff\nD   0x8000\nD   0x0001: plane[0001]   [i:8000,o:0002] parent 0000\nD      0x8000\nD      0x0002: plane[0002]   [i:8000,o:0003] parent 0001\nD         0x8000\nD         0x0003: plane[0003]   [i:8000,o:0004] parent 0002\nD            0x8000\nD            0x0004: plane[0004]   [i:0005,o:c000] parent 0003\nD               0x0005: plane[0005]   [i:0006,o:c000] parent 0004\nD                  0x0006: plane[0006]   [i:0007,o:c000] parent 0005\nD                     0x0007: plane[0007]   [i:0008,o:c000] parent 0006\nD                        0x0008: plane[0008]   [i:8000,o:c000] parent 0007\nD                           0x8000\nD                           0xc000\nD                        0xc000\nD                     0xc000\nD                  0xc000\nD               0xc000\nCULLR 00000000 P[   5] In[00008000] Out[00000001]\n  CULLR 00000001 P[   5] In[00008000] Out[00000002]\n    CULLR 00000002 P[   5] In[00008000] Out[00000003]\n      CULLR 00000003 P[   5] In[00008000] Out[00000004]\n        CULLR 00000004 P[   5] In[00000005] Out[0000c000]\n          CULLR 00000005 P[   5] In[00000006] Out[0000c000]\n            CULLR 00000006 P[   5] In[00000007] Out[0000c000]\n\n",
+			"settings":
+			{
+				"buffer_size": 3624,
+				"line_ending": "Unix",
+				"name": "broken"
+			}
+		},
+		{
+			"file": "src/math.h",
+			"settings":
+			{
+				"buffer_size": 8808,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "src/math.cpp",
+			"settings":
+			{
+				"buffer_size": 26962,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "src/fixedarray.h",
+			"settings":
+			{
+				"buffer_size": 2720,
 				"line_ending": "Unix"
 			}
 		}
@@ -278,7 +392,7 @@
 	],
 	"find":
 	{
-		"height": 34.0
+		"height": 35.0
 	},
 	"find_in_files":
 	{
@@ -293,6 +407,80 @@
 		"case_sensitive": false,
 		"find_history":
 		[
+			"BspDrawPoly",
+			"g_nBspOccluderDrawOccluders",
+			"g_nBspOccluderDrawEdges",
+			"Edges",
+			"g_nBspOccluderDebugDrawClipResult",
+			"g_nBspOccluderDrawOccluders",
+			"BspDrawPoly",
+			"PLANE_TEST_EPSILON",
+			"add extra out",
+			"Add Out",
+			"Add out",
+			"BspPlaneTestNew",
+			"BspDumpPlanes",
+			"g_nPolyExtraDump",
+			"In",
+			"sort",
+			"skipping",
+			"SkipIndex",
+			"skipadd",
+			"nExcludeMask",
+			"nBaseExcludeMask",
+			"nExcludeMask",
+			"USE_EXCLUDE_MASK",
+			"1024",
+			"settings",
+			"bspsett",
+			"g_nBspNodeCap",
+			"nodecap",
+			"Plane Overlap",
+			"BspDump",
+			"BSP_DUMP_PRINTF",
+			"DUMP_PRINTF",
+			"WorldOcclusionCreate",
+			"F5",
+			"F%",
+			"LEAF_TEST",
+			"spaces",
+			"BSP_DUMP_PRINTF",
+			"LEAF_TEST",
+			"nodecap",
+			"fail cull",
+			"g_nBspNodeCap",
+			"depth",
+			"RAND_MAX",
+			"myrand",
+			"seed",
+			"WorldInitOcclusionTest",
+			"fprintf(g_",
+			"fprintf(g_Te",
+			"fprintf(g_",
+			"%13s",
+			" %10s",
+			"%10s",
+			", %",
+			"%13.4f",
+			"%10d",
+			"Bsp",
+			"BspAddOccluderInternal",
+			"func",
+			"<<10",
+			"g_fTestTime",
+			"g_f",
+			"g_fTestTime",
+			"g_fPrepareTime",
+			"g_fTestTime",
+			"\"BSP\"",
+			"\"CullTest\"",
+			"ZDEBUG_",
+			"up",
+			"uplo",
+			"MICROPROFILE_SCOPEIC",
+			"scope",
+			"fesetenv",
+			"fsetenv",
 			"MP_DRAW_TIMERS",
 			"MicroProfileCalcTimers",
 			";",
@@ -346,81 +534,7 @@
 			"Program",
 			"PFNGLCREATESHADERPROGRAMVPROC",
 			"glCreateShaderProgramv",
-			"glCreateShaderProgramvARB",
-			"buf",
-			"GLEW_ARB_separate_shader_objects",
-			"GLEW_ARB_Seperate",
-			"GLEW_ARB_S",
-			"CreateSphereMesh",
-			"Mesh",
-			"void uprintf",
-			"pQuad",
-			"Quad",
-			"const",
-			"nSubDivs",
-			"nVertices",
-			"pQuads",
-			"pVertices",
-			"Normal",
-			"pSphereMesh",
-			"+4",
-			".Normal",
-			";",
-			"0]",
-			"]",
-			"(f,",
-			"Mesh",
-			"GL_DEPTH_TEST",
-			"ProgramMain",
-			"GL_DEPTH_TEST",
-			"Depth",
-			"],",
-			"BspOccluderDebugDraw",
-			"i",
-			"pOccluders",
-			"i",
-			"bFlip",
-			"vNormalPlane",
-			"bFlip",
-			"window_view",
-			"setWantsBestResolutionOpenGLSurface",
-			"setWantsBestResolutionOpenGLSurface:YES",
-			"window_view respondsToSelector:@selector",
-			"g_BaseWidth",
-			"near is",
-			"g_WorldState.Camera.vPosition",
-			"fNear",
-			"desc",
-			"1",
-			"zNear",
-			"znear",
-			"Desc",
-			"vOrigin",
-			"flip",
-			"flipped",
-			"3",
-			"TESS_FACT",
-			"g_nBspDebugPlane",
-			"BspDebugDrawHalfspace",
-			"nVertices",
-			"BspAddInternal",
-			"flip",
-			"BspAddOccluder",
-			"i",
-			"Occluders",
-			"BspAddOccluder",
-			"alias",
-			"world",
-			"BspAddInternal",
-			"BspAddOccluder",
-			"vCorners",
-			"pPlanes",
-			"g_nBspOccluderDrawOccluders",
-			"randcolor",
-			"g_nBspOccluderDrawEdges",
-			"ZDEBUG_DRAWBOX",
-			"spaces",
-			"BspClipPoly"
+			"glCreateShaderProgramvARB"
 		],
 		"highlight": false,
 		"in_selection": false,
@@ -438,7 +552,7 @@
 	"groups":
 	[
 		{
-			"selected": 8,
+			"selected": 21,
 			"sheets":
 			[
 				{
@@ -463,7 +577,7 @@
 							"syntax": "Packages/C++/C++.tmLanguage"
 						},
 						"translation.x": 0.0,
-						"translation.y": 87527.0,
+						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
@@ -501,7 +615,7 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 49,
+						"buffer_size": 149,
 						"regions":
 						{
 						},
@@ -528,7 +642,7 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 1050,
+						"buffer_size": 1139,
 						"regions":
 						{
 						},
@@ -553,46 +667,19 @@
 				},
 				{
 					"buffer": 4,
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 32,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								32,
-								32
-							]
-						],
-						"settings":
-						{
-							"auto_name": "#pragma once",
-							"syntax": "Packages/Text/Plain text.tmLanguage"
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"type": "text"
-				},
-				{
-					"buffer": 5,
 					"file": ".hgignore",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 56,
+						"buffer_size": 71,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								11,
-								11
+								0,
+								0
 							]
 						],
 						"settings":
@@ -607,7 +694,7 @@
 					"type": "text"
 				},
 				{
-					"buffer": 6,
+					"buffer": 5,
 					"semi_transient": false,
 					"settings":
 					{
@@ -635,7 +722,7 @@
 					"type": "text"
 				},
 				{
-					"buffer": 7,
+					"buffer": 6,
 					"file": "src/Makefile",
 					"semi_transient": false,
 					"settings":
@@ -647,8 +734,8 @@
 						"selection":
 						[
 							[
-								0,
-								0
+								231,
+								231
 							]
 						],
 						"settings":
@@ -662,20 +749,20 @@
 					"type": "text"
 				},
 				{
-					"buffer": 8,
+					"buffer": 7,
 					"file": "src/microprofile.h",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 78072,
+						"buffer_size": 83769,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								62318,
-								62318
+								62849,
+								62849
 							]
 						],
 						"settings":
@@ -690,7 +777,7 @@
 					"type": "text"
 				},
 				{
-					"buffer": 9,
+					"buffer": 8,
 					"file": "microprofile.vs",
 					"semi_transient": false,
 					"settings":
@@ -717,7 +804,7 @@
 					"type": "text"
 				},
 				{
-					"buffer": 10,
+					"buffer": 9,
 					"file": "font2.png",
 					"semi_transient": false,
 					"settings":
@@ -744,12 +831,12 @@
 					"type": "text"
 				},
 				{
-					"buffer": 11,
+					"buffer": 10,
 					"file": "src/microprofile.cpp",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 19342,
+						"buffer_size": 19598,
 						"regions":
 						{
 						},
@@ -772,20 +859,20 @@
 					"type": "text"
 				},
 				{
-					"buffer": 12,
+					"buffer": 11,
 					"file": "src/text.cpp",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 6504,
+						"buffer_size": 6533,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								0,
-								0
+								5521,
+								5521
 							]
 						],
 						"settings":
@@ -794,13 +881,13 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 1350.0,
+						"translation.y": 3216.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
 				},
 				{
-					"buffer": 13,
+					"buffer": 12,
 					"file": "microprofile.ps",
 					"semi_transient": false,
 					"settings":
@@ -823,6 +910,422 @@
 						},
 						"translation.x": 0.0,
 						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 13,
+					"file": "src/program.cpp",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 53786,
+						"regions":
+						{
+							"bookmarks":
+							{
+								"flags": 144,
+								"icon": "bookmark",
+								"regions":
+								[
+									[
+										10586,
+										10586
+									]
+								],
+								"scope": "bookmarks"
+							}
+						},
+						"selection":
+						[
+							[
+								21301,
+								21301
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 14356.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 14,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1733,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1723,
+								1723
+							]
+						],
+						"settings":
+						{
+							"auto_name": "med Exclude",
+							"syntax": "Packages/Text/Plain text.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 15,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 8,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								8,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Diff/Diff.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 16,
+					"file": "src/program.h",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1827,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 1517.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 17,
+					"file": "src/debug.h",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1855,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								101,
+								101
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 18,
+					"file": "src/text.h",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 527,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								310,
+								414
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 14.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 19,
+					"file": "src/debug.cpp",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 15024,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								15024,
+								15024
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 8159.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 20,
+					"file": "src/main.cpp",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 13983,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								13795,
+								13795
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 1.0,
+						"translation.y": 10125.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 21,
+					"file": "src/bsp.cpp",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 65711,
+						"regions":
+						{
+							"bookmarks":
+							{
+								"flags": 144,
+								"icon": "bookmark",
+								"regions":
+								[
+									[
+										56701,
+										56701
+									]
+								],
+								"scope": "bookmarks"
+							}
+						},
+						"selection":
+						[
+							[
+								37337,
+								37337
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 21804.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 22,
+					"file": "src/borken",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 57,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								57,
+								57
+							]
+						],
+						"settings":
+						{
+							"auto_name": "expr SkipClear();SkipAddRange(12,200);SkipAddRange",
+							"syntax": "Packages/Text/Plain text.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 23,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3624,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								225,
+								231
+							]
+						],
+						"settings":
+						{
+							"auto_name": "broken",
+							"syntax": "Packages/Text/Plain text.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 24,
+					"file": "src/math.h",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 8808,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 25,
+					"file": "src/math.cpp",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 26962,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								24766,
+								24766
+							],
+							[
+								25181,
+								25181
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 7.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 26,
+					"file": "src/fixedarray.h",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 2720,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1823,
+								1836
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 1241.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
@@ -877,6 +1380,62 @@
 		"selected_items":
 		[
 			[
+				"bsp",
+				"bsp.cpp"
+			],
+			[
+				"pro",
+				"program.cpp"
+			],
+			[
+				"make",
+				"Makefile"
+			],
+			[
+				"",
+				"bsp.cpp"
+			],
+			[
+				"progra",
+				"program.h"
+			],
+			[
+				"makef",
+				"Makefile"
+			],
+			[
+				"fix",
+				"fixedarray.h"
+			],
+			[
+				"p",
+				"program.cpp"
+			],
+			[
+				"prog",
+				"program.cpp"
+			],
+			[
+				"math",
+				"math.cpp"
+			],
+			[
+				"progr",
+				"program.cpp"
+			],
+			[
+				"debu",
+				"debug.h"
+			],
+			[
+				"dbu",
+				"debug.h"
+			],
+			[
+				"debug",
+				"debug.h"
+			],
+			[
 				"micro",
 				"microprofile.h"
 			],
@@ -893,28 +1452,8 @@
 				"Makefile"
 			],
 			[
-				"make",
-				"D:\\bsp\\premake4.lua"
-			],
-			[
-				"bsp",
-				"bsp.h"
-			],
-			[
 				"bs",
 				"bsp.h"
-			],
-			[
-				"pro",
-				"program.h"
-			],
-			[
-				"",
-				"program.cpp"
-			],
-			[
-				"debug",
-				"debug.cpp"
 			],
 			[
 				"de",
@@ -927,10 +1466,6 @@
 			[
 				"main",
 				"main.cpp"
-			],
-			[
-				"debu",
-				"debug.cpp"
 			],
 			[
 				"deb",
@@ -997,10 +1532,6 @@
 				"glew/glew-1.9.0/include/GL/glew.h"
 			],
 			[
-				"progr",
-				"program.cpp"
-			],
-			[
 				".ps",
 				"flat.ps"
 			],
@@ -1033,14 +1564,6 @@
 				"base.h"
 			],
 			[
-				"math",
-				"math.h"
-			],
-			[
-				"prog",
-				"program.cpp"
-			],
-			[
 				"m",
 				"math.cpp"
 			],
@@ -1049,20 +1572,12 @@
 				"manipulator.cpp"
 			],
 			[
-				"p",
-				"program.cpp"
-			],
-			[
 				"ma",
 				"math.cpp"
 			],
 			[
 				"mai",
 				"main.cpp"
-			],
-			[
-				"progra",
-				"program.h"
 			],
 			[
 				"fixarray",
@@ -1117,10 +1632,6 @@
 				"math.h"
 			],
 			[
-				"fix",
-				"fixedarray.h"
-			],
-			[
 				"bsp.c",
 				"bsp.cpp"
 			],
@@ -1170,7 +1681,7 @@
 	"show_open_files": false,
 	"show_tabs": true,
 	"side_bar_visible": true,
-	"side_bar_width": 150.0,
+	"side_bar_width": 343.0,
 	"status_bar_visible": true,
 	"template_settings":
 	{
