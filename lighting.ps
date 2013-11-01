@@ -23,7 +23,9 @@ uniform vec3 vWorldEye;
 in vec3 fNormal;
 in vec3 fWorldPos;
 in vec4 fShadowCoords;
+in vec3 fColor;
 out vec4 Out0;
+
 
 
 float EvalShadow()
@@ -44,17 +46,24 @@ float EvalShadow()
 	return 1.0;
 }
 
+float EvalAmbient()
+{
+	vec3 vToLight0 = -(vec3(0.59188753, 0.74972421, 0.29594377));	
+	vec3 vToLight1 = -(vec3(-0.59188753, 0.74972421, -0.29594377));	
+	vec3 vToLight2 = -(vec3(-0.59188753, 0.29594377, 0.74972421));	
+	float fAngle0 = max(dot(vToLight0, fNormal), 0.0);
+	float fAngle1 = max(dot(vToLight1, fNormal), 0.0);
+	float fAngle2 = max(dot(vToLight2, fNormal), 0.0);
+	return max(max(fAngle0, fAngle1), fAngle2) * 0.33;
+}
 vec3 EvalSun()
 {
 
 	float fShadow = EvalShadow();
-	vec3 vToLight = vec3(0.7071067811, -0.7071067811, 0);
+	vec3 vToLight = (vec3(0.59188753, -0.74972421, 0.29594377));
 	vec3 vDir = -vToLight;
 	float fAngle = max(dot(vDir, fNormal), 0.0);
-	//float fAngle = max(0.0, (0.5 + dot(vDir, fNormal) / (1.0+0.5)));
-	vec3 vDiffuse = vec3(fAngle) * 0.4;
- 	vec3 vHalf = normalize(0.5 * (normalize(fWorldPos-vWorldEye) + vDir));
- 	float fSpec = max(dot(vHalf, fNormal), 0.f);
+	vec3 vDiffuse = vec3(fAngle) * 0.66;
  	return vDiffuse * fShadow;//r + vec3(min(1.0, pow(fSpec, 4.0) * 5));
 }
 
@@ -147,7 +156,7 @@ void main(void)
 		}
 	}
 	//Out0.xyz = Color + EvalSun();
-	Out0.xyz =  EvalSun();
+	Out0.xyz = (EvalSun() + EvalAmbient()) * fColor;
 	Out0.w = 1.0;
 }
 

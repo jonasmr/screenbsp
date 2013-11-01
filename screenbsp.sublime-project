@@ -2,7 +2,12 @@
 	"folders":
 	[
 		{
-			"path": "./src"
+			"follow_symlinks": true,
+			"path": "src"
+		},
+		{
+			"follow_symlinks": true,
+			"path": "/Users/jonasm/screenbsp"
 		}
 	]
 }

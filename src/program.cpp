@@ -191,7 +191,7 @@ ShadowMap AllocateShadowMap()
 void RenderShadowMap(ShadowMap& SM)
 {
 	MICROPROFILE_SCOPEGPUI("GPU", "Shadowmap", 0xff0099);
-	v3 vDirection = v3normalize(v3init(0.7071067811, -0.7071067811, 0.3));
+	v3 vDirection = v3normalize(v3init(0.59188753, -0.74972421, 0.29594377));
 	v3 vRight = v3normalize(v3cross(v3init(0,1,0), vDirection));
 	v3 vUp = v3normalize(v3cross(vRight, vDirection));
 	m mview = mcreate(vDirection, vRight, v3zero());
@@ -253,7 +253,7 @@ void WorldOcclusionCreate(v3 vSize, uint32 nFlags, v3 vColor, v3 vPos)
 }
 
 
-void WorldOcclusionCreate(v3 vSize, uint32 nFlags, v3 vColor = v3zero())
+void WorldOcclusionCreate(v3 vSize, uint32 nFlags, v3 vColor = v3rep(frandrange(0.6f, 0.9f)))
 {
 	v3 vPos = v3zero();
 	vPos.x = frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
@@ -475,7 +475,7 @@ void WorldInitOcclusionTest()
 		//if(i + nNumObjects == 189)
 		if(1)
 		{
-			WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUSION_TEST, v3init(1,0,0));
+			WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUSION_TEST, v3fromcolor(randcolor()));
 		}
 		else
 		{
@@ -644,6 +644,7 @@ void WorldDrawObjects(bool* bCulled)
 {
 	int nLocSize = ShaderGetLocation("Size");
 	int nLocModelView = ShaderGetLocation("ModelViewMatrix");
+	int nLocColor = ShaderGetLocation("ConstColor");
 	for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
 	{
 		if(bCulled)
@@ -654,10 +655,9 @@ void WorldDrawObjects(bool* bCulled)
 			}
 			else
 			{
-				// SHADER_SET("Size", g_WorldState.WorldObjects[i].vSize);
-				// SHADER_SET("ModelViewMatrix", g_WorldState.WorldObjects[i].mObjectToWorld);
 				ShaderSetUniform(nLocSize, g_WorldState.WorldObjects[i].vSize);
 				ShaderSetUniform(nLocModelView, g_WorldState.WorldObjects[i].mObjectToWorld);
+				ShaderSetUniform(nLocColor, v3fromcolor(g_WorldState.WorldObjects[i].nColor));
 				MeshDraw(GetBaseMesh(MESH_BOX_FLAT));
 			}
 		}
