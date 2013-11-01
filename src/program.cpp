@@ -33,7 +33,7 @@ void WorldDrawObjects(bool* bCulled);
 uint32 g_nUseOrtho = 0;
 float g_fOrthoScale = 10;
 SOccluderBsp* g_Bsp = 0;
-uint32_t g_nBspNodeCap = 512;
+uint32_t g_nBspNodeCap = 128;
 uint32 g_nUseDebugCameraPos = 2;
 
 
@@ -238,7 +238,7 @@ void RenderShadowMap(ShadowMap& SM)
 #define OCCLUSION_NUM_LARGE 10
 #define OCCLUSION_NUM_SMALL 100
 #define OCCLUSION_NUM_LONG 20
-#define OCCLUSION_NUM_OBJECTS 500
+#define OCCLUSION_NUM_OBJECTS 2000
 #define OCCLUSION_USE_GROUND 1
 #define OCCLUSION_GROUND_Y 0.f
 
@@ -293,6 +293,10 @@ void WorldInitOcclusionTest()
 			SObject::OCCLUDER_BOX,
 			v3init(1,1,1),
 			v3init(0,OCCLUSION_GROUND_Y, 0));
+	}
+	else
+	{
+
 	}
 
 
@@ -468,7 +472,7 @@ void WorldInitOcclusionTest()
 		//if(i > 16 && i < 20)
 		//if(0||(i >= 168 && i < 16))
 		//if(i == 169)
-		//if(i + nNumObjects == 78)
+		//if(i + nNumObjects == 189)
 		if(1)
 		{
 			WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUSION_TEST, v3init(1,0,0));
@@ -758,15 +762,18 @@ void StopTest()
 
 int nSettingsBsp[] = 
 {
-	// 10, 20, 
-	// 32,
-	// 64, 
-	//128, 
+	10, 
+	20, 
+	32,
+	64, 
+	128, 
 	200, 
-	// 256, 
-	// //386, 
-	// 512, 
-	//1024,
+	256, 
+	386, 
+	512, 
+	768,
+	1024,
+	2048,
 };
 const uint32 nNumSettingsBsp = sizeof(nSettingsBsp)/sizeof(nSettingsBsp[0]);
 const uint32 nNumSettingsSO = 0;
@@ -847,8 +854,8 @@ void RunTest(v3& vPos_, v3& vDir_, v3& vRight_)
 	{
 		[] (int index, v3& vPos, v3& vDir, v3& vUp) -> int{
 			vUp = v3init(0, 1, 0);
-			const int CIRCLE_TOTAL_STEPS = (1<<8);
-			const int CIRCLE_REVOLUTIONS = 1;
+			const int CIRCLE_TOTAL_STEPS = (1<<6);
+			const int CIRCLE_REVOLUTIONS = 8;
 			const int CIRCLE_INNER_RADIUS = 50;
 			const int CIRCLE_OUTER_RADIUS = 600;
 			float fAngle = TWOPI * float(index) / (CIRCLE_TOTAL_STEPS/CIRCLE_REVOLUTIONS);
@@ -1253,7 +1260,10 @@ void WorldRender()
 
 
 
-	RenderShadowMap(g_SM);
+	{
+		MICROPROFILE_SCOPEI("MAIN", "RenderShadowMap", 0xff44dddd);
+		RenderShadowMap(g_SM);
+	}
 
 
 
@@ -1328,6 +1338,7 @@ void WorldRender()
 	static int nNumFail = 0;
 	if(g_nUseDebugCameraPos == 0)
 	{
+		MICROPROFILE_SCOPEI("MAIN", "Stencil Reference Test", 0xff44dddd);
 		glEnable(GL_CULL_FACE);
 		glEnable(GL_DEPTH_TEST);
 		glDepthMask(1);
@@ -1455,6 +1466,7 @@ void WorldRender()
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 	static int usezpass = 1;
 	{
+		MICROPROFILE_SCOPEI("MAIN", "Main render", 0xff44dddd);
 		MICROPROFILE_SCOPEGPUI("GPU", "OBJ PASS", 0xffff77);
 		if(usezpass)
 		{
@@ -1865,6 +1877,10 @@ g_WorldState.Camera.vDir = v3init(0.722574,0.263033,-0.639282);
 g_WorldState.Camera.vRight = v3init(0.662614,0.000000,0.748949);
 #endif
 
+
+g_WorldState.Camera.vPosition = v3init(111.778938,10.000000,131.156204);
+g_WorldState.Camera.vDir = v3init(-0.647556,-0.057932,-0.759812);
+g_WorldState.Camera.vRight = v3init(0.761091,0.000000,-0.648646); 
 
 #endif
 	g_WorldState.Camera.fFovY = 45.f;
