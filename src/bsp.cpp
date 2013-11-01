@@ -8,23 +8,11 @@
 #include "microprofileinc.h"
 
 // todo:
-//  dont add unused/clipped planes
 //  prioritize after clipping vs frustum
 //  make prioritization use proper area
-//  generate test scene
-//  seperate objects in test scene
-//  basic lighting
-//  object colors
-//  generate path through test scene
 //  rename cull to isvisible
 //  optimize!
-//
-//  add objects below ground
-
-// precision list:
-//   normal planes with w near 0 tend to cause precision issues
-//   clip with the front plane
-//   
+// test vs intel
 
 #include <algorithm>
 #define OCCLUDER_EMPTY (0xc000)

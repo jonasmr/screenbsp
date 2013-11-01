@@ -22,9 +22,6 @@
 uint32_t g_nDump = 0;
 extern uint32_t g_Width;
 extern uint32_t g_Height;
-//render todo
-//tile calc
-//debug render fixing + color
 
 
 void WorldDrawObjects(bool* bCulled);
@@ -476,6 +473,11 @@ void WorldInitOcclusionTest()
 		if(1)
 		{
 			WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUSION_TEST, v3fromcolor(randcolor()));
+			if(frand()<0.02f)
+			{
+				g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects-1].mObjectToWorld.trans.y -= 10;
+			}
+
 		}
 		else
 		{
