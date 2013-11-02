@@ -54,7 +54,7 @@ float EvalAmbient()
 	float fAngle0 = max(dot(vToLight0, fNormal), 0.0);
 	float fAngle1 = max(dot(vToLight1, fNormal), 0.0);
 	float fAngle2 = max(dot(vToLight2, fNormal), 0.0);
-	return max(max(fAngle0, fAngle1), fAngle2) * 0.33;
+	return max(max(fAngle0, fAngle1), fAngle2) * 0.433;
 }
 vec3 EvalSun()
 {

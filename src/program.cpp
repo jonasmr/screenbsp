@@ -237,7 +237,7 @@ void RenderShadowMap(ShadowMap& SM)
 #define OCCLUSION_NUM_LONG 20
 #define OCCLUSION_NUM_OBJECTS 2000
 #define OCCLUSION_USE_GROUND 1
-#define OCCLUSION_GROUND_Y 0.f
+#define OCCLUSION_GROUND_Y -1.0f
 
 void WorldOcclusionCreate(v3 vSize, uint32 nFlags, v3 vColor, v3 vPos)
 {
@@ -764,18 +764,18 @@ void StopTest()
 
 int nSettingsBsp[] = 
 {
-	10, 
-	20, 
-	32,
-	64, 
-	128, 
-	200, 
-	256, 
-	386, 
-	512, 
-	768,
+	// 10, 
+	// 20, 
+	// 32,
+	// 64, 
+	// 128, 
+	// 200, 
+	// 256, 
+	// 386, 
+	// 512, 
+	// 768,
 	1024,
-	2048,
+	// 2048,
 };
 const uint32 nNumSettingsBsp = sizeof(nSettingsBsp)/sizeof(nSettingsBsp[0]);
 const uint32 nNumSettingsSO = 0;
@@ -856,7 +856,7 @@ void RunTest(v3& vPos_, v3& vDir_, v3& vRight_)
 	{
 		[] (int index, v3& vPos, v3& vDir, v3& vUp) -> int{
 			vUp = v3init(0, 1, 0);
-			const int CIRCLE_TOTAL_STEPS = (1<<6);
+			const int CIRCLE_TOTAL_STEPS = (8<<10);
 			const int CIRCLE_REVOLUTIONS = 8;
 			const int CIRCLE_INNER_RADIUS = 50;
 			const int CIRCLE_OUTER_RADIUS = 600;
