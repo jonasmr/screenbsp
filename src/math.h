@@ -380,3 +380,79 @@ void Swap(T& a, T& b)
 	a = b;
 	b = t;
 }
+//#ifndef _WINDOWS
+//#define inline __inline __attribute__((always_inline))
+
+//#endif
+
+inline v2 v3::tov2()
+{
+	v2 r;
+	r.x = x;
+	r.y = y;
+	return r;
+}
+
+inline v4 v3::tov4()
+{
+	v4 r;
+	r.x = x;
+	r.y = y;
+	r.z = z;
+	r.w = 0.f;
+	return r;
+}
+inline uint32_t v3::tocolor()
+{
+	return 0xff000000 
+		| ((uint32_t(z * 255.f) << 16)&0xff0000)
+		| ((uint32_t(y * 255.f) << 8)&0xff00)
+		| (uint32_t(z * 255.f));
+}
+
+inline v4 v3::tov4(float w)
+{
+	v4 r;
+	r.x = x;
+	r.y = y;
+	r.z = z;
+	r.w = w;
+	return r;
+}
+
+inline v3 v3cross(v3 v0, v3 v1)
+{
+	v3 r;
+	r.x = v0.y * v1.z - v0.z * v1.y;
+	r.y = v0.z * v1.x - v0.x * v1.z;
+	r.z = v0.x * v1.y - v0.y * v1.x;
+	return r;
+}
+
+
+inline v3 v4::tov3()
+{
+	v3 r;
+	r.x = x;
+	r.y = y;
+	r.z = z;
+	return r;
+}
+
+inline v2 v4::tov2()
+{
+	v2 r;
+	r.x = x;
+	r.y = y;
+	return r;
+}
+inline v4 v4neg(v4 v)
+{
+	v.x = -v.x;
+	v.y = -v.y;
+	v.z = -v.z;
+	v.w = -v.w;
+	return v;
+}
+
+
