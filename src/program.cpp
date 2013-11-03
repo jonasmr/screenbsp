@@ -856,9 +856,9 @@ void RunTest(v3& vPos_, v3& vDir_, v3& vRight_)
 	{
 		[] (int index, v3& vPos, v3& vDir, v3& vUp) -> int{
 			vUp = v3init(0, 1, 0);
-			const int CIRCLE_TOTAL_STEPS = (8<<10);
+			const int CIRCLE_TOTAL_STEPS = (1<<7);
 			const int CIRCLE_REVOLUTIONS = 8;
-			const int CIRCLE_INNER_RADIUS = 50;
+			const int CIRCLE_INNER_RADIUS = 450;
 			const int CIRCLE_OUTER_RADIUS = 600;
 			float fAngle = TWOPI * float(index) / (CIRCLE_TOTAL_STEPS/CIRCLE_REVOLUTIONS);
 			float fDist = CIRCLE_INNER_RADIUS + (CIRCLE_OUTER_RADIUS-CIRCLE_INNER_RADIUS) * float(index) / CIRCLE_TOTAL_STEPS;

@@ -511,39 +511,6 @@ v3 operator -(const v3 v)
 	return r;
 }
 
-v2 v3::tov2()
-{
-	v2 r;
-	r.x = x;
-	r.y = y;
-	return r;
-}
-v4 v3::tov4()
-{
-	v4 r;
-	r.x = x;
-	r.y = y;
-	r.z = z;
-	r.w = 0.f;
-	return r;
-}
-uint32_t v3::tocolor()
-{
-	return 0xff000000 
-		| ((uint32_t(z * 255.f) << 16)&0xff0000)
-		| ((uint32_t(y * 255.f) << 8)&0xff00)
-		| (uint32_t(z * 255.f));
-}
-
-v4 v3::tov4(float w)
-{
-	v4 r;
-	r.x = x;
-	r.y = y;
-	r.z = z;
-	r.w = w;
-	return r;
-}
 
 float v3distance(v3 p0, v3 p1)
 {
@@ -559,14 +526,7 @@ v3 v3fromcolor(uint32_t nColor)
 	r.z = ((nColor>>16)&0xff) * fMul;
 	return r;
 }
-v3 v3cross(v3 v0, v3 v1)
-{
-	v3 r;
-	r.x = v0.y * v1.z - v0.z * v1.y;
-	r.y = v0.z * v1.x - v0.x * v1.z;
-	r.z = v0.x * v1.y - v0.y * v1.x;
-	return r;
-}
+
 float v3lengthsq(v3 v)
 {	
 	return v3dot(v, v);
@@ -647,22 +607,7 @@ v3 v3splatz(v3 v)
 	r.z = v.z;
 	return r;
 }
-v3 v4::tov3()
-{
-	v3 r;
-	r.x = x;
-	r.y = y;
-	r.z = z;
-	return r;
-}
 
-v2 v4::tov2()
-{
-	v2 r;
-	r.x = x;
-	r.y = y;
-	return r;
-}
 uint32_t v4::tocolor()
 {
 	return ((uint32_t(w * 255.f) << 24)&0xff000000)
@@ -682,15 +627,6 @@ v4 v4fromcolor(uint32_t nColor)
 	return r;
 }
 
-
-v4 v4neg(v4 v)
-{
-	v.x = -v.x;
-	v.y = -v.y;
-	v.z = -v.z;
-	v.w = -v.w;
-	return v;
-}
 
 float v4dot(v4 v0, v4 v1)
 {

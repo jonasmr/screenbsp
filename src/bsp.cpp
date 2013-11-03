@@ -1287,13 +1287,24 @@ ClipPolyResult BspClipPoly(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndic
 						   uint16 *pPolyOut, uint32 &nEdgesIn_, uint32 &nEdgesOut_,
 						   uint32 &nMaskIn_, uint32 &nMaskOut_)
 {
+	//MICROPROFILE_SCOPEIC("BSP", "ClipPoly");
+
 	ZASSERT(nNumPlanes < 32);
 	uint32 nNumEdges = nNumPlanes - 1;
 	v4 vNormalPlane = BspGetPlane(pBsp, pIndices[nNumEdges]);
 
 	ZASSERT(nNumEdges > 2);
-	bool *bCorners = (bool *)alloca(nNumPlanes - 1);
-	bool *bCorners0 = (bool *)alloca(nNumPlanes - 1);
+	#define NO_MODULO 1
+	#if NO_MODULO
+	bool *bCorners = (bool *)alloca(nNumPlanes);
+	bool *bCorners0 = (bool *)alloca(nNumPlanes);
+	bCorners++;
+	bCorners0++;
+	#else
+	bool *bCorners = (bool *)alloca(nNumPlanes-1);
+	bool *bCorners0 = (bool *)alloca(nNumPlanes-1);
+
+	#endif
 	v4 *vPlanes = (v4 *)alloca(sizeof(v4) * (nNumPlanes));
 	v4 vClipPlane = BspGetPlane(pBsp, nClipPlane);
 	for(int i = 0; i < nNumPlanes; ++i)
@@ -1305,9 +1316,12 @@ ClipPolyResult BspClipPoly(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndic
 	{
 		v4 p0 = vPlanes[i];
 		v4 p1 = vPlanes[(i + 1) % nNumEdges];
-		bCorners[i] = BspPlaneTestNew(p0, p1, vClipPlane) < PLANE_TEST_EPSILON;
-		bCorners0[i] = BspPlaneTestNew(p0, p1, vClipPlane) < -PLANE_TEST_EPSILON;
+		float fTest = BspPlaneTestNew(p0, p1, vClipPlane);
+		bCorners[i] = fTest < PLANE_TEST_EPSILON;
+		bCorners0[i] = fTest < -PLANE_TEST_EPSILON;
 	}
+	bCorners[-1] = bCorners[nNumEdges-1];
+	bCorners0[-1] = bCorners0[nNumEdges-1];
 
 	uint32 nEdgesIn = 0;
 	uint32 nEdgesOut = 0;
@@ -1323,7 +1337,11 @@ ClipPolyResult BspClipPoly(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndic
 
 	for(int i = 0; i < nNumEdges; ++i)
 	{
+		#if NO_MODULO
+		bool bCorner0 = bCorners0[(i - 1)];
+		#else
 		bool bCorner0 = bCorners0[(i + nNumEdges - 1) % nNumEdges];
+		#endif
 		bool bCorner1 = bCorners0[i];
 		if(bCorner0 != bCorner1)
 		{
@@ -1388,7 +1406,11 @@ ClipPolyResult BspClipPoly(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndic
 	nMask = nExcludeMask;
 	for(int i = 0; i < nNumEdges; ++i)
 	{
+		#if NO_MODULO
+		bool bCorner0 = bCorners[(i - 1)];
+		#else
 		bool bCorner0 = bCorners[(i + nNumEdges - 1) % nNumEdges];
+		#endif
 		bool bCorner1 = bCorners[i];
 		if(bCorner0 != bCorner1)
 		{

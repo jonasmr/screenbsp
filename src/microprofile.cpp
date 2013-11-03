@@ -494,17 +494,17 @@ uint32_t MicroProfileGpuInsertTimeStamp()
 }
 uint64_t MicroProfileGpuGetTimeStamp(uint32_t nKey)
 {
-	int64_t result;
-	#ifdef __APPLE__
-	//for some reason, on osx, this gets truncated to 32bit if only called once ?!?
-	unsigned r;
-	glGetQueryObjectuiv(g_GlTimers[nKey], GL_QUERY_RESULT_AVAILABLE, &r);
-	MP_ASSERT(r);
-	glGetQueryObjectuiv(g_GlTimers[nKey], GL_QUERY_RESULT, &r);
-	printf("gpu LOVE timer is %x\n", r);
-	#endif
-	glGetQueryObjecti64v(g_GlTimers[nKey], GL_QUERY_RESULT, &result);
-	printf("gpu timer is %16llx .. %d\n", result, glGetError());
+	uint64_t result;
+	// #ifdef __APPLE__
+	// //for some reason, on osx, this gets truncated to 32bit if only called once ?!?
+	// unsigned r;
+	// glGetQueryObjectuiv(g_GlTimers[nKey], GL_QUERY_RESULT_AVAILABLE, &r);
+	// MP_ASSERT(r);
+	// glGetQueryObjectuiv(g_GlTimers[nKey], GL_QUERY_RESULT, &r);
+	// //printf("gpu LOVE timer is %x\n", r);
+	// #endif
+	glGetQueryObjectui64v(g_GlTimers[nKey], GL_QUERY_RESULT, &result);
+	//printf("gpu timer is %16llx .. %d\n", result, glGetError());
 	return result;
 }
 
