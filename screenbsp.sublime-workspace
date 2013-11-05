@@ -1,0 +1,1689 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"BspPlan",
+				"BspPlaneTestNew"
+			],
+			[
+				"g_Test",
+				"g_TestFailOut"
+			],
+			[
+				"nBaseTi",
+				"nBaseTicksCpu"
+			],
+			[
+				"nBaseTick",
+				"nBaseTicksGpu"
+			],
+			[
+				"MicroProfileGetGrou",
+				"MicroProfileGetGroupIndex"
+			],
+			[
+				"MicroProfileTick",
+				"MicroProfileTickToMsMultiplier"
+			],
+			[
+				"nNum",
+				"nNumVertexOut"
+			],
+			[
+				"g_nBsp",
+				"g_nBspOccluderDrawOccluders"
+			],
+			[
+				"SBs",
+				"SOccluderBspViewDesc"
+			],
+			[
+				"g_W",
+				"g_Width"
+			],
+			[
+				"vMou",
+				"vMouseWorld"
+			],
+			[
+				"g_nOccluder",
+				"g_nOccluderClipLevels"
+			],
+			[
+				"BspT",
+				"BspOccluderTest"
+			],
+			[
+				"nNumVer",
+				"nNumVertexIn"
+			],
+			[
+				"pVerte",
+				"pVertexNew"
+			],
+			[
+				"vRig",
+				"vRight2"
+			],
+			[
+				"vRi",
+				"vRight"
+			],
+			[
+				"g_",
+				"g_Height"
+			],
+			[
+				"vrig",
+				"vrightzx"
+			],
+			[
+				"vright",
+				"vrightx"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "glew/glew-1.9.0/include/GL/glew.h",
+			"settings":
+			{
+				"buffer_size": 884678,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "renderlist.txt",
+			"settings":
+			{
+				"buffer_size": 160,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "screenbsp.sublime-project",
+			"settings":
+			{
+				"buffer_size": 149,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "premake4.lua",
+			"settings":
+			{
+				"buffer_size": 1139,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": ".hgignore",
+			"settings":
+			{
+				"buffer_size": 71,
+				"line_ending": "Windows",
+				"name": ".depend"
+			}
+		},
+		{
+			"contents": "                                                                     \n                                                                     \n                                                                     \n                                             \n\n\n\n\n\n\n#define OCCLUDER_EMPTY (0xc000)\n#define OCCLUDER_LEAF (0x8000)\n#define OCCLUDER_CLIP_MAX 0x100\n\nstruct SOccluderPlane\n{\n	float4 p[4];\n	float4 corners[4];\n	float4 normal;\n};\n\nstruct SOccluderEdgeIndex\n{\n	uint8 	nEdge;//[0-3] edge idx\n	uint16 	nOccluderIndex;\n};\n\nstruct SOccluderBspNode\n{\n	SOccluderEdgeIndex Index;\n	uint16	nInside;\n	uint16	nOutside;\n};\n\nstruct SOccluderBsp\n{\n	SOccluderPlane* pOccluders;\n	uint32 nNumOccluders;\n	TArray<SOccluderBspNode> Nodes;\n};\n\nint BspAddInternal(SOccluderBsp* pBsp, uint32 nOccluderIndex, uint32 nMask)\n{\n	int r = (int)pBsp->Nodes.Size();\n	int nPrev = -1;\n	for(uint32 i = 0;nMask && i < 4; ++i)\n	{\n		if(nMask&1)\n		{\n			int nIndex = (int)pBsp->Nodes.Size();\n			SOccluderBspNode* pNode = pBsp->Nodes.PushBack();\n			pNode->nOutside = OCCLUDER_EMPTY;\n			pNode->nInside = OCCLUDER_LEAF;\n			pNode->Index.nEdge = (uint8)i;\n			pNode->Index.nOccluderIndex = (uint16)nOccluderIndex;\n			if(nPrev >= 0)\n			{\n				pBsp->Nodes[nPrev].nInside = (uint16)nIndex;\n			}\n			nPrev = nIndex;\n		}\n		nMask >>= 1;\n	}\n	return r;\n}\n\nvoid BspAddOccluderRecursive(SOccluderBsp* pBsp, SOccluderPlane* pOccluder, uint32 nOccluderIndex, uint32 nBspIndex, uint32 nEdgeMask)\n{\n	SOccluderBspNode Node = pBsp->Nodes[nBspIndex];\n	ZASSERT(Node.Index.nOccluderIndex != nOccluderIndex);\n	SOccluderPlane* pPlane = pBsp->pOccluders + Node.Index.nOccluderIndex;\n	uint8 nEdge = Node.Index.nEdge;\n	float4 vPlane = pPlane->p[nEdge];\n	int inside[4];\n\n	for(int i = 0; i < 4; ++i)\n		inside[i] = WVectorDot4(vPlane, pOccluder->corners[i]) < -0.01f;\n	uint32 nNewMaskIn = 0, nNewMaskOut = 0;\n	int x = 1;\n	for(int i = 0; i < 4; ++i)\n	{\n		if(x&nEdgeMask)\n		{\n			if(inside[(i-1)%4] || inside[i])\n				nNewMaskIn |= x;\n			if((!inside[(i-1)%4]) || (!inside[i]))\n				nNewMaskOut |= x;\n		}\n		x <<= 1;\n	}\n	if(nNewMaskIn)\n	{\n		ZASSERT(Node.nInside != OCCLUDER_EMPTY);\n		if(Node.nInside==OCCLUDER_LEAF)\n		{\n			pBsp->Nodes[nBspIndex].nInside = (uint16)BspAddInternal(pBsp, nOccluderIndex, nNewMaskIn);\n		}\n		else\n		{\n			BspAddOccluderRecursive(pBsp, pOccluder, nOccluderIndex, Node.nInside, nNewMaskIn);\n		}\n	}\n\n	if(nNewMaskOut)\n	{\n		ZASSERT(Node.nOutside != OCCLUDER_LEAF);\n		if(Node.nOutside==OCCLUDER_EMPTY)\n		{\n			pBsp->Nodes[nBspIndex].nOutside = (uint16)BspAddInternal(pBsp, nOccluderIndex, nNewMaskOut);\n		}\n		else\n		{\n			BspAddOccluderRecursive(pBsp, pOccluder, nOccluderIndex, Node.nOutside, nNewMaskOut);\n		}\n	}\n}\n\n\nvoid BspAddOccluder(SOccluderBsp* pBsp, SOccluderPlane* pOccluder, uint32 nOccluderIndex)\n{\n	uint32 nNumNodes = (uint32)pBsp->Nodes.Size();\n	if(pBsp->Nodes.IsEmpty())\n	{\n		uint16 nIndex = (uint16)BspAddInternal(pBsp, nOccluderIndex, 0xf);\n		ZASSERT(nIndex==0);\n	}\n	else\n	{\n		BspAddOccluderRecursive(pBsp, pOccluder, nOccluderIndex, 0, 0xf);\n	}\n	uprintf(\"BSP NODE %d -> %d\\n\", nNumNodes, pBsp->Nodes.Size());\n	uplotfnxt(ZString::Format(\"BSP NODE {0} -> {1}\", nNumNodes, pBsp->Nodes.Size()));\n\n}\n\n\nvoid BuildBsp(SOccluderBsp* pBsp)\n {\n	pBsp->Nodes.Clear();\n	if(!pBsp->nNumOccluders)\n		return;\n\n	for(uint32 i = 0; i < pBsp->nNumOccluders; ++i)\n	{\n		BspAddOccluder(pBsp, &pBsp->pOccluders[i], i);\n	}\n}\nZConfigInt g_nBspFlipMask(\"BspFlipMask\", \"\", 0);\nZConfigInt g_nBspDrawMask(\"BspDrawMask\", \"\", -1);\nvoid DrawBspRecursive(SOccluderBsp* pBsp, uint32 nOccluderIndex, uint32 nFlipMask, uint32 nDrawMask, float fOffset, TArray<float4>& DEBUG)\n{\n	SOccluderBspNode Node = pBsp->Nodes[nOccluderIndex];\n	SOccluderPlane* pPlane = pBsp->pOccluders + Node.Index.nOccluderIndex;\n	float4 vOffset = WSet(fOffset, 0.f, 0.f, 0.f);\n	float4 v0 = WSetWOne(pPlane->corners[(Node.Index.nEdge+3) %4]);\n	float4 v1 = WSetWOne(pPlane->corners[(Node.Index.nEdge) %4]);\n	DEBUG.PushBack(v0);\n	DEBUG.PushBack(v1);\n	if(1)\n	{\n		for(uint32 i = 0; i < DEBUG.Size(); i += 2)\n		{\n			float4 v0 = DEBUG[i] + vOffset;\n			float4 v1 = DEBUG[i+1] + vOffset;\n			ZDEBUG_DRAWLINE(v0, v1, 0xffff44ff, true);\n		}\n	}\n	if(0 == (nFlipMask&1))\n	{\n		if((Node.nInside&0x8000) == 0)\n		{\n			DrawBspRecursive(pBsp, Node.nInside, nFlipMask>>1, nDrawMask>>1, fOffset - 2.0f, DEBUG);\n		}\n	}\n	else\n	{\n		if((Node.nOutside&0x8000) == 0)\n		{\n			DrawBspRecursive(pBsp, Node.nOutside, nFlipMask>>1, nDrawMask>>1, fOffset - 2.0f, DEBUG);\n		}\n	}\n}\n\nbool BspClipQuadR(SOccluderBsp* pBsp, uint32 nNodeIndex, uint32 nPolyIndex, uint32 nPolyVertices, uint32 nVertexIndex, float4* pVertices, uint8* , nIndices);)\n{\n	uint8 nIndicesIn[256];\n	uint8 nIndicesOut[256];\n	uint8* nDot = alloca(2*(nPolyVertices+2));\n	SOccluderBspNode* pNode = pBsp->Nodes[nOccluderIndex];\n	SOccluderPlane* pOccluder = pBsp->pOccluders + pNode->Index.nOccluderIndex;\n	uint32 nEdge = pNode->Index.nEdge;\n	float4 vPlane = pOccluder->p[nEdge];\n	float vNormalPlane = pOccluder->normal;\n	\n#define INSIDE 1\n#define OUTSIDE 2\n	//test mod planet\n	int nMask = 0;\n	int n = 1;\n	for(uint32 i = 0; i < nPolyVertices; ++i)\n	{\n		float4 pVertex = pVertices[ nIndices[i + nPolyIndex ]];\n		d = WVectorDot4(pVertex, vPlane) > 0.0f ? INSIDE : OUTSIDE;\n		n = n && WVectorDot4(pVertex, vNormalPlane) > 0.f ? 1 : 0;\n		nDot[i] = d;\n		nMask |= d;\n	}\n	if(d == 3)\n	{\n		int nIndexIn = 0;\n		for(uint32 i = 0; i < nPolyVertices; ++i)\n		{\n			int idxn = (i + 1) % nPolyVertices;\n			int i0 = nDot[i];\n			int i1 = nDot[idxn];\n			if(INSIDE == i0)\n			{\n				//PUSH i0				\n				ZASSERT(nNewPolyIndex < OCCLUDER_CLIP_MAX);\n				if(OUTSIDE == i1)\n				{\n\n					//PUSH INTERSECTION\n					float4 vVertex = WSetWOne(pVertices[ nIndices[ i + nPolyIndex ]]);\n					float4 vToPlane = WVectorDot4(vVertex, vPlane) * WSetWZero(vPlane);\n					float4 vIntersection = vVertex + vToPlane;\n					uprintf(\"INTERSECTION IS %f\\n\", WVectorDot4(vIntersection, vPlane).ToFloat());\n					int nIndex = nVertexIndex++;\n					pVertices[nIndex] = vIntersection;\n\n					nIndicesIn[nIndexIn++] = i + nPolyIndex;\n					nIndicesIn[nIndexIn++] = nIndex;\n					nIndicesOut[nIndexOut++] = nIndex;\n					ZASSERT(nIndexIn < 256);\n				}\n				else\n				{\n					nIndicesIn[nIndexIn++] = i + nPolyIndex;\n				}\n			}\n			else\n			{\n				if(i1 == INSIDE)\n				{\n					//PUSH INTERSECTION\n					float4 vVertex = WSetWOne(pVertices[ nIndices[ i + nPolyIndex ]]);\n					float4 vToPlane = WVectorDot4(vVertex, vPlane) * WSetWZero(vPlane);\n					float4 vIntersection = vVertex + vToPlane;\n					uprintf(\"INTERSECTION IS %f\\n\", WVectorDot4(vIntersection, vPlane).ToFloat());\n					int nIndex = nVertexIndex++;\n					pVertices[nIndex] = vIntersection;\n\n					nIndicesIn[nIndexIn++] = nIndex;\n					nIndicesOut[nIndexOut++] = nIndex;\n					nIndicesOut[nIndexOut++] = i + nPolyIndex;\n					ZASSERT(nNewPolyIndex < OCCLUDER_CLIP_MAX);\n				}\n				else\n				{\n					nIndicesOut[nIndexOut++] = i + nPolyIndex;\n				}\n			}\n		}\n		int nNumIndices = nNewPolyIndex - (nPolyIndex + nPolyVertices);\n		return BspClipQuadR(pBsp, pNode->nInside, nNewPolyIndex, nNumIndices, nVertexIndex, pVertices, nIndices);\n	}\n	else\n	{\n		if(d == 1)\n		{\n			// all in inside\n			ZASSERT(pNode->nInside != OCCLUDER_EMPTY);\n			if(pNode->nInside == OCCLUDER_LEAF)\n			{\n				return n != 0;\n			}\n			else\n			{\n				return n != 0 && BspClipQuadR(pBsp, pBsp->nInside, nPolyIndex, nPolyVertices, nVertexIndex, pVertices, nIndices);\n\n			}\n\n		}\n		else\n		{\n			// all in outside\n			ZASSERT(pNode->nOutside != OCCLUDER_LEAF);\n			if(pNode->nOutside == OCCLUDER_EMPTY)\n			{\n				ZASSERT(nPolyVertices); \n				return false; // all is out, none is clipped\n			}\n			else\n			{\n				return BspClipQuadR(pBsp, pNode->nOutside, nPolyIndex, nPolyVertices, nVertexIndex, pVertices, nIndices);\n			}\n		}\n	}\n}\n//returns true if 100% clipped\nbool BspClipQuad(SOccluderBsp* pBsp, float4arg v0, float4arg v1, float4arg v2, float4arg v3)\n{\n	float4 vClipBuffer[OCCLUDER_CLIP_MAX];\n	uint8 nInidices[OCCLUDER_CLIP_MAX];\n	vClipBuffer[0] = v0;\n	vClipBuffer[1] = v1;\n	vClipBuffer[2] = v2;\n	vClipBuffer[3] = v3;\n	nInidices[0] = 0;\n	nInidices[1] = 1;\n	nInidices[2] = 2;\n	nInidices[3] = 3;\n	return BspClipQuadR(pBsp, 0, 0, 4, 4, &vClipBuffer[0], &nIndices[0]);\n}\n\nvoid RunBspTest(SOccluderBsp* pBsp, SOccluderPlane* pTest, uint32 nNumOccluders, ZRenderGraphNode** ppNodes, uint32 nNumNodes)\n{\n	for(uint32 i = 0; i< nNumNodes; ++i)\n	{\n		if(!ppNodes[i]) \n			continue;\n		SMatrix mObjectToWorld = ppNodes[i]->GetObjectToWorldTransform();\n		float4 vHalfSize = ppNodes[i]->GetLocalHalfSize();\n		float4 vCenter = ppNodes[i]->GetLocalCenter();\n		float4 vCenterWorld = WVectorTransform(mObjectToWorld, vCenter);\n		float4 AABB = TransformOBBToAABB(mObjectToWorld, vHalfSize);\n\n		float4 vCenterPoly = vCenterWorld - WSet(AABB.x(), 0.f, 0.f, 0.f);\n		float4 vDir0 = WSet(0.f,  AABB.y(),  AABB.z(), 0.f);\n		float4 vDir1 = WSet(0.f, -AABB.y(),  AABB.z(), 0.f);\n		float4 vDir2 = WSet(0.f, -AABB.y(), -AABB.z(), 0.f);\n		float4 vDir3 = WSet(0.f,  AABB.y(), -AABB.z(), 0.f);\n		float4 v0 = vCenterPoly + vDir0;\n		float4 v1 = vCenterPoly + vDir1;\n		float4 v2 = vCenterPoly + vDir2;\n		float4 v3 = vCenterPoly + vDir3;\n		ZDEBUG_DRAWLINE(v0, v1, 0xff0000ff, true);\n		ZDEBUG_DRAWLINE(v1, v2, 0xff0000ff, true);\n		ZDEBUG_DRAWLINE(v2, v3, 0xff0000ff, true);\n		ZDEBUG_DRAWLINE(v3, v0, 0xff0000ff, true);\n		BspClipQuad(pBsp, v0, v1, v2, v3);\n	}\n	TArray<float4> DEBUG;\n	DrawBspRecursive(pBsp, 0, g_nBspFlipMask, g_nBspDrawMask, -1.f, DEBUG);\n}\n\nfloat4 MakePlane(float4arg p, float4arg normal)\n{\n	float4 r = WSetW(-(WVectorDot3(normal,p).ToFloat()), normal);\n	float1 vDot = WVectorDot4(WSetW(1.f, p), r);\n	if(ZMath::Abs(vDot.ToFloat()) > 0.001f)\n	{\n		ZBREAK();\n	}\n\n	return r;\n}\n\nvoid BspOccluderTest(SOccluder* pOccluders, uint32 nNumOccluders, ZRenderGraphNode** ppNodes, uint32 nNumNodes)\n{\n	SOccluderPlane* pPlanes = ZNEW SOccluderPlane[nNumOccluders];\n	uint8* nMasks = ZNEW uint8[nNumOccluders];\n	memset(nMasks, 0xff, nNumOccluders);\n\n\n	float4 vCameraPosition = WLoadZero();\n	for(uint32 i = 0; i < nNumOccluders; ++i)\n	{\n		float4 vCorners[4];\n		SOccluder Occ = pOccluders[i];\n		float4 vNormal = WLoad3U(&Occ.vNormal.x);\n		float4 vUp = WLoad3U(&Occ.vUp.x);\n		float4 vLeft = WVectorCross3(vNormal, vUp);\n		float4 vCenter = WLoad3U(&Occ.vCenter.x);\n		vCorners[0] = vCenter + vUp * Occ.vSize.y + vLeft * Occ.vSize.x;\n		vCorners[1] = vCenter - vUp * Occ.vSize.y + vLeft * Occ.vSize.x;\n		vCorners[2] = vCenter - vUp * Occ.vSize.y - vLeft * Occ.vSize.x;\n		vCorners[3] = vCenter + vUp * Occ.vSize.y - vLeft * Occ.vSize.x;\n		SOccluderPlane& Plane = pPlanes[i];\n\n		for(uint32 i = 0; i < 4; ++i)\n		{\n			float4 v0 = vCorners[i];\n			float4 v1 = vCorners[(i+1) % 4];\n			float4 v2 = vCameraPosition;\n			float4 vCenter = (v0 + v1 + v2) / WReplicate(3.f);\n			float4 vNormal = WVectorNormalize3(WVectorCross3(WVectorNormalize3(v1 - v0), WVectorNormalize3(v2 - v0)));\n			float4 vEnd = vCenter + vNormal;\n			Plane.p[i] = MakePlane(vCorners[i], vNormal);\n			Plane.corners[i] = vCorners[i];\n			ZDEBUG_DRAWLINE(v0, v1, (uint32)-1, true);\n			ZDEBUG_DRAWLINE(v1, v2, (uint32)-1, true);\n			ZDEBUG_DRAWLINE(v2, v0, (uint32)-1, true);\n			ZDEBUG_DRAWLINE(vCenter, vEnd, 0xff00ffff, true);\n		}\n		Plane.normal = MakePlane(vCorners[0], vNormal);\n	}\n	SOccluderBsp Bsp;\n	Bsp.pOccluders = pPlanes;\n	Bsp.nNumOccluders = nNumOccluders;\n\n	BuildBsp(&Bsp);\n\n	RunBspTest(&Bsp, pPlanes, nNumOccluders, ppNodes, nNumNodes);\n\n	ZDELETE(pPlanes);\n}\n\n\n",
+			"settings":
+			{
+				"buffer_size": 11336,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/Makefile",
+			"settings":
+			{
+				"buffer_size": 1039,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/microprofile.h",
+			"settings":
+			{
+				"buffer_size": 83769,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "microprofile.vs",
+			"settings":
+			{
+				"buffer_size": 257,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "font2.png",
+			"settings":
+			{
+				"buffer_size": 4072,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/microprofile.cpp",
+			"settings":
+			{
+				"buffer_size": 19598,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/text.cpp",
+			"settings":
+			{
+				"buffer_size": 6533,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "microprofile.ps",
+			"settings":
+			{
+				"buffer_size": 302,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/program.cpp",
+			"settings":
+			{
+				"buffer_size": 53786,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"contents": "med Exclude\n\n             Sett  frames frafail maxfail totfail maxfals totfals avgfals    time maxtime avgtime preptim buildti culltim\n ScreenBsp     32     512       0       0       0     648   98877  193.12 1464.21    6.32    2.86    0.54    0.76    2.10\n ScreenBsp     64     512       0       0       0     648   67355  131.55 1564.90    5.33    3.06    0.54    0.89    2.17\n ScreenBsp    128     512       0       0       0     648   42097   82.22 1602.72    4.92    3.13    0.51    1.01    2.12\n ScreenBsp    256     512       0       0       0     648   24230   47.32 1782.79    7.33    3.48    0.50    1.33    2.16\n ScreenBsp    512     512       0       0       0     648   17480   34.14 2068.38    7.57    4.04    0.51    1.83    2.21\n ScreenBsp   1024     512       0       0       0     648   17162   33.52 2246.60    9.54    4.39    0.51    2.19    2.19\n\n\n             Sett  frames frafail maxfail totfail maxfals totfals avgfals    time maxtime avgtime preptim buildti culltim\n ScreenBsp     32     512       0       0       0     694  120976  236.28 1544.90    6.46    3.02    0.54    0.73    2.28\n ScreenBsp     64     512       0       0       0     694   87831  171.54 1602.21    6.03    3.13    0.51    0.79    2.34\n ScreenBsp    128     512       0       0       0     694   62367  121.81 1743.89    6.54    3.41    0.50    0.93    2.48\n ScreenBsp    256     512       0       0       0     694   39430   77.01 1944.83    7.02    3.80    0.50    1.19    2.61\n ScreenBsp    512     512       0       0       0     694   24738   48.32 2247.13    9.54    4.39    0.51    1.65    2.74\n ScreenBsp   1024     512       0       0       0     694   18120   35.39 2619.09   11.28    5.12    0.51    2.32    2.79\n\n\n\n UDEN\n\n",
+			"settings":
+			{
+				"buffer_size": 1733,
+				"line_ending": "Unix",
+				"name": "med Exclude"
+			}
+		},
+		{
+			"contents": "****3626",
+			"settings":
+			{
+				"buffer_size": 8,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/program.h",
+			"settings":
+			{
+				"buffer_size": 1827,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/debug.h",
+			"settings":
+			{
+				"buffer_size": 1855,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/text.h",
+			"settings":
+			{
+				"buffer_size": 527,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "src/debug.cpp",
+			"settings":
+			{
+				"buffer_size": 15024,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/main.cpp",
+			"settings":
+			{
+				"buffer_size": 13983,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/bsp.cpp",
+			"settings":
+			{
+				"buffer_size": 65711,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "src/borken",
+			"settings":
+			{
+				"buffer_size": 57,
+				"line_ending": "Unix",
+				"name": "expr SkipClear();SkipAddRange(12,200);SkipAddRange"
+			}
+		},
+		{
+			"contents": "broken\nD0x0000: plane[0000]   [i:8000,o:0001] parent ffffffff\nD   0x8000\nD   0x0001: plane[0001]   [i:8000,o:0002] parent 0000\nD      0x8000\nD      0x0002: plane[0002]   [i:8000,o:0003] parent 0001\nD         0x8000\nD         0x0003: plane[0003]   [i:8000,o:0004] parent 0002\nD            0x8000\nD            0x0004: plane[0004]   [i:0005,o:c000] parent 0003\nD               0x0005: plane[0005]   [i:0006,o:0010] parent 0004\nD                  0x0006: plane[0006]   [i:0007,o:000f] parent 0005 <<-- den her\nD                     0x0007: plane[0007]   [i:0008,o:000e] parent 0006\nD                        0x0008: plane[0008]   [i:8000,o:0009] parent 0007\nD                           0x8000\nD                           0x0009: plane[000c]   [i:000a,o:c000] parent 0008\nD                              0x000a: plane[000b]   [i:000b,o:c000] parent 0009\nD                                 0x000b: plane[000a]   [i:000c,o:c000] parent 000a\nD                                    0x000c: plane[0009]   [i:000d,o:c000] parent 000b\nD                                       0x000d: plane[000d]   [i:8000,o:c000] parent 000c\nD                                          0x8000\nD                                          0xc000\nD                                       0xc000\nD                                    0xc000\nD                                 0xc000\nD                              0xc000\nD                        0x000e: plane[000d]   [i:8000,o:c000] parent 0007\nD                           0x8000\nD                           0xc000\nD                     0x000f: plane[000d]   [i:8000,o:c000] parent 0006\nD                        0x8000\nD                        0xc000\nD                  0x0010: plane[000b]   [i:0011,o:c000] parent 0005\nD                     0x0011: plane[000d]   [i:8000,o:c000] parent 0010\nD                        0x8000\nD                        0xc000\nD                     0xc000\nD               0xc000\nCULLR 00000000 P[   5] In[00008000] Out[00000001]\n  CULLR 00000001 P[   5] In[00008000] Out[00000002]\n    CULLR 00000002 P[   5] In[00008000] Out[00000003]\n      CULLR 00000003 P[   5] In[00008000] Out[00000004]\n        CULLR 00000004 P[   5] In[00000005] Out[0000c000]\n          CULLR 00000005 P[   5] In[00000006] Out[00000010]\n            CULLR 00000006 P[   5] In[00000007] Out[0000000f]\n              CULLR 0000000f P[   5] In[00008000] Out[0000c000]\n                LEAF_TEST 0000000f CULLED 1\n\n\nD0x0000: plane[0000]   [i:8000,o:0001] parent ffffffff\nD   0x8000\nD   0x0001: plane[0001]   [i:8000,o:0002] parent 0000\nD      0x8000\nD      0x0002: plane[0002]   [i:8000,o:0003] parent 0001\nD         0x8000\nD         0x0003: plane[0003]   [i:8000,o:0004] parent 0002\nD            0x8000\nD            0x0004: plane[0004]   [i:0005,o:c000] parent 0003\nD               0x0005: plane[0005]   [i:0006,o:c000] parent 0004\nD                  0x0006: plane[0006]   [i:0007,o:c000] parent 0005\nD                     0x0007: plane[0007]   [i:0008,o:c000] parent 0006\nD                        0x0008: plane[0008]   [i:8000,o:c000] parent 0007\nD                           0x8000\nD                           0xc000\nD                        0xc000\nD                     0xc000\nD                  0xc000\nD               0xc000\nCULLR 00000000 P[   5] In[00008000] Out[00000001]\n  CULLR 00000001 P[   5] In[00008000] Out[00000002]\n    CULLR 00000002 P[   5] In[00008000] Out[00000003]\n      CULLR 00000003 P[   5] In[00008000] Out[00000004]\n        CULLR 00000004 P[   5] In[00000005] Out[0000c000]\n          CULLR 00000005 P[   5] In[00000006] Out[0000c000]\n            CULLR 00000006 P[   5] In[00000007] Out[0000c000]\n\n",
+			"settings":
+			{
+				"buffer_size": 3624,
+				"line_ending": "Unix",
+				"name": "broken"
+			}
+		},
+		{
+			"file": "src/math.h",
+			"settings":
+			{
+				"buffer_size": 8808,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "src/math.cpp",
+			"settings":
+			{
+				"buffer_size": 26962,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "src/fixedarray.h",
+			"settings":
+			{
+				"buffer_size": 2720,
+				"line_ending": "Unix"
+			}
+		}
+	],
+	"build_system": "Packages/User/mybuild.sublime-build",
+	"command_palette":
+	{
+		"height": 380.0,
+		"selected_items":
+		[
+			[
+				"packa",
+				"Package Control: Install Package"
+			]
+		],
+		"width": 400.0
+	},
+	"console":
+	{
+		"height": 0.0,
+		"history":
+		[
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": true,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"file_history":
+	[
+		"/D/PRJ_PRO/main/code/src/base/threading/_internal/_windows/thread_win32.cpp",
+		"/D/PRJ_PRO/main/code/src/base/misc/_windows/_internal/system_win32.cpp",
+		"/D/PRJ_PRO/main/code/readme.txt",
+		"/D/bsp/In file included from /usr/include/c++/4.2.1/algorithm",
+		"/C/Users/jonasm/AppData/Roaming/Sublime Text 3/Installed Packages/Clipboard History.sublime-package",
+		"/D/bsp/default.vs",
+		"/D/bsp/flat.ps",
+		"/D/bsp/glew.c",
+		"/D/bsp/fixedarray.h",
+		"/D/bsp/text.cpp",
+		"/D/bsp/base.h",
+		"/D/bsp/text.h",
+		"/D/bsp/debug.cpp",
+		"/D/bsp/input.cpp",
+		"/D/bsp/debug.h",
+		"/D/bsp/bsp.h",
+		"/Users/jonasm/.lldbinit",
+		"/usr/include/c++/4.2.1/bits/stl_algo.h",
+		"/D/bsp/In file included from bsp.cpp",
+		"/D/bsp/input.h",
+		"/D/bsp/glinc.h",
+		"/D/bsp/Makefile",
+		"/Users/jonasm/Library/Application Support/Sublime Text 3/Packages/User/Preferences.sublime-settings",
+		"/Users/jonasm/Library/Application Support/Sublime Text 3/Packages/User/Distraction Free.sublime-settings",
+		"/D/bsp/math.cpp",
+		"/D/bsp/math.h",
+		"/D/bsp/program.h",
+		"/D/bsp/manipulator.cpp",
+		"/D/bsp/fwd.h",
+		"/D/bsp/manipulator.h",
+		"/D/bsp/shader.cpp",
+		"/D/bsp/shader.h",
+		"/D/bsp/mesh.cpp",
+		"/D/bsp/mesh.h",
+		"/D/bsp/program.cpp",
+		"/Users/jonasm/slasher/sdl/src/video/quartz/SDL_QuartzVideo.m",
+		"/D/bsp/main.cpp",
+		"/D/bsp/bsp.cpp",
+		"/Users/jonasm/screenbsp/basic.vs",
+		"/Users/jonasm/screenbsp/[shell_cmd",
+		"/Users/jonasm/screenbsp/make",
+		"/Users/jonasm/screenbsp/                uplotfnxt(\"FLIP %d==%d\", i, bFlip?1",
+		"/Users/jonasm/screenbsp/In file included from shader.cpp",
+		"/Users/jonasm/screenbsp/[dir",
+		"/Users/jonasm/screenbsp/        SOccluderEdgeIndex* = ECPR_BOTH == CR ? &ClippedPoly[nNumEdgeInd] ",
+		"/Users/jonasm/Library/Application Support/Sublime Text 3/Packages/Default/Preferences.sublime-settings",
+		"/Users/jonasm/screenbsp/bsp",
+		"/Users/jonasm/screenbsp/debugdraw.h",
+		"/Users/jonasm/screenbsp/debug.h",
+		"/Users/jonasm/Library/Application Support/Sublime Text 3/Packages/User/Default (OSX).sublime-keymap"
+	],
+	"find":
+	{
+		"height": 35.0
+	},
+	"find_in_files":
+	{
+		"height": 93.0,
+		"where_history":
+		[
+			""
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"BspDrawPoly",
+			"g_nBspOccluderDrawOccluders",
+			"g_nBspOccluderDrawEdges",
+			"Edges",
+			"g_nBspOccluderDebugDrawClipResult",
+			"g_nBspOccluderDrawOccluders",
+			"BspDrawPoly",
+			"PLANE_TEST_EPSILON",
+			"add extra out",
+			"Add Out",
+			"Add out",
+			"BspPlaneTestNew",
+			"BspDumpPlanes",
+			"g_nPolyExtraDump",
+			"In",
+			"sort",
+			"skipping",
+			"SkipIndex",
+			"skipadd",
+			"nExcludeMask",
+			"nBaseExcludeMask",
+			"nExcludeMask",
+			"USE_EXCLUDE_MASK",
+			"1024",
+			"settings",
+			"bspsett",
+			"g_nBspNodeCap",
+			"nodecap",
+			"Plane Overlap",
+			"BspDump",
+			"BSP_DUMP_PRINTF",
+			"DUMP_PRINTF",
+			"WorldOcclusionCreate",
+			"F5",
+			"F%",
+			"LEAF_TEST",
+			"spaces",
+			"BSP_DUMP_PRINTF",
+			"LEAF_TEST",
+			"nodecap",
+			"fail cull",
+			"g_nBspNodeCap",
+			"depth",
+			"RAND_MAX",
+			"myrand",
+			"seed",
+			"WorldInitOcclusionTest",
+			"fprintf(g_",
+			"fprintf(g_Te",
+			"fprintf(g_",
+			"%13s",
+			" %10s",
+			"%10s",
+			", %",
+			"%13.4f",
+			"%10d",
+			"Bsp",
+			"BspAddOccluderInternal",
+			"func",
+			"<<10",
+			"g_fTestTime",
+			"g_f",
+			"g_fTestTime",
+			"g_fPrepareTime",
+			"g_fTestTime",
+			"\"BSP\"",
+			"\"CullTest\"",
+			"ZDEBUG_",
+			"up",
+			"uplo",
+			"MICROPROFILE_SCOPEIC",
+			"scope",
+			"fesetenv",
+			"fsetenv",
+			"MP_DRAW_TIMERS",
+			"MicroProfileCalcTimers",
+			";",
+			"0.f",
+			"MicroProfileToggleFlipDetailed",
+			"nRunning",
+			"nFlipLog",
+			"FlipLog",
+			"MicroProfileCalcTimers",
+			"nBaseTicks",
+			"nBaseTicksCpu",
+			"MicroProfileMsToTick",
+			"MicroProfileLoopActiveGroups",
+			"MicroProfileTickToMsMultiplier",
+			"TicksPerSecond",
+			"MicroProfileTicksPerSecondCpu",
+			"MicroProfileTicksPerSecond",
+			"MicroProfileTickToMs",
+			"float ftoMs",
+			"MicroProfileTickToMs",
+			"fToMs",
+			"MicroProfileTickToMsMultiplier(MicroProfileTicksPerSecond());",
+			"fToMs",
+			"MicroProfileTickToMs",
+			"Sleep",
+			"pWorldObjects",
+			"dot",
+			"BspCullObjectR",
+			"ZDEBUG_DRAWBOX",
+			"i",
+			"DRAWBOU",
+			"DRAWBO",
+			"vHalfSize",
+			"glPushMatrix",
+			"CreateFlatMesh",
+			"CreateProgram",
+			"pMesh",
+			".no",
+			"normal",
+			"v3",
+			".Normal",
+			"MESH_",
+			"glEnableClientState",
+			"].",
+			"GLHandleARB",
+			"CheckGlError",
+			"CheckGLError",
+			"LinkedProgram",
+			"type",
+			"PFNGLCREATESHADERPROGRAMVPROC",
+			"Program",
+			"PFNGLCREATESHADERPROGRAMVPROC",
+			"glCreateShaderProgramv",
+			"glCreateShaderProgramvARB"
+		],
+		"highlight": false,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 21,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "glew/glew-1.9.0/include/GL/glew.h",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 884678,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								278963,
+								278963
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "renderlist.txt",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 160,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								42,
+								42
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Text/Plain text.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "screenbsp.sublime-project",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 149,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								49,
+								49
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/JavaScript/JSON.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "premake4.lua",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1139,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Lua/Lua.tmLanguage",
+							"tab_size": 3,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": ".hgignore",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 71,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"auto_name": ".depend",
+							"syntax": "Packages/Text/Plain text.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 11336,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								522,
+								522
+							]
+						],
+						"settings":
+						{
+							"auto_name": "",
+							"syntax": "Packages/Text/Plain text.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 6,
+					"file": "src/Makefile",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1039,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								231,
+								231
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Makefile/Makefile.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 7,
+					"file": "src/microprofile.h",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 83769,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								62849,
+								62849
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 1.0,
+						"translation.y": 32569.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 8,
+					"file": "microprofile.vs",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 257,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Text/Plain text.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 9,
+					"file": "font2.png",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 4072,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Text/Plain text.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 10,
+					"file": "src/microprofile.cpp",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 19598,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 972.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 11,
+					"file": "src/text.cpp",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 6533,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								5521,
+								5521
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 3216.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 12,
+					"file": "microprofile.ps",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 302,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Text/Plain text.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 13,
+					"file": "src/program.cpp",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 53786,
+						"regions":
+						{
+							"bookmarks":
+							{
+								"flags": 144,
+								"icon": "bookmark",
+								"regions":
+								[
+									[
+										10586,
+										10586
+									]
+								],
+								"scope": "bookmarks"
+							}
+						},
+						"selection":
+						[
+							[
+								21301,
+								21301
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 14356.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 14,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1733,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1723,
+								1723
+							]
+						],
+						"settings":
+						{
+							"auto_name": "med Exclude",
+							"syntax": "Packages/Text/Plain text.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 15,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 8,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								8,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Diff/Diff.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 16,
+					"file": "src/program.h",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1827,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 1517.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 17,
+					"file": "src/debug.h",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1855,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								101,
+								101
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 18,
+					"file": "src/text.h",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 527,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								310,
+								414
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 14.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 19,
+					"file": "src/debug.cpp",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 15024,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								15024,
+								15024
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 8159.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 20,
+					"file": "src/main.cpp",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 13983,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								13795,
+								13795
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 1.0,
+						"translation.y": 10125.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 21,
+					"file": "src/bsp.cpp",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 65711,
+						"regions":
+						{
+							"bookmarks":
+							{
+								"flags": 144,
+								"icon": "bookmark",
+								"regions":
+								[
+									[
+										56701,
+										56701
+									]
+								],
+								"scope": "bookmarks"
+							}
+						},
+						"selection":
+						[
+							[
+								37337,
+								37337
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 21804.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 22,
+					"file": "src/borken",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 57,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								57,
+								57
+							]
+						],
+						"settings":
+						{
+							"auto_name": "expr SkipClear();SkipAddRange(12,200);SkipAddRange",
+							"syntax": "Packages/Text/Plain text.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 23,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3624,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								225,
+								231
+							]
+						],
+						"settings":
+						{
+							"auto_name": "broken",
+							"syntax": "Packages/Text/Plain text.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 24,
+					"file": "src/math.h",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 8808,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 25,
+					"file": "src/math.cpp",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 26962,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								24766,
+								24766
+							],
+							[
+								25181,
+								25181
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 7.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 26,
+					"file": "src/fixedarray.h",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 2720,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1823,
+								1836
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 1241.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 34.0
+	},
+	"input":
+	{
+		"height": 0.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.exec":
+	{
+		"height": 333.0
+	},
+	"project": "screenbsp.sublime-project",
+	"replace":
+	{
+		"height": 62.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"selected_items":
+		[
+			[
+				"bsp",
+				"bsp.cpp"
+			],
+			[
+				"pro",
+				"program.cpp"
+			],
+			[
+				"make",
+				"Makefile"
+			],
+			[
+				"",
+				"bsp.cpp"
+			],
+			[
+				"progra",
+				"program.h"
+			],
+			[
+				"makef",
+				"Makefile"
+			],
+			[
+				"fix",
+				"fixedarray.h"
+			],
+			[
+				"p",
+				"program.cpp"
+			],
+			[
+				"prog",
+				"program.cpp"
+			],
+			[
+				"math",
+				"math.cpp"
+			],
+			[
+				"progr",
+				"program.cpp"
+			],
+			[
+				"debu",
+				"debug.h"
+			],
+			[
+				"dbu",
+				"debug.h"
+			],
+			[
+				"debug",
+				"debug.h"
+			],
+			[
+				"micro",
+				"microprofile.h"
+			],
+			[
+				"te",
+				"text.cpp"
+			],
+			[
+				"micr",
+				"microprofile.cpp"
+			],
+			[
+				"makefile",
+				"Makefile"
+			],
+			[
+				"bs",
+				"bsp.h"
+			],
+			[
+				"de",
+				"default.vs"
+			],
+			[
+				"pr",
+				"program.cpp"
+			],
+			[
+				"main",
+				"main.cpp"
+			],
+			[
+				"deb",
+				"debug.h"
+			],
+			[
+				"mes",
+				"mesh.cpp"
+			],
+			[
+				"bspc",
+				"bsp.cpp"
+			],
+			[
+				"b",
+				"basic.vs"
+			],
+			[
+				"mesh",
+				"mesh.cpp"
+			],
+			[
+				"sh",
+				"shader.h"
+			],
+			[
+				"defa",
+				"default.vs"
+			],
+			[
+				"fl",
+				"flat.ps"
+			],
+			[
+				"def",
+				"default.vs"
+			],
+			[
+				"basic",
+				"~/screenbsp/basic.vs"
+			],
+			[
+				"sha",
+				"shader.cpp"
+			],
+			[
+				"me",
+				"mesh.cpp"
+			],
+			[
+				"shader",
+				"shader.cpp"
+			],
+			[
+				"basi",
+				"basic.vs"
+			],
+			[
+				"flat",
+				"flat.ps"
+			],
+			[
+				"glew.",
+				"glew/glew-1.9.0/include/GL/glew.h"
+			],
+			[
+				".ps",
+				"flat.ps"
+			],
+			[
+				"glew.h",
+				"glew/glew-1.9.0/include/GL/glew.h"
+			],
+			[
+				"bas",
+				"base.h"
+			],
+			[
+				"glew",
+				"glew.c"
+			],
+			[
+				"g",
+				"glinc.h"
+			],
+			[
+				"shad",
+				"shader.h"
+			],
+			[
+				"dbeu",
+				"debug.h"
+			],
+			[
+				"base",
+				"base.h"
+			],
+			[
+				"m",
+				"math.cpp"
+			],
+			[
+				"mani",
+				"manipulator.cpp"
+			],
+			[
+				"ma",
+				"math.cpp"
+			],
+			[
+				"mai",
+				"main.cpp"
+			],
+			[
+				"fixarray",
+				"fixedarray.h"
+			],
+			[
+				"mat",
+				"math.cpp"
+			],
+			[
+				"math.c",
+				"math.cpp"
+			],
+			[
+				"dbeug",
+				"debug.h"
+			],
+			[
+				"gl",
+				"glinc.h"
+			],
+			[
+				"man",
+				"manipulator.cpp"
+			],
+			[
+				"fw",
+				"fwd.h"
+			],
+			[
+				"inpu",
+				"input.h"
+			],
+			[
+				"in",
+				"input.h"
+			],
+			[
+				"input",
+				"input.cpp"
+			],
+			[
+				"ll",
+				"~/.lldbinit"
+			],
+			[
+				"math.cp",
+				"math.cpp"
+			],
+			[
+				"mah",
+				"math.h"
+			],
+			[
+				"bsp.c",
+				"bsp.cpp"
+			],
+			[
+				"program",
+				"program.cpp"
+			],
+			[
+				"math.",
+				"math.h"
+			],
+			[
+				"progrma",
+				"program.cpp"
+			],
+			[
+				"tex",
+				"text.cpp"
+			],
+			[
+				"glin",
+				"glinc.h"
+			]
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 343.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}
