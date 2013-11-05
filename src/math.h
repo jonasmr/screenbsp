@@ -455,4 +455,9 @@ inline v4 v4neg(v4 v)
 	return v;
 }
 
+inline float v4dot(v4 v0, v4 v1)
+{
+	return v0.x * v1.x + v0.y * v1.y + v0.z * v1.z + v0.w * v1.w;
+}
+
 
