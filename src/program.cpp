@@ -31,7 +31,7 @@ void WorldDrawObjects(bool* bCulled);
 uint32 g_nUseOrtho = 0;
 float g_fOrthoScale = 10;
 SOccluderBsp* g_Bsp = 0;
-uint32_t g_nBspNodeCap = 2048;
+uint32_t g_nBspNodeCap = 128;
 uint32 g_nUseDebugCameraPos = 2;
 
 
