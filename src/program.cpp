@@ -31,7 +31,7 @@ void WorldDrawObjects(bool* bCulled);
 uint32 g_nUseOrtho = 0;
 float g_fOrthoScale = 10;
 SOccluderBsp* g_Bsp = 0;
-uint32_t g_nBspNodeCap = 128;
+uint32_t g_nBspNodeCap = 2048;
 uint32 g_nUseDebugCameraPos = 2;
 
 
@@ -165,14 +165,61 @@ ShadowMap AllocateShadowMap()
 }
 
 
-void RenderShadowMap(ShadowMap& SM)
+void RenderShadowMap(ShadowMap& SM, v3 vEye, v3 vDir, v3* vCorners)
 {
 	MICROPROFILE_SCOPEGPUI("GPU", "Shadowmap", 0xff0099);
 	v3 vDirection = v3normalize(v3init(0.59188753, -0.74972421, 0.29594377));
 	v3 vRight = v3normalize(v3cross(v3init(0,1,0), vDirection));
 	v3 vUp = v3normalize(v3cross(vRight, vDirection));
 	m mview = mcreate(vDirection, vRight, v3zero());
-	m mprj = morthogl(-500, 500, -500, 500, -500.f, 500.f);
+	m mviewinverse = maffineinverse(mview);
+
+	{
+		v3 vDirLight = mrotate(mview, vDir);
+		v3 vPosLight = mtransform(mview, vEye);		
+		v3 vCornerLocal[4];
+		v3 vDirMin = vPosLight;
+		v3 vDirMax = vPosLight;
+		for(int i = 0; i < 4; ++i)
+		{			
+			vCornerLocal[i] = mtransform(mview, vCorners[i]);
+			vDirMin = v3min(vDirMin, vCornerLocal[i]);
+			vDirMax = v3max(vDirMax, vCornerLocal[i]);
+		}
+		v3 vCenter = 0.5f * (vDirMax + vDirMin);
+		m mtrans = mid();
+		mtrans.trans = v4init(-vCenter, 1.f);
+		//mtrans = mtransform(mviewinverse(
+		mview = mmult(mtrans, mview);
+		v3 AABBLocal[8];
+		AABBLocal[0] = v3init(vDirMax.x, vDirMax.y, vDirMax.z);
+		AABBLocal[1] = v3init(vDirMax.x, vDirMin.y, vDirMax.z);
+		AABBLocal[2] = v3init(vDirMin.x, vDirMin.y, vDirMax.z);
+		AABBLocal[3] = v3init(vDirMin.x, vDirMax.y, vDirMax.z);
+		AABBLocal[4] = v3init(vDirMax.x, vDirMax.y, vDirMin.z);
+		AABBLocal[5] = v3init(vDirMax.x, vDirMin.y, vDirMin.z);
+		AABBLocal[6] = v3init(vDirMin.x, vDirMin.y, vDirMin.z);
+		AABBLocal[7] = v3init(vDirMin.x, vDirMax.y, vDirMin.z);
+		for(int i = 0; i < 8; ++i)
+		{
+			AABBLocal[i] = mtransform(mviewinverse, AABBLocal[i]);
+		}
+		ZDEBUG_DRAWLINE(AABBLocal[0], AABBLocal[1], -1, 0);
+		ZDEBUG_DRAWLINE(AABBLocal[1], AABBLocal[2], -1, 0);
+		ZDEBUG_DRAWLINE(AABBLocal[2], AABBLocal[3], -1, 0);
+		ZDEBUG_DRAWLINE(AABBLocal[3], AABBLocal[0], -1, 0);
+		ZDEBUG_DRAWLINE(AABBLocal[4], AABBLocal[5], -1, 0);
+		ZDEBUG_DRAWLINE(AABBLocal[5], AABBLocal[6], -1, 0);
+		ZDEBUG_DRAWLINE(AABBLocal[6], AABBLocal[7], -1, 0);
+		ZDEBUG_DRAWLINE(AABBLocal[7], AABBLocal[4], -1, 0);
+		ZDEBUG_DRAWLINE(AABBLocal[0], AABBLocal[4], -1, 0);
+		ZDEBUG_DRAWLINE(AABBLocal[1], AABBLocal[5], -1, 0);
+		ZDEBUG_DRAWLINE(AABBLocal[2], AABBLocal[6], -1, 0);
+		ZDEBUG_DRAWLINE(AABBLocal[3], AABBLocal[7], -1, 0);
+
+	}
+	const int size = 120;
+	m mprj = morthogl(-size, size, -size, size, -1500.f, 1500.f);
 	m moffset = mid();
 	moffset.x = v4init(0.5, 0.0, 0.0, 0.0f);
 	moffset.y = v4init(0.0, 0.5, 0.0, 0.0f);
@@ -730,7 +777,39 @@ void WorldRender()
 
 	{
 		MICROPROFILE_SCOPEI("MAIN", "RenderShadowMap", 0xff44dddd);
-		RenderShadowMap(g_SM);
+
+		v3 vFrustumCorners[4];
+		SOccluderBspViewDesc Desc = ViewDesc;
+		float fAngle = (Desc.fFovY * PI / 180.f) / 2.f;
+		float fCA = cosf(fAngle);
+		float fSA = sinf(fAngle);
+		float fY = fSA / fCA;
+		float fX = fY / Desc.fAspect;
+		const float fDist = 200;
+		const v3 vOrigin = Desc.vOrigin;
+		const v3 vDirection = Desc.vDirection;
+		const v3 vRight = Desc.vRight;
+		const v3 vUp = v3normalize(v3cross(vRight, vDirection));
+
+		vFrustumCorners[0] = fDist * (vDirection + fY * vUp + fX * vRight) + vOrigin;
+		vFrustumCorners[1] = fDist * (vDirection - fY * vUp + fX * vRight) + vOrigin;
+		vFrustumCorners[2] = fDist * (vDirection - fY * vUp - fX * vRight) + vOrigin;
+		vFrustumCorners[3] = fDist * (vDirection + fY * vUp - fX * vRight) + vOrigin;
+
+
+
+		ZDEBUG_DRAWLINE(vOrigin, vFrustumCorners[0], 0, true);
+		ZDEBUG_DRAWLINE(vOrigin, vFrustumCorners[1], 0, true);
+		ZDEBUG_DRAWLINE(vOrigin, vFrustumCorners[2], 0, true);
+		ZDEBUG_DRAWLINE(vOrigin, vFrustumCorners[3], 0, true);
+		ZDEBUG_DRAWLINE(vFrustumCorners[0], vFrustumCorners[1], 0, true);
+		ZDEBUG_DRAWLINE(vFrustumCorners[1], vFrustumCorners[2], 0, true);
+		ZDEBUG_DRAWLINE(vFrustumCorners[2], vFrustumCorners[3], 0, true);
+		ZDEBUG_DRAWLINE(vFrustumCorners[3], vFrustumCorners[0], 0, true);
+
+
+		RenderShadowMap(g_SM, vOrigin, vDirection, vFrustumCorners);
+
 	}
 
 
@@ -1346,9 +1425,13 @@ g_WorldState.Camera.vRight = v3init(0.662614,0.000000,0.748949);
 #endif
 
 
-g_WorldState.Camera.vPosition = v3init(111.778938,10.000000,131.156204);
-g_WorldState.Camera.vDir = v3init(-0.647556,-0.057932,-0.759812);
-g_WorldState.Camera.vRight = v3init(0.761091,0.000000,-0.648646); 
+g_WorldState.Camera.vPosition = v3init(92.796921,10.000000,-196.202789);
+g_WorldState.Camera.vDir = v3init(-0.427102,-0.046025,0.903031);
+g_WorldState.Camera.vRight = v3init(-0.903989,0.000000,-0.427555);
+
+g_WorldState.Camera.vPosition = v3init(246.143951,10.000000,225.857758);
+g_WorldState.Camera.vDir = v3init(-0.736488,-0.029921,-0.675789);
+g_WorldState.Camera.vRight = v3init(0.676092,0.000000,-0.736817);
 
 #endif
 	g_WorldState.Camera.fFovY = 45.f;
