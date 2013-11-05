@@ -628,10 +628,6 @@ v4 v4fromcolor(uint32_t nColor)
 }
 
 
-float v4dot(v4 v0, v4 v1)
-{
-	return v0.x * v1.x + v0.y * v1.y + v0.z * v1.z + v0.w * v1.w;
-}
 
 float v4length(v4 v0)
 {
