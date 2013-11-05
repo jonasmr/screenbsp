@@ -259,6 +259,7 @@ void RenderShadowMap(ShadowMap& SM, v3 vEye, v3 vDir, v3* vCorners)
 
 void RunTestOnly()
 {
+//	return;
 	WorldInitOcclusionTest();
 
 

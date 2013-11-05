@@ -378,9 +378,9 @@ bool BspFrustumOutside(v4 vPlane, v4* vPlanes, uint32 nNumPlanes)
 
 bool BspFrustumDisjoint(v4* pPlanes0, uint32 nNumPlanes0, v4* pPlanes1, uint32 nNumPlanes1)
 {
-	char buffer[256];
-	char foo[100];
-	strcpy(buffer, "***FRDIST ");
+	// char buffer[256];
+	// char foo[100];
+	// strcpy(buffer, "***FRDIST ");
 	bool bSum = false;
 	for(uint32 i = 0; i < nNumPlanes0; ++i)
 	{
@@ -388,19 +388,19 @@ bool BspFrustumDisjoint(v4* pPlanes0, uint32 nNumPlanes0, v4* pPlanes1, uint32 n
 		bool bTest = BspFrustumOutside(vPlane, pPlanes1, nNumPlanes1);
 		bSum = bSum || bTest;
 
-		snprintf(foo, 100, "%d ", bTest ? 1 : 0);
-		strcat(buffer, foo);
+		// // snprintf(foo, 100, "%d ", bTest ? 1 : 0);
+		// strcat(buffer, foo);
 	}
 	for(uint32 i = 0; i < nNumPlanes1; ++i)
 	{
 		v4 vPlane = pPlanes0[i];
 		bool bTest = BspFrustumOutside(vPlane, pPlanes1, nNumPlanes1);
 		bSum = bSum || bTest;
-		snprintf(foo, 100, "%d ", bTest ? 1 : 0);
-		strcat(buffer, foo);
+		// snprintf(foo, 100, "%d ", bTest ? 1 : 0);
+		// strcat(buffer, foo);
 	}
-	strcat(buffer, " TOTAL ");
-	strcat(buffer, bSum ? "1" : "0");
+	// strcat(buffer, " TOTAL ");
+	// strcat(buffer, bSum ? "1" : "0");
 //	uplotfnxt(buffer);
 	return bSum;
 }
