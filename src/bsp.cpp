@@ -105,11 +105,13 @@ struct SOccluderBspNode
 	uint16 nPlaneIndex;
 	uint16 nInside;
 	uint16 nOutside;
+};
+struct SOccluderBspNodeExtra
+{
+	v3 vDebugCorner;
 	bool bLeaf;
 	bool bSpecial;
-	v3 vDebugCorner;
 };
-
 struct SOccluderBsp
 {
 	static const int MAX_PLANES = 1024 * 4;
@@ -126,6 +128,7 @@ struct SOccluderBsp
 	TFixedArray<v4, MAX_PLANES> Planes;
 	TFixedArray<v3, MAX_PLANES> Corners;
 	TFixedArray<SOccluderBspNode, MAX_NODES> Nodes;
+	TFixedArray<SOccluderBspNodeExtra, MAX_NODES> NodesExtra;
 
 	SOccluderBspStats Stats;
 };
@@ -661,13 +664,14 @@ void BspAddFrustum(SOccluderBsp *pBsp, SBspPotentialOccluders& P, v3 vLocalDirec
 
 			int nIndex = (int)pBsp->Nodes.Size();
 			SOccluderBspNode* pNode = pBsp->Nodes.PushBack();
+			SOccluderBspNodeExtra* pNodeExtra = pBsp->NodesExtra.PushBack();
+			pNode->nPlaneIndex = i;
 			pNode->nInside = OCCLUDER_LEAF;
 			pNode->nOutside = i == 3 ? OCCLUDER_EMPTY : (i+1);
 //			pNode->nOutside = OCCLUDER_EMPTY;
-			pNode->bLeaf = false;
-			pNode->bSpecial = true;
-			pNode->nPlaneIndex = i;
-			pNode->vDebugCorner = pBsp->Corners[i];
+			pNodeExtra->bLeaf = false;
+			pNodeExtra->bSpecial = true;
+			pNodeExtra->vDebugCorner = pBsp->Corners[i];
 			//ZASSERT(nIndex == 0);
 		//	uplotfnxt("localdir is %f %f %f", vLocalDirection.x,vLocalDirection.y,vLocalDirection.z);
 		}
@@ -767,6 +771,7 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 	g_nDumpFrame = 0;
 	pBsp->nDepth = 0;
 	pBsp->Nodes.Clear();
+	pBsp->NodesExtra.Clear();
 	pBsp->Planes.Clear();
 	pBsp->Corners.Clear();
 	memset(&pBsp->Stats, 0, sizeof(pBsp->Stats));
@@ -856,6 +861,7 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 		}
 	}
 	pBsp->Stats.nNumNodes = pBsp->Nodes.Size();
+	ZASSERT(pBsp->Nodes.Size() == pBsp->NodesExtra.Size());
 	pBsp->Stats.nNumPlanes = pBsp->Planes.Size();
 
 
@@ -995,7 +1001,7 @@ void BspAddOccluderInternal(SOccluderBsp *pBsp, v4 *pPlanes, v3* pCorners, uint3
 	}
 	else
 	{
-		MICROPROFILE_SCOPEIC("BSP", "Build_AddRecursive");
+		//MICROPROFILE_SCOPEIC("BSP", "Build_AddRecursive");
 		BspAddRecursive(pBsp, 0, nPlaneIndices, nNumPlanes, 0, 0);
 	}
 	if(pBsp->Nodes.Size() == nNodesSize)
@@ -1168,7 +1174,7 @@ int BspAddInternal(SOccluderBsp *pBsp, uint16 nParent, bool bOutsideParent, uint
 {
 	if(!BspCanAddNodes(pBsp, nNumPlanes))
 		return -1;
-	MICROPROFILE_SCOPEIC("BSP", "Build_AddInternal");
+	//MICROPROFILE_SCOPEIC("BSP", "Build_AddInternal");
 	ZASSERT(nNumPlanes > 1);
 	int nCount = 0;
 	uint32 nBaseExcludeMask = nExcludeMask;
@@ -1184,20 +1190,21 @@ int BspAddInternal(SOccluderBsp *pBsp, uint16 nParent, bool bOutsideParent, uint
 			nCount++;
 			int nIndex = (int)pBsp->Nodes.Size();
 			SOccluderBspNode *pNode = pBsp->Nodes.PushBack();
+			SOccluderBspNodeExtra *pNodeExtra = pBsp->NodesExtra.PushBack();
 			pNode->nOutside = OCCLUDER_EMPTY;
 			pNode->nInside = OCCLUDER_LEAF;
-			pNode->bLeaf = i == nNumPlanes - 1;
 			pNode->nPlaneIndex = pIndices[i];
-			pNode->bSpecial = false;
+			pNodeExtra->bLeaf = i == nNumPlanes - 1;
+			pNodeExtra->bSpecial = false;
 			if(nPrev >= 0)
 				pBsp->Nodes[nPrev].nInside = nIndex;
 			nPrev = nIndex;
-			pNode->vDebugCorner = pBsp->Corners[pIndices[i]&(~0x8000)];
+			pNodeExtra->vDebugCorner = pBsp->Corners[pIndices[i]&(~0x8000)];
 
 			if(0)
 			{
 				v4 vPlane = BspGetPlane(pBsp, pIndices[i]);
-				v3 vCorner = pNode->vDebugCorner;
+				v3 vCorner = pNodeExtra->vDebugCorner;
 				vCorner = mtransform(pBsp->mfrombsp, vCorner);
 				vPlane = v4init(mrotate(pBsp->mfrombsp, vPlane.tov3()), 1.f);
 				ZDEBUG_DRAWPLANE(vPlane.tov3(), vCorner, 0xff00ff00);
@@ -1294,19 +1301,46 @@ ClipPolyResult BspClipPoly(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndic
 	v4 vNormalPlane = BspGetPlane(pBsp, pIndices[nNumEdges]);
 
 	ZASSERT(nNumEdges > 2);
-	#define NO_MODULO 1
-	#if NO_MODULO
+	v4 vClipPlane = BspGetPlane(pBsp, nClipPlane);
+
+#if 1
+
+	bool *bCorners = (bool *)alloca(nNumPlanes<<1);
+	bool *bCorners0 = bCorners+nNumPlanes;//(bool *)alloca(nNumPlanes);
+	//v4 vClipPlane = BspGetPlane(pBsp, nClipPlane);
+
+	v4 vLastPlane = BspGetPlane(pBsp, pIndices[ 0 ]);
+	v4 vFirstPlane = vLastPlane;
+	//bool bDebug = 0 == g_nFirst++;
+	for(int i = 1; i < nNumEdges; ++i)
+	{
+		v4 p1 = BspGetPlane(pBsp, pIndices[i]);
+		//v4 p1 = vPlanes[(i + 1) % nNumEdges];
+		float fTest = BspPlaneTestNew(vLastPlane, p1, vClipPlane);
+		vLastPlane = p1;
+		bCorners[i] = fTest < PLANE_TEST_EPSILON;
+		bCorners0[i] = fTest < -PLANE_TEST_EPSILON;
+	}
+
+	float fTest = BspPlaneTestNew(vLastPlane, vFirstPlane, vClipPlane);
+	bCorners[0] = bCorners[nNumEdges] = fTest < PLANE_TEST_EPSILON;
+	bCorners0[0] = bCorners0[nNumEdges] = fTest < -PLANE_TEST_EPSILON;
+	// bCorners[nNumEdges] = bCorners[0];
+	// bCorners0[nNumEdges] = bCorners0[0];
+
+	bCorners++;
+	bCorners0++;
+
+
+#else
+
+
+
 	bool *bCorners = (bool *)alloca(nNumPlanes);
 	bool *bCorners0 = (bool *)alloca(nNumPlanes);
 	bCorners++;
 	bCorners0++;
-	#else
-	bool *bCorners = (bool *)alloca(nNumPlanes-1);
-	bool *bCorners0 = (bool *)alloca(nNumPlanes-1);
-
-	#endif
 	v4 *vPlanes = (v4 *)alloca(sizeof(v4) * (nNumPlanes));
-	v4 vClipPlane = BspGetPlane(pBsp, nClipPlane);
 	for(int i = 0; i < nNumPlanes; ++i)
 	{
 		vPlanes[i] = BspGetPlane(pBsp, pIndices[i]);
@@ -1323,6 +1357,14 @@ ClipPolyResult BspClipPoly(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndic
 	bCorners[-1] = bCorners[nNumEdges-1];
 	bCorners0[-1] = bCorners0[nNumEdges-1];
 
+	// for(int i = -1; i < nNumEdges; ++i)
+	// {
+	// 	ZASSERT(bCorners[i] == bCorners_[i]);
+	// 	ZASSERT(bCorners0[i] == bCorners0_[i]);
+	// }
+
+#endif	
+
 	uint32 nEdgesIn = 0;
 	uint32 nEdgesOut = 0;
 	uint32 nMaskIn = 0;
@@ -1337,11 +1379,8 @@ ClipPolyResult BspClipPoly(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndic
 
 	for(int i = 0; i < nNumEdges; ++i)
 	{
-		#if NO_MODULO
 		bool bCorner0 = bCorners0[(i - 1)];
-		#else
-		bool bCorner0 = bCorners0[(i + nNumEdges - 1) % nNumEdges];
-		#endif
+
 		bool bCorner1 = bCorners0[i];
 		if(bCorner0 != bCorner1)
 		{
@@ -1406,11 +1445,7 @@ ClipPolyResult BspClipPoly(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndic
 	nMask = nExcludeMask;
 	for(int i = 0; i < nNumEdges; ++i)
 	{
-		#if NO_MODULO
 		bool bCorner0 = bCorners[(i - 1)];
-		#else
-		bool bCorner0 = bCorners[(i + nNumEdges - 1) % nNumEdges];
-		#endif
 		bool bCorner1 = bCorners[i];
 		if(bCorner0 != bCorner1)
 		{
@@ -1511,8 +1546,6 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 	v4 vPlane = BspGetPlane(pBsp, Node.nPlaneIndex);
 	bool bPlaneOverlap = false;
 	{
-	
-		MICROPROFILE_SCOPEIC("BSP", "Build_Test1");
 		for(int i = 0; i < nNumIndices - 1; ++i)
 		{
 			if(0 == (nExcludeMask & (1 << i)))
@@ -1529,7 +1562,6 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 				}
 			}
 		}
-		MICROPROFILE_SCOPEIC("BSP", "Build_Test");
 	}
 
 
