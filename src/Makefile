@@ -1,7 +1,8 @@
 
 LDFLAGS=-O2 -framework OpenGL `sdl2-config --static-libs` -lBulletDynamics -lBulletCollision -lLinearMath -lpthread
 CFLAGS=`sdl2-config --cflags` -I../glew -DGLEW_STATIC -Wno-c++11-extensions -I/usr/local/include/bullet
-CFLAGS+=-g -O2 -Wno-invalid-offsetof -msse -msse2 -msse3 	
+CFLAGS+=-g -O2 -Wno-invalid-offsetof 
+#-msse -msse2 -msse3 	
 CPPFLAGS=$(CFLAGS)
 CPPFLAGS+=-Wno-lambda-extensions -stdlib=libc++ -std=c++11
 
