@@ -8,6 +8,8 @@
 #include "debug.h"
 
 
+#include "immintrin.h"
+
 void v2::operator +=(const v2& r)
 {
 	x += r.x;
@@ -536,11 +538,37 @@ float v3length(v3 v)
 {	
 	return sqrt(v3dot(v,v));
 }
-v3 v3normalize(v3 v)
+
+inline __m128 rsqrt(__m128 x)
 {
-	return v / v3length(v);
+	__m128 v = _mm_rsqrt_ps(x);
+	__m128 halfx = _mm_mul_ps(x, _mm_set1_ps(-0.5f));
+	__m128 x2 = _mm_mul_ps(v, v);
+	__m128 foo = _mm_mul_ps(v, _mm_add_ps(_mm_set1_ps(1.5f), _mm_mul_ps(x2, halfx)));
+	return foo;
+}
+
+v3 v3normalize(v3 v_)
+{
+#if 1
+	__m128 r, v;
+	__m128 x = _mm_load_ss(&v_.x);
+	__m128 y = _mm_load_ss(&v_.y);
+	__m128 z = _mm_load_ss(&v_.z);
+	__m128 xy = _mm_movelh_ps(x, y);
+	v = _mm_shuffle_ps(xy, z, _MM_SHUFFLE(2, 0, 2, 0));
+	__m128 r0 = _mm_mul_ps(v, v);
+	__m128 r1 = _mm_hadd_ps(r0, r0);
+	__m128 r2 = _mm_hadd_ps(r1, r1);
+	__m128 result = _mm_mul_ps(rsqrt(r2), v);
+	return *(v3*)&result;
+#else
+	return v_ / v3length(v_);
+#endif
 
 }
+
+
 v3 v3min(v3 a, v3 b)
 {
 	v3 r;
