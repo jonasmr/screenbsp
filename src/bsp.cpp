@@ -136,7 +136,7 @@ inline bool BspIsLeafNode(const SOccluderBspNode &Node)
 	return Node.nInside == OCCLUDER_LEAF;
 }
 
-inline v4 BspGetPlane(SOccluderBsp *pBsp, uint16 nIndex)
+__forceinline inline v4 BspGetPlane(SOccluderBsp *pBsp, uint16 nIndex)
 {
 	v4 vPlane = pBsp->Planes[nIndex & ~SOccluderBsp::PLANE_FLIP_BIT];
 	if(SOccluderBsp::PLANE_FLIP_BIT & nIndex)
