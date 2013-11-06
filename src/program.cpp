@@ -212,7 +212,7 @@ void RenderShadowMap(ShadowMap& SM)
 
 void RunTestOnly()
 {
-//	return;
+	//return;
 	WorldInitOcclusionTest();
 
 
