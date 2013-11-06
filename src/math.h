@@ -283,8 +283,9 @@ v4 v4makeplane(v3 p, v3 normal);
 
 
 
-
+inline float v4length2(v4 v0){ return v0.x * v0.x + v0.y * v0.y + v0.z * v0.z + v0.w * v0.w;}
 inline float v4distance(v4 v0, v4 v1){ return v4length(v0-v1);}
+inline float v4distance2(v4 v0, v4 v1){ return v4length2(v0-v1);}
 
 inline
 v4 v4lerp(v4 from_, v4 to_, float fLerp) { return from_ + (to_-from_) * fLerp; }
@@ -460,4 +461,34 @@ inline float v4dot(v4 v0, v4 v1)
 	return v0.x * v1.x + v0.y * v1.y + v0.z * v1.z + v0.w * v1.w;
 }
 
+
+
+inline __m128 rsqrt(__m128 x)
+{
+	__m128 v = _mm_rsqrt_ps(x);
+	__m128 halfx = _mm_mul_ps(x, _mm_set1_ps(-0.5f));
+	__m128 x2 = _mm_mul_ps(v, v);
+	__m128 foo = _mm_mul_ps(v, _mm_add_ps(_mm_set1_ps(1.5f), _mm_mul_ps(x2, halfx)));
+	return foo;
+}
+
+inline v3 v3normalize(v3 v_)
+{
+#if 1
+	__m128 r, v;
+	__m128 x = _mm_load_ss(&v_.x);
+	__m128 y = _mm_load_ss(&v_.y);
+	__m128 z = _mm_load_ss(&v_.z);
+	__m128 xy = _mm_movelh_ps(x, y);
+	v = _mm_shuffle_ps(xy, z, _MM_SHUFFLE(2, 0, 2, 0));
+	__m128 r0 = _mm_mul_ps(v, v);
+	__m128 r1 = _mm_hadd_ps(r0, r0);
+	__m128 r2 = _mm_hadd_ps(r1, r1);
+	__m128 result = _mm_mul_ps(rsqrt(r2), v);
+	return *(v3*)&result;
+#else
+	return v_ / v3length(v_);
+#endif
+
+}
 

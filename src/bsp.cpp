@@ -1551,9 +1551,10 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 			if(0 == (nExcludeMask & (1 << i)))
 			{
 				v4 vInner = BspGetPlane(pBsp, pIndices[i]);
-				float fDot0 = v4distance(vInner, vPlane);
-				float fDot1 = v4distance(v4neg(vInner), vPlane);
-				if(fDot0 < 0.001f || fDot1 < 0.001f)
+				float fDot0 = v4distance2(vInner, vPlane);
+				float fDot1 = v4distance2(v4neg(vInner), vPlane);
+#define TRESHOLD2 (0.000001f)
+				if(fDot0 < TRESHOLD2 || fDot1 < TRESHOLD2)
 				{
 					#if USE_EXCLUDE_MASK_OVERLAP
 					nExcludeMask |= (1 << i);
