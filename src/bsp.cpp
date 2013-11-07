@@ -1391,13 +1391,13 @@ ClipPolyResult BspClipPoly(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndic
 				if(bCorner0) // outside --> inside
 				{
 					pPolyOut[nEdgesOut++] = pIndices[i];
-					if(nMask & 1)
-						nMaskOut |= nMaskRollOut;
+					nMaskOut |= nMaskRollOut & nMask;
 					nMaskRollOut <<= 1;
 
 					pPolyOut[nEdgesOut++] = nClipPlane ^ SOccluderBsp::PLANE_FLIP_BIT;
 					nMaskOut |= nMaskRollOut;
 					nMaskRollOut <<= 1;
+					nMask <<= 1;
 					if(g_nPolyExtraDump)
 					{
 						uprintf("Add extra out planexx %d %04x\n",  nEdgesOut-1, nClipPlane ^ SOccluderBsp::PLANE_FLIP_BIT);
@@ -1408,6 +1408,7 @@ ClipPolyResult BspClipPoly(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndic
 					pPolyOut[nEdgesOut++] = nClipPlane ^ SOccluderBsp::PLANE_FLIP_BIT;
 					nMaskOut |= nMaskRollOut;
 					nMaskRollOut <<= 1;
+					nMask <<= 1;
 
 					if(g_nPolyExtraDump)
 					{
@@ -1416,30 +1417,32 @@ ClipPolyResult BspClipPoly(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndic
 
 
 					pPolyOut[nEdgesOut++] = pIndices[i];
-					if(nMask & 1)
-						nMaskOut |= nMaskRollOut;
+					nMaskOut |= nMaskRollOut & nMask;
+					//if(nMask & 1)
+					//	nMaskOut |= nMaskRollOut;
 					nMaskRollOut <<= 1;
 				}
 			}
 			else
 			{
 				pPolyOut[nEdgesOut++] = pIndices[i];
-				if(nMask & 1)
-					nMaskOut |= nMaskRollOut;
+				nMaskOut |= nMaskRollOut & nMask;
+				//if(nMask & 1)
+				//	nMaskOut |= nMaskRollOut;
 				nMaskRollOut <<= 1;
 			}
 		}
 		else if(bCorner0) // both outside
 		{
 			pPolyOut[nEdgesOut++] = pIndices[i];
-			if(nMask & 1)
-				nMaskOut |= nMaskRollOut;
+			nMaskOut |= nMaskRollOut & nMask;
 			nMaskRollOut <<= 1;
 		}
 		else // both insides
 		{
+			nMask >>= 1;
 		}
-		nMask >>= 1;
+		//nMask >>= 1;
 	}
 
 	nMask = nExcludeMask;
@@ -1458,6 +1461,7 @@ ClipPolyResult BspClipPoly(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndic
 					pPolyIn[nEdgesIn++] = nClipPlane ;
 					nMaskIn |= nMaskRollIn;
 					nMaskRollIn <<= 1;
+					nMask <<= 1;
 
 					if(g_nPolyExtraDump)
 					{
@@ -1466,20 +1470,19 @@ ClipPolyResult BspClipPoly(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndic
 
 
 					pPolyIn[nEdgesIn++] = pIndices[i];
-					if(nMask & 1)
-						nMaskIn |= nMaskRollIn;
+					nMaskIn |= nMaskRollIn & nMask;
 					nMaskRollIn <<= 1;
 				}
 				else // inside --> outside
 				{
 					pPolyIn[nEdgesIn++] = pIndices[i] ;
-					if(nMask & 1)
-						nMaskIn |= nMaskRollIn;
+					nMaskIn |= nMaskRollIn & nMask;
 					nMaskRollIn <<= 1;
 
 					pPolyIn[nEdgesIn++] = nClipPlane;
 					nMaskIn |= nMaskRollIn;
 					nMaskRollIn <<= 1;
+					nMask <<= 1;
 
 					if(g_nPolyExtraDump)
 					{
@@ -1491,25 +1494,23 @@ ClipPolyResult BspClipPoly(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndic
 			else
 			{
 				pPolyIn[nEdgesIn++] = pIndices[i];
-				if(nMask & 1)
-					nMaskIn |= nMaskRollIn;
+				nMaskIn |= nMaskRollIn & nMask;
 				nMaskRollIn <<= 1;
 			}
 		}
 		else if(bCorner0) // both outside
 		{
 			ZASSERT(bCorner1);
+			nMask >>= 1;
 		}
 		else // both insides
 		{
 			ZASSERT(!bCorner1);
 			ZASSERT(!bCorner0);
 			pPolyIn[nEdgesIn++] = pIndices[i];
-			if(nMask & 1)
-				nMaskIn |= nMaskRollIn;
+			nMaskIn |= nMaskRollIn & nMask;
 			nMaskRollIn <<= 1;
 		}
-		nMask >>= 1;
 	}
 
 
