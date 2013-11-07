@@ -1315,11 +1315,11 @@ ClipPolyResult BspClipPoly(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndic
 		v4 p1 = BspGetPlane(pBsp, pIndices[i]);
 		float fTest = BspPlaneTestNew(vLastPlane, p1, vClipPlane);
 		vLastPlane = p1;
-		bCorners[i] = fTest < PLANE_TEST_EPSILON;
+		bCorners[i] = fTest < 0.f;
 	}
 
 	float fTest = BspPlaneTestNew(vLastPlane, vFirstPlane, vClipPlane);
-	bCorners[0] = bCorners[nNumEdges] = fTest < PLANE_TEST_EPSILON;
+	bCorners[0] = bCorners[nNumEdges] = fTest < 0.f;
 	bCorners++;
 
 
@@ -1439,7 +1439,7 @@ ClipPolyResult BspClipPoly(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndic
 
 
 #else
-#if 1
+
 
 	bool *bCorners = (bool *)alloca(nNumPlanes<<1);
 	bool *bCorners0 = bCorners+nNumPlanes;//(bool *)alloca(nNumPlanes);
@@ -1467,174 +1467,6 @@ ClipPolyResult BspClipPoly(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndic
 	bCorners++;
 	bCorners0++;
 
-
-
-	uint32 nEdgesIn = 0;
-	uint32 nEdgesOut = 0;
-	uint32 nMaskIn = 0;
-	uint32 nMaskOut = 0;
-	uint32 nMaskRollIn = 1;
-	uint32 nMaskRollOut = 1;
-	uint32 nMask = nExcludeMask;
-	int nClipAddedIn = 0;
-	int nClipAddedOut = 0;
-
-	// TRUE --> OUTSIDE
-
-	for(int i = 0; i < nNumEdges; ++i)
-	{
-		bool bCorner0 = bCorners[(i - 1)];
-		bool bCorner1 = bCorners[i];
-		if(bCorner0 != bCorner1)
-		{
-			// add to both
-			if(!nClipAddedIn)
-			{
-				nClipAddedIn = true;
-				if(bCorner0) // outside --> inside
-				{
-					pPolyOut[nEdgesOut++] = pIndices[i];
-					if(nMask & 1)
-						nMaskOut |= nMaskRollOut;
-					nMaskRollOut <<= 1;
-
-					pPolyOut[nEdgesOut++] = nClipPlane ^ SOccluderBsp::PLANE_FLIP_BIT;
-					nMaskOut |= nMaskRollOut;
-					nMaskRollOut <<= 1;
-					if(g_nPolyExtraDump)
-					{
-						uprintf("Add extra out planexx %d %04x\n",  nEdgesOut-1, nClipPlane ^ SOccluderBsp::PLANE_FLIP_BIT);
-					}
-				}
-				else // inside --> outside
-				{
-					pPolyOut[nEdgesOut++] = nClipPlane ^ SOccluderBsp::PLANE_FLIP_BIT;
-					nMaskOut |= nMaskRollOut;
-					nMaskRollOut <<= 1;
-
-					if(g_nPolyExtraDump)
-					{
-						uprintf("Add extra out plane %d %04x\n",  nEdgesOut-1, nClipPlane ^ SOccluderBsp::PLANE_FLIP_BIT);
-					}
-
-
-					pPolyOut[nEdgesOut++] = pIndices[i];
-					if(nMask & 1)
-						nMaskOut |= nMaskRollOut;
-					nMaskRollOut <<= 1;
-				}
-
-				if(bCorner0) // outside --> inside
-				{
-					pPolyIn[nEdgesIn++] = nClipPlane ;
-					nMaskIn |= nMaskRollIn;
-					nMaskRollIn <<= 1;
-
-					if(g_nPolyExtraDump)
-					{
-						uprintf("Add extra in plane %d %04x\n",  nEdgesIn-1, nClipPlane);
-					}
-
-
-					pPolyIn[nEdgesIn++] = pIndices[i];
-					if(nMaskCopyIn & 1)
-						nMaskIn |= nMaskRollIn;
-					nMaskRollIn <<= 1;
-				}
-				else // inside --> outside
-				{
-					pPolyIn[nEdgesIn++] = pIndices[i] ;
-					if(nMaskCopyIn & 1)
-						nMaskIn |= nMaskRollIn;
-					nMaskRollIn <<= 1;
-
-					pPolyIn[nEdgesIn++] = nClipPlane;
-					nMaskIn |= nMaskRollIn;
-					nMaskRollIn <<= 1;
-
-					if(g_nPolyExtraDump)
-					{
-						uprintf("Add extra in plane %d %04x\n",  nEdgesIn-1, nClipPlane);
-					}
-
-				}
-
-			}
-			else
-			{
-				pPolyOut[nEdgesOut++] = pIndices[i];
-				if(nMask & 1)
-					nMaskOut |= nMaskRollOut;
-				nMaskRollOut <<= 1;
-
-				pPolyIn[nEdgesIn++] = pIndices[i];
-				if(nMaskCopyIn & 1)
-					nMaskIn |= nMaskRollIn;
-				nMaskRollIn <<= 1;
-
-
-			}
-		}
-		else if(bCorner0) // both outside
-		{
-			pPolyOut[nEdgesOut++] = pIndices[i];
-			if(nMask & 1)
-				nMaskOut |= nMaskRollOut;
-			nMaskRollOut <<= 1;
-		}
-		else // both insides
-		{
-			ZASSERT(!bCorner1);
-			ZASSERT(!bCorner0);
-			pPolyIn[nEdgesIn++] = pIndices[i];
-			if(nMaskCopyIn & 1)
-				nMaskIn |= nMaskRollIn;
-			nMaskRollIn <<= 1;
-
-		}
-		nMask >>= 1;
-		nMaskCopyIn >>= 1;
-
-	}
-
-
-
-
-
-
-
-#else
-
-
-
-	bool *bCorners = (bool *)alloca(nNumPlanes);
-	bool *bCorners0 = (bool *)alloca(nNumPlanes);
-	bCorners++;
-	bCorners0++;
-	v4 *vPlanes = (v4 *)alloca(sizeof(v4) * (nNumPlanes));
-	for(int i = 0; i < nNumPlanes; ++i)
-	{
-		vPlanes[i] = BspGetPlane(pBsp, pIndices[i]);
-	}
-	bool bDebug = 0 == g_nFirst++;
-	for(int i = 0; i < nNumEdges; ++i)
-	{
-		v4 p0 = vPlanes[i];
-		v4 p1 = vPlanes[(i + 1) % nNumEdges];
-		float fTest = BspPlaneTestNew(p0, p1, vClipPlane);
-		bCorners[i] = fTest < PLANE_TEST_EPSILON;
-		bCorners0[i] = fTest < -PLANE_TEST_EPSILON;
-	}
-	bCorners[-1] = bCorners[nNumEdges-1];
-	bCorners0[-1] = bCorners0[nNumEdges-1];
-
-	// for(int i = -1; i < nNumEdges; ++i)
-	// {
-	// 	ZASSERT(bCorners[i] == bCorners_[i]);
-	// 	ZASSERT(bCorners0[i] == bCorners0_[i]);
-	// }
-
-#endif	
 
 	uint32 nEdgesIn = 0;
 	uint32 nEdgesOut = 0;
@@ -1784,7 +1616,6 @@ ClipPolyResult BspClipPoly(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndic
 		}
 	}
 #endif
-
 	ZASSERT(nEdgesIn == 0 || nEdgesIn > 2);
 	ZASSERT(nEdgesOut == 0 || nEdgesOut > 2);
 

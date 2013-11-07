@@ -1482,9 +1482,9 @@ int ProgramMain()
 	if(!once)
 	{
 		once = 1;
-		uprintf("Running test\n");
+//		uprintf("Running test\n");
 		RunTestOnly();
-		uprintf("Running test done\n");
+//		uprintf("Running test done\n");
 	}
 
 	// glMatrixMode(GL_PROJECTION);
