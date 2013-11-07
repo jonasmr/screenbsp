@@ -14,7 +14,7 @@ void InputInit()
 	if(g_nNumJoysticks > AXIS_MAX)
 		g_nNumJoysticks = AXIS_MAX;
 	memset(g_pJoyStick, 0, sizeof(g_pJoyStick));
-	uprintf("opening %d joysticks\n", g_nNumJoysticks);
+//	uprintf("opening %d joysticks\n", g_nNumJoysticks);
 	for(uint32_t i = 0; i < g_nNumJoysticks; ++i)
 	{
 		g_pJoyStick[i] = SDL_JoystickOpen(i);

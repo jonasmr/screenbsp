@@ -158,7 +158,7 @@ void main(void)   \
 	{
 		int nLogLen = 0;
 		glGetShaderiv(handle, GL_COMPILE_STATUS, &nLogLen);
-		printf("compile status %d\n", nLogLen);
+//		printf("compile status %d\n", nLogLen);
 
 		glGetShaderiv(handle, GL_INFO_LOG_LENGTH, &nLogLen);
 		CheckGLError();

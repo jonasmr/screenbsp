@@ -288,7 +288,7 @@ void WorldInitOcclusionTest()
 			nadd++;
 		}
 	}
-	uprintf("TOTAL ADD LONG %d\n", nadd);
+	//uprintf("TOTAL ADD LONG %d\n", nadd);
 	uint32 nNumObjects = g_WorldState.nNumWorldObjects;
 	for(int i = 0; i < OCCLUSION_NUM_OBJECTS; ++i)
 	{
