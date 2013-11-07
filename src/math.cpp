@@ -8,7 +8,6 @@
 #include "debug.h"
 
 
-#include "immintrin.h"
 
 void v2::operator +=(const v2& r)
 {

@@ -4,6 +4,7 @@
 #define TWOPI 6.2831853071795864769f
 #define TORAD (PI/180.f)
 #include <string.h>
+#include "immintrin.h"
 
 struct v2;
 struct v3;
