@@ -1449,6 +1449,15 @@ g_WorldState.Camera.vRight = v3init(0.676092,0.000000,-0.736817);
 }
 int ProgramMain()
 {
+	static int once = 0;
+	if(!once)
+	{
+		once = 1;
+//		uprintf("Running test\n");
+		RunTestOnly();
+//		uprintf("Running test done\n");
+	}
+
 
 	//fesetenv(FE_DFL_DISABLE_SSE_DENORMS_ENV);
 	if(g_KeyboardState.keys[SDL_SCANCODE_ESCAPE] & BUTTON_RELEASED)
@@ -1478,14 +1487,6 @@ int ProgramMain()
 	m mview = g_WorldState.Camera.mview;
 	m mprjview = mmult(mprj, mview);
 
-	static int once = 0;
-	if(!once)
-	{
-		once = 1;
-//		uprintf("Running test\n");
-		RunTestOnly();
-//		uprintf("Running test done\n");
-	}
 
 	// glMatrixMode(GL_PROJECTION);
 	// glLoadMatrixf(&g_WorldState.Camera.mprj.x.x);
