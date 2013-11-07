@@ -6,6 +6,8 @@
 #include "debug.h"
 #include <functional>
 
+
+
 uint32 g_nRunTest = 0;
 FILE* g_TestOut = 0;
 FILE* g_TestFailOut = 0;
@@ -44,31 +46,28 @@ extern uint32 g_nBspNodeCap;
 
 int nSettingsBsp[] = 
 {
-	// 10, 
-	// 20, 
-	// 32,
-	// 64, 
-	// 128, 
-	// 200, 
-	// 256, 
-	// 386, 
-	// 512, 
-	// 768,
+	#if QUICK_PERF
 	1024,
 	1024,
 	1024,
 	1024,
 	1024,
 	1024,
-	//1024,
-	//1024,
-	//1024,
-	//1024,
-	//1024,
-	//1024,
-	//1024,
-	//1024,	
-	// 2048,
+
+	#else
+	10, 
+	20, 
+	32,
+	64, 
+	128, 
+	200, 
+	256, 
+	386, 
+	512, 
+	768,
+	1024,	
+	2048,
+	#endif
 };
 const uint32 nNumSettingsBsp = sizeof(nSettingsBsp)/sizeof(nSettingsBsp[0]);
 const uint32 nNumSettingsSO = 0;
@@ -494,10 +493,17 @@ void RunTest(v3& vPos_, v3& vDir_, v3& vRight_)
 	{
 		[] (int index, v3& vPos, v3& vDir, v3& vUp) -> int{
 			vUp = v3init(0, 1, 0);
+			#if QUICK_PERF
 			const int CIRCLE_TOTAL_STEPS = (1<<9);
 			const int CIRCLE_REVOLUTIONS = 2;
 			const int CIRCLE_INNER_RADIUS = 300;
 			const int CIRCLE_OUTER_RADIUS = 350;
+			#else
+			const int CIRCLE_TOTAL_STEPS = (8<<10);
+			const int CIRCLE_REVOLUTIONS = 8;
+			const int CIRCLE_INNER_RADIUS = 50;
+			const int CIRCLE_OUTER_RADIUS = 650;
+			#endif
 			float fAngle = TWOPI * float(index) / (CIRCLE_TOTAL_STEPS/CIRCLE_REVOLUTIONS);
 			float fDist = CIRCLE_INNER_RADIUS + (CIRCLE_OUTER_RADIUS-CIRCLE_INNER_RADIUS) * float(index) / CIRCLE_TOTAL_STEPS;
 			float fX = sinf(fAngle) * fDist;
