@@ -1,0 +1,24 @@
+#version 150
+
+uniform sampler2D tex;
+
+in vec4 TC0;
+in vec4 Color;
+out vec4 Out0;
+
+void main(void)  
+{  
+	vec4 color = texture(tex, TC0.xy);
+	if(TC0.x > 1.0 )
+	{
+		Out0.xyz = Color.xyz;
+		Out0.w = 1.0;	
+	}
+	else
+	{
+		Out0.xyz = color.xyz * Color.xyz;
+		Out0.w = color.w;
+	}
+	if(Out0.w<0.5)
+		discard;
+}

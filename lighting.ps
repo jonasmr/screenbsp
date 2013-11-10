@@ -1,0 +1,163 @@
+//uniform sampler2D tex1; 
+#version 150 
+
+
+uniform sampler2D texLight;
+uniform sampler2D texLightTile;
+uniform sampler2D texLightIndex;
+uniform sampler2D texDepth;
+
+uniform float lightDelta;
+uniform int NumLights;
+uniform int MaxTileLights;
+uniform int MaxLightTileIndex;
+uniform int mode;
+uniform vec2 ScreenSize;
+uniform vec3 TileSize;
+uniform vec3 vWorldEye;
+
+
+
+
+
+in vec3 fNormal;
+in vec3 fWorldPos;
+in vec4 fShadowCoords;
+in vec3 fColor;
+out vec4 Out0;
+
+
+
+float EvalShadow()
+{
+	vec4 fShadowPrj = fShadowCoords / fShadowCoords.w;
+	fShadowPrj.z -= 0.002;
+	float Dist = texture(texDepth,fShadowPrj.st).x;
+	
+	
+ 	float shadow = 1.0;
+ 	if (fShadowCoords.w > 0.0)
+ 		shadow = Dist < fShadowPrj.z ? 0.2 : 10.0 ;
+ 	if(fShadowPrj.x>= 0 && fShadowPrj.x<=1.f && 
+ 		fShadowPrj.y>= 0 && fShadowPrj.y<=1.f)
+ 	{
+ 		return Dist < fShadowPrj.z ? 0.0 : 1.0;
+ 	}
+	return 1.0;
+}
+
+float EvalAmbient()
+{
+	vec3 vToLight0 = -(vec3(0.59188753, 0.74972421, 0.29594377));	
+	vec3 vToLight1 = -(vec3(-0.59188753, 0.74972421, -0.29594377));	
+	vec3 vToLight2 = -(vec3(-0.59188753, 0.29594377, 0.74972421));	
+	float fAngle0 = max(dot(vToLight0, fNormal), 0.0);
+	float fAngle1 = max(dot(vToLight1, fNormal), 0.0);
+	float fAngle2 = max(dot(vToLight2, fNormal), 0.0);
+	return max(max(fAngle0, fAngle1), fAngle2) * 0.433;
+}
+vec3 EvalSun()
+{
+
+	float fShadow = EvalShadow();
+	vec3 vToLight = (vec3(0.59188753, -0.74972421, 0.29594377));
+	vec3 vDir = -vToLight;
+	float fAngle = max(dot(vDir, fNormal), 0.0);
+	vec3 vDiffuse = vec3(fAngle) * 0.66;
+ 	return vDiffuse * fShadow;//r + vec3(min(1.0, pow(fSpec, 4.0) * 5));
+}
+
+vec3 EvalLight(vec2 tc0, vec2 tc1)
+{
+	const float fAttenLength = 2.0;
+	vec3 Pos = texture(texLight, tc0).xyz;
+	vec3 LCol = texture(texLight, tc1).xyz;
+	vec3 vToLight = fWorldPos - Pos;
+	float fLen = length(vToLight);
+	float fIntensity = (fLen / fAttenLength);
+	fIntensity = 1.0 - fIntensity;
+	fIntensity = min(max(fIntensity, 0.0), 1.0);
+	fIntensity = fIntensity * fIntensity;
+	vec3 vDir = -normalize(vToLight);
+	float fAngle = max(dot(vDir, fNormal), 0.0);
+	vec3 vDiffuse = fIntensity * fAngle * LCol;
+	return vDiffuse;// + vec3(1,0,0);
+}
+
+void main(void)  
+{
+
+	vec3 Color = vec3(0,0,0);
+	Color += vec3(0.4, 0.4, 0.4);
+	vec3 Normal = normalize(fNormal);
+	const float fAttenLength = 2.0;
+
+	if(mode != 2)
+	{
+		vec2 Tile = floor(gl_FragCoord.xy / TileSize.z);
+		vec2 TileCoord = Tile / TileSize.xy;
+		vec2 LightInfo = texture(texLightTile, TileCoord).xy;
+		float fBaseOffset = LightInfo.x*32768.0;
+		float fCount = LightInfo.y*32768.0;
+		float fMaxLights = float(MaxTileLights);
+		float fScale = clamp(fCount / 5.0, 0.0, 1.0);
+		if(mode == 1)
+		{
+			vec2 foo = (LightInfo.yy*32768.0) /fMaxLights;
+			foo = (foo) * vec2(1.0, 1.0);
+			Color = mix(vec3(1.0,0.0,0.0), vec3(0.0,1.0,0.0), vec3(foo, 0.0));//fScale + fWorldPos.x * 0.000001);
+			Color += fWorldPos.x * 0.000001;
+		}
+		else
+		{
+			int nStart = int(floor(fBaseOffset + 0.5));
+			int nEnd = nStart + int(floor(fCount + 0.5));
+			for(int i = nStart; i < nEnd; ++i)
+			{
+				int u = i % 1024;
+				int v = i / 1024;
+				vec2 Coords = vec2(u / 1024.0, v / 1024.0);
+				vec2 Index = texture(texLightIndex, Coords).xy;
+				int lightIndex = int(Index.x * 32768.0);
+				vec2 tcLight0 = vec2(lightDelta*(float(lightIndex)*2.0), 0);
+				vec2 tcLight1 = vec2(tcLight0.x + lightDelta, 0);
+
+				Color += EvalLight(tcLight0, tcLight1);
+
+
+			}
+			//vec2 foo = (LightInfo.yy*32768.0) /fMaxLights;
+			//Color = mix(vec3(1.0,0.0,0.0), vec3(0.0,1.0,0.0), vec3(foo, 0.0));//fScale + fWorldPos.x * 0.000001);
+			//Color += fWorldPos.x * 0.000001;
+		}
+	}
+	else
+	{
+		for(int i = 0; i < NumLights; i++)
+		{
+			vec2 tc0 = vec2(lightDelta*(float(i)*2.0), 0);
+			vec2 tc1 = vec2(tc0.x + lightDelta, 0);
+#if 1
+			Color += EvalLight(tc0, tc1);
+#else
+			vec3 Pos = texture(texLight, tc0).xyz;
+			vec3 LCol = texture(texLight, tc1).xyz;
+			vec3 vToLight = fWorldPos - Pos;
+			float fLen = length(vToLight);
+			float fIntensity = (fLen / fAttenLength);
+			fIntensity = 1.0 - fIntensity;
+			fIntensity = min(max(fIntensity, 0.0), 1.0);
+			fIntensity = fIntensity * fIntensity;
+			vec3 vDir = -normalize(vToLight);
+			float fAngle = max(dot(vDir, fNormal), 0.0);
+			vec3 vDiffuse = fIntensity * fAngle * LCol;
+			Color += vDiffuse;
+#endif
+		}
+	}
+	//Out0.xyz = Color + EvalSun();
+	Out0.xyz = (EvalSun() + EvalAmbient()) * fColor;
+	Out0.w = 1.0;
+}
+
+
