@@ -270,6 +270,7 @@ void RunTestOnly()
 
 	while(g_nRunTest)
 	{
+		_mm_setcsr( _mm_getcsr() | 0x8040 );
 		RunTest(g_WorldState.Camera.vPosition, g_WorldState.Camera.vDir, g_WorldState.Camera.vRight);
 		SOccluderBspViewDesc ViewDesc;
 		ViewDesc.vOrigin = g_WorldState.Camera.vPosition;
@@ -1437,6 +1438,10 @@ g_WorldState.Camera.vDir = v3init(-0.736488,-0.029921,-0.675789);
 g_WorldState.Camera.vRight = v3init(0.676092,0.000000,-0.736817);
 
 #endif
+g_WorldState.Camera.vPosition = v3init(218.461838,10.000000,-28.306690);
+g_WorldState.Camera.vDir = v3init(-0.990690,-0.045348,0.128366);
+g_WorldState.Camera.vRight = v3init(-0.128499,0.000000,-0.991710);
+
 	g_WorldState.Camera.fFovY = 45.f;
 	g_WorldState.Camera.fNear = 0.1f;
 	g_Bsp = BspCreate();

@@ -14,6 +14,10 @@
 //  optimize!
 // test vs intel
 
+//test list:
+// test branchless shift 
+// try and merge planetests into loop
+
 #include <algorithm>
 #define OCCLUDER_EMPTY (0xc000)
 #define OCCLUDER_LEAF (0x8000)
@@ -1359,79 +1363,43 @@ ClipPolyResult BspClipPoly(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndic
 
 			}
 		}
+		else if(bCorner0) // outside --> inside
+		{
+			pPolyOut[nEdgesOut++] = pIndices[i];
+			pPolyOut[nEdgesOut++] = nClipPlane ^ SOccluderBsp::PLANE_FLIP_BIT;
+			pPolyIn[nEdgesIn++] = nClipPlane ;
+			pPolyIn[nEdgesIn++] = pIndices[i];
+			if(nMask & 1)
+				nMaskOut |= nMaskRollOut;
+			nMaskRollOut <<= 1;
+
+					
+			nMaskOut |= nMaskRollOut;
+			nMaskRollOut <<= 1;
+
+					
+			nMaskIn |= nMaskRollIn;
+			nMaskRollIn <<= 1;
+
+
+
+					
+			if(nMaskCopyIn & 1)
+				nMaskIn |= nMaskRollIn;
+			nMaskRollIn <<= 1;
+
+		}
 		else
 		{
-			// add to both
-			if(!nClipAddedIn)
-			{
-				nClipAddedIn = true;
-				if(bCorner0) // outside --> inside
-				{
-					pPolyOut[nEdgesOut++] = pIndices[i];
-					pPolyOut[nEdgesOut++] = nClipPlane ^ SOccluderBsp::PLANE_FLIP_BIT;
-					pPolyIn[nEdgesIn++] = nClipPlane ;
-					pPolyIn[nEdgesIn++] = pIndices[i];
-					if(nMask & 1)
-						nMaskOut |= nMaskRollOut;
-					nMaskRollOut <<= 1;
-
-					
-					nMaskOut |= nMaskRollOut;
-					nMaskRollOut <<= 1;
-
-					
-					nMaskIn |= nMaskRollIn;
-					nMaskRollIn <<= 1;
-
-
-
-					
-					if(nMaskCopyIn & 1)
-						nMaskIn |= nMaskRollIn;
-					nMaskRollIn <<= 1;
-
-				}
-				else // inside --> outside
-				{
-					pPolyOut[nEdgesOut++] = nClipPlane ^ SOccluderBsp::PLANE_FLIP_BIT;
-					pPolyOut[nEdgesOut++] = pIndices[i];
-					pPolyIn[nEdgesIn++] = pIndices[i] ;
-					pPolyIn[nEdgesIn++] = nClipPlane;
-					nMaskOut |= nMaskRollOut;
-					nMaskRollOut <<= 1;
-
-
-
-					if(nMask & 1)
-						nMaskOut |= nMaskRollOut;
-					nMaskRollOut <<= 1;
-					if(nMaskCopyIn & 1)
-						nMaskIn |= nMaskRollIn;
-					nMaskRollIn <<= 1;
-
-					nMaskIn |= nMaskRollIn;
-					nMaskRollIn <<= 1;
-
-
-				}
-			}
-			else
-			{
-				pPolyOut[nEdgesOut++] = pIndices[i];
-				pPolyIn[nEdgesIn++] = pIndices[i];
-				if(nMask & 1)
-					nMaskOut |= nMaskRollOut;
-				nMaskRollOut <<= 1;
-
-
-				if(nMaskCopyIn & 1)
-					nMaskIn |= nMaskRollIn;
-				nMaskRollIn <<= 1;
-
-
-			}
+			pPolyOut[nEdgesOut++] = pIndices[i];
+			pPolyIn[nEdgesIn++] = pIndices[i];
+			if(nMask & 1)
+				nMaskOut |= nMaskRollOut;
+			nMaskRollOut <<= 1;
+			if(nMaskCopyIn & 1)
+				nMaskIn |= nMaskRollIn;
+			nMaskRollIn <<= 1;
 		}
-
 		nMask >>= 1;
 		nMaskCopyIn >>= 1;
 
