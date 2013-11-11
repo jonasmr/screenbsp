@@ -7,7 +7,7 @@ extern FILE* g_TestFailOut;
 extern int32 g_nTestFail;
 extern int32 g_nTestFalsePositives;
 
-#define QUICK_PERF 0
+#define QUICK_PERF 1
 
 void WorldInitOcclusionTest();
 void StopTest();
