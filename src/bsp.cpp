@@ -30,6 +30,11 @@
 
 #define BSP_DUMP_PRINTF(...) do{if(g_nDumpFrame){ uprintf(__VA_ARGS__); } }while(0)
 
+#define BspCullObjectSSE BspCullObject
+//#define BspCullObjectSafe BspCullObject
+
+
+
 uint32 g_nBspOccluderDebugDrawClipResult = 0;
 uint32 g_nBspOccluderDrawEdges = 2;
 uint32 g_nBspOccluderDrawOccluders = 0;//2
@@ -1293,10 +1298,13 @@ void BspDumpPlanes(const char* prefix, SOccluderBsp *pBsp, uint16 *pIndices, uin
 
 
 //#define BspClipPoly BspClipPolyChecked
-//#define BspClipPoly BspClipPolySafe2
+#define BspClipPoly BspClipPolySafe
 //#define BspClipPoly BspClipPolySingleTest
-#define BspClipPoly BspClipPolySingleTest0
+//#define BspClipPoly BspClipPolySingleTest0
 //#define BspClipPoly BspClipPolyChecked
+
+#define BspClipPolyCull BspClipPolySingleTest0
+//#define BspClipPolyCull BspClipPolySafe
 uint32 g_nPolyExtraDump = 0;
 ClipPolyResult BspClipPolySafe(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndices,
 						   uint16 nNumPlanes, uint32 nExcludeMask, uint16 *pPolyIn,
@@ -2391,7 +2399,7 @@ ClipPolyResult BspClipPolyChecked(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 
 	uint16* pClippedOut = (uint16*)alloca(sizeof(uint16)*(1+nNumPlanes));
 
 
-	ClipPolyResult CR2 = BspClipPolySingleTest0(pBsp, nClipPlane, pIndices, nNumPlanes, nExcludeMask,
+	ClipPolyResult CR2 = BspClipPolySafe2(pBsp, nClipPlane, pIndices, nNumPlanes, nExcludeMask,
 						 pClippedIn, pClippedOut, nEdgesIn_2, nEdgesOut_2, nExcludeMaskIn2, nExcludeMaskOut2);
 	ZASSERT(CR2 == CR);
 	ZASSERT(nEdgesIn_2 == nEdgesIn_);
@@ -2673,7 +2681,7 @@ bool BspCullObjectR(SOccluderBsp *pBsp, uint32 Index, uint16 *Poly, uint32 nNumE
 	uint32 nOut = 0;
 	uint32 nExclusionIn = 0, nExclusionOut = 0;
 
-	ClipPolyResult CR = BspClipPoly(pBsp, Node.nPlaneIndex, Poly, nNumEdges, 0, ClippedPolyIn,
+	ClipPolyResult CR = BspClipPolyCull(pBsp, Node.nPlaneIndex, Poly, nNumEdges, 0, ClippedPolyIn,
 									ClippedPolyOut, nIn, nOut, nExclusionIn, nExclusionOut);
 
 	if(g_nBspDebugPlane == g_nBspDebugPlaneCounter)
@@ -2753,7 +2761,7 @@ bool BspCullObjectR(SOccluderBsp *pBsp, uint32 Index, uint16 *Poly, uint32 nNumE
 	return !bFail;
 }
 
-bool BspCullObject(SOccluderBsp *pBsp, SWorldObject *pObject)
+bool BspCullObjectSafe(SOccluderBsp *pBsp, SWorldObject *pObject)
 {
 	if(0 == (pObject->nFlags & SObject::OCCLUSION_TEST))
 		return false;
@@ -2777,9 +2785,10 @@ bool BspCullObject(SOccluderBsp *pBsp, SWorldObject *pObject)
 	uint16_t Poly[5];
 	uint32 nSize = pBsp->Planes.Size();
 	{
-		MICROPROFILE_SCOPEIC("BSP", "CullPrepare");
+		//MICROPROFILE_SCOPEIC("BSP", "CullPrepare");
 		m mObjectToWorld = pObject->mObjectToWorld;
 		m mObjectToBsp = mmult(pBsp->mtobsp, mObjectToWorld);
+		//m mObjectToBsp = mmult_sse(&pBsp->mtobsp, &mObjectToWorld);
 		v3 vHalfSize = pObject->vSize;
 		v4 vCenterWorld_ = mtransform(pBsp->mtobsp, pObject->mObjectToWorld.trans);
 		v4 vCenterWorld_1 = mObjectToBsp.trans;
@@ -2824,6 +2833,102 @@ bool BspCullObject(SOccluderBsp *pBsp, SWorldObject *pObject)
 		if(fTest > 0.f)
 		{
 
+			for(int i = 0; i < 5; ++i)
+				Poly[i] = nSize + i;
+		}
+		else
+		{
+			Poly[4] = nSize + 4;
+			Poly[0] = nSize + 3;
+			Poly[1] = nSize + 2;
+			Poly[2] = nSize + 1;
+			Poly[3] = nSize + 0;
+		}
+	}
+
+	
+
+
+	bool bResult = BspCullObjectR(pBsp, 0, &Poly[0], 5, 0);
+	pBsp->Planes.Resize(nSize);
+	srand(seed);
+	if(!bResult)
+		pBsp->Stats.nNumObjectsTestedVisible++;
+
+	return bResult;
+}
+
+
+bool BspCullObjectSSE(SOccluderBsp *pBsp, SWorldObject *pObject)
+{
+	if(0 == (pObject->nFlags & SObject::OCCLUSION_TEST))
+		return false;
+	pBsp->Stats.nNumObjectsTested++;
+	if(!pBsp->Nodes.Size())
+		return false;
+	g_nBspDebugPlaneCounter = 0;
+	long seed = rand();
+	srand((int)(uintptr)pObject);
+	randseed(0xed32babe, 0xdeadf39c);
+	g_nShowClipLevelSubCounter = 0;
+
+
+	// SBspEdgeIndex Poly[5];
+	uint16_t Poly[5];
+	uint32 nSize = pBsp->Planes.Size();
+	{
+		////MICROPROFILE_SCOPEIC("BSP", "CullPrepare");
+		m mObjectToWorld = pObject->mObjectToWorld;
+		m mObjectToBsp = mmult_sse(&pBsp->mtobsp, &mObjectToWorld);
+		v3 vHalfSize = pObject->vSize;
+		v4 vCenterWorld_ = mtransform(pBsp->mtobsp, pObject->mObjectToWorld.trans);
+		v3 vCenterWorld = v3init(vCenterWorld_);
+
+		// uprintf("distance is %f\n", v3distance(vCenterWorld1, vCenterWorld));
+		// ZASSERT(abs(v3distance(vCenterWorld1, vCenterWorld)) < 1e-3f);
+		v3 vToCenter = v3normalize(vCenterWorld);
+		v3 vUp = v3init(0.f, 1.f, 0.f); // replace with camera up.
+		if(v3dot(vUp, vToCenter) > 0.9f)
+			vUp = v3init(1.f, 0, 0);
+		v3 vRight = v3normalize(v3cross(vToCenter, vUp));
+		vUp = v3normalize(v3cross(-vToCenter, vRight));
+
+		//m mbox = mcreate(vToCenter, vRight, vCenterWorld);
+		m mboxinv;
+		mboxinv.x = v4init(vRight, 0.f);
+		mboxinv.y = v4init(vUp, 0.f);
+		mboxinv.z = v4init(-vToCenter, 0.f);
+		mboxinv.trans = v4init(vCenterWorld, 1.f);
+		m mbox = maffineinverse(mboxinv);
+
+		m mcomposite = mmult_sse(&mbox, &mObjectToBsp);
+		v3 AABB = obbtoaabb(mcomposite, vHalfSize);
+
+		vRight = mgetxaxis(mboxinv);
+		vUp = mgetyaxis(mboxinv);
+
+		v3 vCenterQuad = vCenterWorld - vToCenter * AABB.z * 1.1f;
+		v3 v0 = vCenterQuad + vRight * AABB.x + vUp * AABB.y;
+		v3 v1 = vCenterQuad + vRight * -AABB.x + vUp * AABB.y;
+		v3 v2 = vCenterQuad + vRight * -AABB.x + vUp * -AABB.y;
+		v3 p3 = vCenterQuad + vRight * AABB.x + vUp * -AABB.y;
+
+		pBsp->Planes.Resize(nSize + 5); // TODO use thread specific blocks
+
+		v4 *pPlanes = pBsp->Planes.Ptr() + nSize;
+		v3 n0 = v3normalize(v3cross(v0, v0 - v1));
+		v3 n1 = v3normalize(v3cross(v1, v1 - v2));
+		v3 n2 = v3normalize(v3cross(v2, v2 - p3));
+		v3 n3 = v3normalize(v3cross(p3, p3 - v0));
+		pPlanes[0] = v4init(n0, 0.f);
+		pPlanes[1] = v4init(n1, 0.f);
+		pPlanes[2] = v4init(n2, 0.f);
+		pPlanes[3] = v4init(n3, 0.f);
+		pPlanes[4] = v4makeplane(p3, v3normalize(vToCenter));
+
+		float fTest = BspPlaneTestNew(pPlanes[0], pPlanes[1], pPlanes[2]);
+		if(fTest > 0.f)
+		{
 			for(int i = 0; i < 5; ++i)
 				Poly[i] = nSize + i;
 		}

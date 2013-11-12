@@ -79,7 +79,7 @@ struct v4
 /// x y z w  * y
 /// x y z w    z
 /// x y z w    w
-struct m
+struct __attribute__((aligned(16))) m
 {
 	//{
 		v4 x;
@@ -297,7 +297,11 @@ v4 v4lerp(v4 from_, v4 to_, float fLerp) { return from_ + (to_-from_) * fLerp; }
 m minit(v3 vx, v3 vy, v3 vz, v3 vtrans);
 m mid();
 m mcreate(v3 vDir, v3 vRight, v3 vPoint);
+m mcreate(v3 vDir, v3 vRight, v3 vUp, v3 vPoint);
 m mmult(m m0, m m1);
+m mmult_sse(const m* m0, const m* m1);
+
+
 m mtranspose(m mat);
 m mrotatex(float fAngle);
 m mrotatey(float fAngle);
@@ -492,4 +496,46 @@ inline v3 v3normalize(v3 v_)
 #endif
 
 }
+
+
+inline
+m mmult_sse(const m* m0_, const m* m1_)
+{
+	__m128* p0 = (__m128*)m0_;
+	__m128* p1 = (__m128*)m1_;
+	__m128 m0_x = _mm_loadu_ps((float*)&p0[0]);
+	__m128 m0_y = _mm_loadu_ps((float*)&p0[1]);
+	__m128 m0_z = _mm_loadu_ps((float*)&p0[2]);
+	__m128 m0_w = _mm_loadu_ps((float*)&p0[3]);
+	__m128 m1_x = _mm_loadu_ps((float*)&p1[0]);
+	__m128 m1_y = _mm_loadu_ps((float*)&p1[1]);
+	__m128 m1_z = _mm_loadu_ps((float*)&p1[2]);
+	__m128 m1_w = _mm_loadu_ps((float*)&p1[3]);
+
+	__m128 rx = _mm_mul_ps(m0_x, _mm_shuffle_ps(m1_x, m1_x, 0));
+	rx = _mm_add_ps(rx, _mm_mul_ps(m0_y, _mm_shuffle_ps(m1_x,m1_x, 0x55)));
+	rx = _mm_add_ps(rx, _mm_mul_ps(m0_z, _mm_shuffle_ps(m1_x, m1_x, 0xaa)));
+	rx = _mm_add_ps(rx, _mm_mul_ps(m0_w, _mm_shuffle_ps(m1_x, m1_x, 0xff)));
+	__m128 ry = _mm_mul_ps(m0_x, _mm_shuffle_ps(m1_y, m1_y, 0));
+	ry = _mm_add_ps(ry, _mm_mul_ps(m0_y, _mm_shuffle_ps(m1_y,m1_y, 0x55)));
+	ry = _mm_add_ps(ry, _mm_mul_ps(m0_z, _mm_shuffle_ps(m1_y, m1_y, 0xaa)));
+	ry = _mm_add_ps(ry, _mm_mul_ps(m0_w, _mm_shuffle_ps(m1_y, m1_y, 0xff)));
+	__m128 rz = _mm_mul_ps(m0_x, _mm_shuffle_ps(m1_z, m1_z, 0));
+	rz = _mm_add_ps(rz, _mm_mul_ps(m0_y, _mm_shuffle_ps(m1_z,m1_z, 0x55)));
+	rz = _mm_add_ps(rz, _mm_mul_ps(m0_z, _mm_shuffle_ps(m1_z, m1_z, 0xaa)));
+	rz = _mm_add_ps(rz, _mm_mul_ps(m0_w, _mm_shuffle_ps(m1_z, m1_z, 0xff)));
+	__m128 rw = _mm_mul_ps(m0_x, _mm_shuffle_ps(m1_w, m1_w, 0));
+	rw = _mm_add_ps(rw, _mm_mul_ps(m0_y, _mm_shuffle_ps(m1_w,m1_w, 0x55)));
+	rw = _mm_add_ps(rw, _mm_mul_ps(m0_z, _mm_shuffle_ps(m1_w, m1_w, 0xaa)));
+	rw = _mm_add_ps(rw, _mm_mul_ps(m0_w, _mm_shuffle_ps(m1_w, m1_w, 0xff)));
+
+	m r1;
+	_mm_storeu_ps((float*)&((__m128*)&r1)[0], rx);
+	_mm_storeu_ps((float*)&((__m128*)&r1)[1], ry);
+	_mm_storeu_ps((float*)&((__m128*)&r1)[2], rz);
+	_mm_storeu_ps((float*)&((__m128*)&r1)[3], rw);
+
+	return r1;
+}
+
 
