@@ -53,6 +53,14 @@ int nSettingsBsp[] =
 	1024,
 	1024,
 	1024,
+	1024,
+	1024,
+	1024,
+	1024,
+	1024,
+	1024,
+	1024,
+	1024,
 
 	#else
 	// 10, 
@@ -61,12 +69,12 @@ int nSettingsBsp[] =
 	// 64, 
 	// 128, 
 	// 200, 
-	// 256, 
-	// 386, 
-	// 512, 
-	// 768,
-	1024,	
-	2048,
+	256, 
+	386, 
+	512, 
+	768,
+	// 1024,	
+	// 2048,
 	#endif
 };
 const uint32 nNumSettingsBsp = sizeof(nSettingsBsp)/sizeof(nSettingsBsp[0]);
