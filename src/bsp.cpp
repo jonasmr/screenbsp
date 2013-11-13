@@ -1303,7 +1303,8 @@ void BspDumpPlanes(const char* prefix, SOccluderBsp *pBsp, uint16 *pIndices, uin
 //#define BspClipPoly BspClipPolySingleTest0
 //#define BspClipPoly BspClipPolyChecked
 
-#define BspClipPolyCull BspClipPolySingleTest0
+//#define BspClipPolyCull BspClipPolySingleTest0
+#define BspClipPolyCull BspClipPolySingleNoMask
 //#define BspClipPolyCull BspClipPolySafe
 uint32 g_nPolyExtraDump = 0;
 ClipPolyResult BspClipPolySafe(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndices,
@@ -2243,6 +2244,117 @@ ClipPolyResult BspClipPolySingleTest0(SOccluderBsp *pBsp, uint16 nClipPlane, uin
 	}
 	return ClipPolyResult((nEdgesIn ? 0x1 : 0) | (nEdgesOut ? 0x2 : 0));
 }
+ClipPolyResult BspClipPolySingleNoMask(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndices,
+						   uint16 nNumPlanes, uint16 *pPolyIn,
+						   uint16 *pPolyOut, uint32 &nEdgesIn_, uint32 &nEdgesOut_)
+{
+	//MICROPROFILE_SCOPEIC("BSP", "ClipPoly");
+
+	ZASSERT(nNumPlanes < 32);
+	uint32 nNumEdges = nNumPlanes - 1;
+	v4 vNormalPlane = BspGetPlane(pBsp, pIndices[nNumEdges]);
+
+	ZASSERT(nNumEdges > 2);
+	v4 vClipPlane = BspGetPlane(pBsp, nClipPlane);
+
+
+
+	bool *bCorners = (bool *)alloca(nNumPlanes+1);
+	//bool *bCorners0 = bCorners+nNumPlanes;//(bool *)alloca(nNumPlanes);
+	//v4 vClipPlane = BspGetPlane(pBsp, nClipPlane);
+
+	v4 vLastPlane = BspGetPlane(pBsp, pIndices[ 0 ]);
+	v4 vFirstPlane = vLastPlane;
+	//bool bDebug = 0 == g_nFirst++;
+	for(int i = 1; i < nNumEdges; ++i)
+	{
+		v4 p1 = BspGetPlane(pBsp, pIndices[i]);
+		//v4 p1 = vPlanes[(i + 1) % nNumEdges];
+		float fTest = BspPlaneTestNew(vLastPlane, p1, vClipPlane);
+		vLastPlane = p1;
+		bCorners[i] = fTest < 0.f;
+//		bCorners0[i] = fTest <  0.f;
+	}
+
+	float fTest = BspPlaneTestNew(vLastPlane, vFirstPlane, vClipPlane);
+	bCorners[0] = bCorners[nNumEdges] = fTest < 0.f;
+	//bCorners0[0] = bCorners0[nNumEdges] = fTest <  0.f;
+	// bCorners[nNumEdges] = bCorners[0];
+	// bCorners0[nNumEdges] = bCorners0[0];
+
+	bCorners++;
+	//bCorners0++;
+
+
+	uint32 nEdgesIn = 0;
+	uint32 nEdgesOut = 0;
+	int nClipAddedIn = 0;
+	int nClipAddedOut = 0;
+
+	// TRUE --> OUTSIDE
+
+	for(int i = 0; i < nNumEdges; ++i)
+	{
+		bool bCorner0 = bCorners[(i - 1)];
+		bool bCorner1 = bCorners[i];
+		if(bCorner0 == bCorner1)
+		{
+			if(bCorner0) // both outside
+			{
+				pPolyOut[nEdgesOut++] = pIndices[i];
+
+			}
+			else // both insides
+			{
+				pPolyIn[nEdgesIn++] = pIndices[i];
+			}
+
+		}
+		else
+		{
+
+			// add to both
+			if(!nClipAddedIn)
+			{
+				nClipAddedIn = true;
+				if(bCorner0) // outside --> inside
+				{
+					pPolyOut[nEdgesOut++] = pIndices[i];
+					pPolyOut[nEdgesOut++] = nClipPlane ^ SOccluderBsp::PLANE_FLIP_BIT;
+					pPolyIn[nEdgesIn++] = nClipPlane ;
+					pPolyIn[nEdgesIn++] = pIndices[i];
+				}
+				else // inside --> outside
+				{
+					pPolyOut[nEdgesOut++] = nClipPlane ^ SOccluderBsp::PLANE_FLIP_BIT;
+					pPolyOut[nEdgesOut++] = pIndices[i];
+					pPolyIn[nEdgesIn++] = pIndices[i] ;
+					pPolyIn[nEdgesIn++] = nClipPlane;
+
+				}
+			}
+			else
+			{
+				pPolyOut[nEdgesOut++] = pIndices[i];
+				pPolyIn[nEdgesIn++] = pIndices[i];
+
+			}
+		}
+	}
+
+	ZASSERT(nEdgesIn == 0 || nEdgesIn > 2);
+	ZASSERT(nEdgesOut == 0 || nEdgesOut > 2);
+
+	// add normal plane
+	if(nEdgesIn)
+		pPolyIn[nEdgesIn++] = pIndices[nNumEdges];
+	if(nEdgesOut)
+		pPolyOut[nEdgesOut++] = pIndices[nNumEdges];
+
+	nEdgesIn_ = nEdgesIn;
+	nEdgesOut_ = nEdgesOut;
+	return ClipPolyResult((nEdgesIn ? 0x1 : 0) | (nEdgesOut ? 0x2 : 0));
+}
 
 ClipPolyResult BspClipPolySingle(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndices,
 						   uint16 nNumPlanes, uint32 nExcludeMask, uint16 *pPolyIn,
@@ -2679,10 +2791,10 @@ bool BspCullObjectR(SOccluderBsp *pBsp, uint32 Index, uint16 *Poly, uint32 nNumE
 	uint16 *ClippedPolyOut = (uint16 *)alloca(nMaxEdges * sizeof(uint16));
 	uint32 nIn = 0;
 	uint32 nOut = 0;
-	uint32 nExclusionIn = 0, nExclusionOut = 0;
+//	uint32 nExclusionIn = 0, nExclusionOut = 0;
 
-	ClipPolyResult CR = BspClipPolyCull(pBsp, Node.nPlaneIndex, Poly, nNumEdges, 0, ClippedPolyIn,
-									ClippedPolyOut, nIn, nOut, nExclusionIn, nExclusionOut);
+	ClipPolyResult CR = BspClipPolyCull(pBsp, Node.nPlaneIndex, Poly, nNumEdges, ClippedPolyIn,
+									ClippedPolyOut, nIn, nOut);
 
 	if(g_nBspDebugPlane == g_nBspDebugPlaneCounter)
 	{
