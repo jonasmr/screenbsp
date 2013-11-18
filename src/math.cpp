@@ -8,6 +8,7 @@
 #include "debug.h"
 
 
+
 void v2::operator +=(const v2& r)
 {
 	x += r.x;
@@ -536,11 +537,9 @@ float v3length(v3 v)
 {	
 	return sqrt(v3dot(v,v));
 }
-v3 v3normalize(v3 v)
-{
-	return v / v3length(v);
 
-}
+
+
 v3 v3min(v3 a, v3 b)
 {
 	v3 r;
@@ -628,20 +627,12 @@ v4 v4fromcolor(uint32_t nColor)
 }
 
 
-float v4dot(v4 v0, v4 v1)
-{
-	return v0.x * v1.x + v0.y * v1.y + v0.z * v1.z + v0.w * v1.w;
-}
 
 float v4length(v4 v0)
 {
 	return sqrt(v0.x * v0.x + v0.y * v0.y + v0.z * v0.z + v0.w * v0.w);
 }
 
-float v4length2(v4 v0)
-{
-	return v0.x * v0.x + v0.y * v0.y + v0.z * v0.z + v0.w * v0.w;
-}
 
 
 v4 v4makeplane(v3 p, v3 normal)
@@ -903,6 +894,26 @@ m mcreate(v3 vDir, v3 vRight, v3 vPoint)
 	ZASSERTAFFINE(r0);
 	ZASSERTAFFINE(mtotales);
 
+
+	return mtotales;
+}
+
+
+m mcreate(v3 vDir, v3 vRight, v3 vUp, v3 vPoint)
+{
+	m r0 = mid();
+	msetxaxis(r0, vRight);
+	msetyaxis(r0, vUp);
+	msetzaxis(r0, -vDir);
+	//msettrans(r0, -vPoint);
+	r0.trans = v4init(vPoint, 1.f);
+	m mtotales = mcreate(vDir, vRight, vPoint);
+	for(int i = 0; i < 16; ++i)
+	{
+		float f1 = ((float*)&mtotales)[i];
+		float f2 = ((float*)&r0)[i];
+		ZASSERT( fabsf(f1-f2) < 1e-5f);
+	}
 
 	return mtotales;
 }
@@ -1462,3 +1473,96 @@ uint32 randredcolor()
 // gen_html { hsv_to_rgb(rand, 0.5, 0.95) }
 
 
+
+
+
+m mmult_sse_test(const m* m0_, const m* m1_)
+{
+	m r;
+	__m128* p0 = (__m128*)m0_;
+	__m128* p1 = (__m128*)m1_;
+	m m0 = *m0_;
+	m m1 = *m1_;
+	__m128 m0_x = _mm_loadu_ps((float*)&p0[0]);
+	__m128 m0_y = _mm_loadu_ps((float*)&p0[1]);
+	__m128 m0_z = _mm_loadu_ps((float*)&p0[2]);
+	__m128 m0_w = _mm_loadu_ps((float*)&p0[3]);
+	__m128 m1_x = _mm_loadu_ps((float*)&p1[0]);
+	__m128 m1_y = _mm_loadu_ps((float*)&p1[1]);
+	__m128 m1_z = _mm_loadu_ps((float*)&p1[2]);
+	__m128 m1_w = _mm_loadu_ps((float*)&p1[3]);
+	__m128 rx = _mm_mul_ps(m0_x, _mm_shuffle_ps(m1_x, m1_x, 0));
+	rx = _mm_add_ps(rx, _mm_mul_ps(m0_y, _mm_shuffle_ps(m1_x,m1_x, 0x55)));
+	rx = _mm_add_ps(rx, _mm_mul_ps(m0_z, _mm_shuffle_ps(m1_x, m1_x, 0xaa)));
+	rx = _mm_add_ps(rx, _mm_mul_ps(m0_w, _mm_shuffle_ps(m1_x, m1_x, 0xff)));
+	r.x.x = m0.x.x * m1.x.x + m0.y.x * m1.x.y + m0.z.x * m1.x.z + m0.trans.x * m1.x.w;
+	r.x.y = m0.x.y * m1.x.x + m0.y.y * m1.x.y + m0.z.y * m1.x.z + m0.trans.y * m1.x.w;
+	r.x.z = m0.x.z * m1.x.x + m0.y.z * m1.x.y + m0.z.z * m1.x.z + m0.trans.z * m1.x.w;
+	r.x.w = m0.x.w * m1.x.x + m0.y.w * m1.x.y + m0.z.w * m1.x.z + m0.trans.w * m1.x.w;
+
+	__m128 ry = _mm_mul_ps(m0_x, _mm_shuffle_ps(m1_y, m1_y, 0));
+	ry = _mm_add_ps(ry, _mm_mul_ps(m0_y, _mm_shuffle_ps(m1_y,m1_y, 0x55)));
+	ry = _mm_add_ps(ry, _mm_mul_ps(m0_z, _mm_shuffle_ps(m1_y, m1_y, 0xaa)));
+	ry = _mm_add_ps(ry, _mm_mul_ps(m0_w, _mm_shuffle_ps(m1_y, m1_y, 0xff)));
+
+
+	r.y.x = m0.x.x * m1.y.x + m0.y.x * m1.y.y + m0.z.x * m1.y.z + m0.trans.x * m1.y.w;
+	r.y.y = m0.x.y * m1.y.x + m0.y.y * m1.y.y + m0.z.y * m1.y.z + m0.trans.y * m1.y.w;
+	r.y.z = m0.x.z * m1.y.x + m0.y.z * m1.y.y + m0.z.z * m1.y.z + m0.trans.z * m1.y.w;
+	r.y.w = m0.x.w * m1.y.x + m0.y.w * m1.y.y + m0.z.w * m1.y.z + m0.trans.w * m1.y.w;
+
+
+	__m128 rz = _mm_mul_ps(m0_x, _mm_shuffle_ps(m1_z, m1_z, 0));
+	rz = _mm_add_ps(rz, _mm_mul_ps(m0_y, _mm_shuffle_ps(m1_z,m1_z, 0x55)));
+	rz = _mm_add_ps(rz, _mm_mul_ps(m0_z, _mm_shuffle_ps(m1_z, m1_z, 0xaa)));
+	rz = _mm_add_ps(rz, _mm_mul_ps(m0_w, _mm_shuffle_ps(m1_z, m1_z, 0xff)));
+
+
+
+	r.z.x = m0.x.x * m1.z.x + m0.y.x * m1.z.y + m0.z.x * m1.z.z + m0.trans.x * m1.z.w;
+	r.z.y = m0.x.y * m1.z.x + m0.y.y * m1.z.y + m0.z.y * m1.z.z + m0.trans.y * m1.z.w;
+	r.z.z = m0.x.z * m1.z.x + m0.y.z * m1.z.y + m0.z.z * m1.z.z + m0.trans.z * m1.z.w;
+	r.z.w = m0.x.w * m1.z.x + m0.y.w * m1.z.y + m0.z.w * m1.z.z + m0.trans.w * m1.z.w;
+
+	__m128 rw = _mm_mul_ps(m0_x, _mm_shuffle_ps(m1_w, m1_w, 0));
+	rw = _mm_add_ps(rw, _mm_mul_ps(m0_y, _mm_shuffle_ps(m1_w,m1_w, 0x55)));
+	rw = _mm_add_ps(rw, _mm_mul_ps(m0_z, _mm_shuffle_ps(m1_w, m1_w, 0xaa)));
+	rw = _mm_add_ps(rw, _mm_mul_ps(m0_w, _mm_shuffle_ps(m1_w, m1_w, 0xff)));
+
+
+
+	r.trans.x = m0.x.x * m1.trans.x + m0.y.x * m1.trans.y + m0.z.x * m1.trans.z + m0.trans.x * m1.trans.w;
+	r.trans.y = m0.x.y * m1.trans.x + m0.y.y * m1.trans.y + m0.z.y * m1.trans.z + m0.trans.y * m1.trans.w;
+	r.trans.z = m0.x.z * m1.trans.x + m0.y.z * m1.trans.y + m0.z.z * m1.trans.z + m0.trans.z * m1.trans.w;
+	r.trans.w = m0.x.w * m1.trans.x + m0.y.w * m1.trans.y + m0.z.w * m1.trans.z + m0.trans.w * m1.trans.w;
+
+
+	// r.x.x = m0.x.x * m1.x.x + m0.x.y * m1.y.x + m0.x.z * m1.z.x + m0.x.w * m1.w.x; 
+	// r.x.y = m0.x.x * m1.x.y + m0.x.y * m1.y.y + m0.x.z * m1.z.y + m0.x.w * m1.w.y; 
+	// r.x.z = m0.x.x * m1.x.z + m0.x.y * m1.y.z + m0.x.z * m1.z.z + m0.x.w * m1.w.z; 
+	// r.x.w = m0.x.x * m1.x.w + m0.x.y * m1.y.w + m0.x.z * m1.z.w + m0.x.w * m1.w.w; 
+
+	// r.y.x = m0.y.x * m1.x.x + m0.y.y * m1.y.x + m0.y.z * m1.z.x + m0.y.w * m1.w.x; 
+	// r.y.y = m0.y.x * m1.x.y + m0.y.y * m1.y.y + m0.y.z * m1.z.y + m0.y.w * m1.w.y; 
+	// r.y.z = m0.y.x * m1.x.z + m0.y.y * m1.y.z + m0.y.z * m1.z.z + m0.y.w * m1.w.z; 
+	// r.y.w = m0.y.x * m1.x.w + m0.y.y * m1.y.w + m0.y.z * m1.z.w + m0.y.w * m1.w.w; 
+
+	// r.z.x = m0.z.x * m1.x.x + m0.z.y * m1.y.x + m0.z.z * m1.z.x + m0.z.w * m1.w.x; 
+	// r.z.y = m0.z.x * m1.x.y + m0.z.y * m1.y.y + m0.z.z * m1.z.y + m0.z.w * m1.w.y; 
+	// r.z.z = m0.z.x * m1.x.z + m0.z.y * m1.y.z + m0.z.z * m1.z.z + m0.z.w * m1.w.z; 
+	// r.z.w = m0.z.x * m1.x.w + m0.z.y * m1.y.w + m0.z.z * m1.z.w + m0.z.w * m1.w.w; 
+
+	// r.w.x = m0.w.x * m1.x.x + m0.w.y * m1.y.x + m0.w.z * m1.z.x + m0.w.w * m1.w.x; 
+	// r.w.y = m0.w.x * m1.x.y + m0.w.y * m1.y.y + m0.w.z * m1.z.y + m0.w.w * m1.w.y; 
+	// r.w.z = m0.w.x * m1.x.z + m0.w.y * m1.y.z + m0.w.z * m1.z.z + m0.w.w * m1.w.z; 
+	// r.w.w = m0.w.x * m1.x.w + m0.w.y * m1.y.w + m0.w.z * m1.z.w + m0.w.w * m1.w.w;
+	m r1;
+	_mm_storeu_ps((float*)&((__m128*)&r1)[0], rx);
+	_mm_storeu_ps((float*)&((__m128*)&r1)[1], ry);
+	_mm_storeu_ps((float*)&((__m128*)&r1)[2], rz);
+	_mm_storeu_ps((float*)&((__m128*)&r1)[3], rw);
+
+	ZASSERT(0 == memcmp(&r1, &r, sizeof(r)));
+//	uprintf("LALA\n");
+	return r;
+}

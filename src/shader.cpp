@@ -69,7 +69,7 @@ static void DumpGlLog(GLuint handle)
 GLuint CreateProgram(int nType, const char* pFile)
 {
 	CheckGLError();
-	uprintf("COMPILING %s as %s\n", pFile, nType == GL_FRAGMENT_SHADER_ARB ? "FRAGMENT SHADER" : "VERTEX SHADER");
+//	uprintf("COMPILING %s as %s\n", pFile, nType == GL_FRAGMENT_SHADER_ARB ? "FRAGMENT SHADER" : "VERTEX SHADER");
 	char* pBuffer = ReadTextFile(pFile);
 	GLuint handle = glCreateShaderObjectARB(nType);
 	CheckGLError();
@@ -126,7 +126,7 @@ void ShaderUse(EShaderVS vs, EShaderPS ps)
 	uint32 nIndex = ps * VS_SIZE + vs;
 	if(!g_ShaderState.LinkedPrograms[nIndex])
 	{
-		uprintf("LINKING %d\n", nIndex);
+		//uprintf("LINKING %d\n", nIndex);
 		GLuint prg = glCreateProgramObjectARB();
 		CheckGLError();
 		glCompileShader(g_ShaderState.PS[ps]);
