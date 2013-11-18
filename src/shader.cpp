@@ -46,6 +46,7 @@ char* ReadTextFile(const char *file_)
 
 static void DumpGlLog(GLuint handle)
 {
+	return;
 	int nLogLen = 0;
 	glGetShaderiv(handle, GL_INFO_LOG_LENGTH, &nLogLen);
 	if(nLogLen > 0)
