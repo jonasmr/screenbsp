@@ -21,12 +21,12 @@ solution "bsp"
 
 
       configuration "Debug"
-         links {"BulletCollision_vs2010_x64_debug", "BulletDynamics_vs2010_x64_debug", "LinearMath_vs2010_x64_debug"}         
+      --   links {"BulletCollision_vs2010_x64_debug", "BulletDynamics_vs2010_x64_debug", "LinearMath_vs2010_x64_debug"}         
          defines { "DEBUG" }
          flags { "Symbols", "StaticRuntime" }
  
       configuration "Release"
-         links {"BulletCollision_vs2010_x64_release", "BulletDynamics_vs2010_x64_release", "LinearMath_vs2010_x64_release"}         
+        -- links {"BulletCollision_vs2010_x64_release", "BulletDynamics_vs2010_x64_release", "LinearMath_vs2010_x64_release"}         
          defines { "NDEBUG" }
          flags { "Optimize", "Symbols", "StaticRuntime" }   
 

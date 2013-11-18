@@ -50,9 +50,9 @@ void usleep(__int64 usec)
 #endif
 
 //SDL_Surface* g_Surface;
-#if 0 //#ifdef _WIN32
+#if 1 //#ifdef _WIN32
 #define START_WIDTH 1280
-#define START_HEIGHT 720
+#define START_HEIGHT 1024
 #else
 #define START_WIDTH 800
 #define START_HEIGHT 600
@@ -424,13 +424,13 @@ int main(int argc, char* argv[])
 
 
 	//Microprofile test
-	std::thread t0(WorkerThread, 0);
-	std::thread t1(WorkerThread, 1);
-	std::thread t2(WorkerThread, 2);
-	std::thread t3(WorkerThread, 3);
+	//std::thread t0(WorkerThread, 0);
+	//std::thread t1(WorkerThread, 1);
+	//std::thread t2(WorkerThread, 2);
+	//std::thread t3(WorkerThread, 3);
 
 
-	std::thread t42(WorkerThread, 42);
+	//std::thread t42(WorkerThread, 42);
 	//std::thread t43(WorkerThread, 43);
 	//std::thread t44(WorkerThread, 44);
 	//std::thread t45(WorkerThread, 45);
@@ -581,12 +581,12 @@ int main(int argc, char* argv[])
 	}
 
 
-	t0.join();
-	t1.join();
-	t2.join();
-	t3.join();
-	t42.join();
-	//t43.join();
+	//t0.join();
+	//t1.join();
+	//t2.join();
+	//t3.join();
+	//t42.join();
+	////t43.join();
 	//t44.join();
 	//t45.join();
 

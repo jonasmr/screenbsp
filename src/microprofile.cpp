@@ -156,6 +156,7 @@ void main(void)   \
 	}
 	void DumpGlLog(GLuint handle)
 	{
+		return;
 		int nLogLen = 0;
 		glGetShaderiv(handle, GL_COMPILE_STATUS, &nLogLen);
 		printf("compile status %d\n", nLogLen);
