@@ -504,7 +504,6 @@ uint64_t MicroProfileGpuGetTimeStamp(uint32_t nKey)
 	// //printf("gpu LOVE timer is %x\n", r);
 	// #endif
 	glGetQueryObjectui64v(g_GlTimers[nKey], GL_QUERY_RESULT, &result);
-	//printf("gpu timer is %16llx .. %d\n", result, glGetError());
 	return result;
 }
 

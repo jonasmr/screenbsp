@@ -13,12 +13,12 @@
 //  prioritize after clipping vs frustum
 //  make prioritization use proper area
 //  rename cull to isvisible
-//  optimize!
+//  optimize! [..]
 // test vs intel
 
 //test list:
-// test branchless shift 
-// try and merge planetests into loop
+// test branchless shift [0 gain]
+// try and merge planetests into loop [0 gain]
 
 #include <algorithm>
 #define OCCLUDER_EMPTY (0xc000)
