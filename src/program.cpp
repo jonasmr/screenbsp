@@ -243,7 +243,7 @@ void RenderShadowMap(ShadowMap& SM, v3 vEye, v3 vDir, v3* vCorners)
 
 
 	ShaderUse(VS_SHADOWMAP, PS_SHADOWMAP);
-	SHADER_SET("ProjectionMatrix", SM.mprjview);
+	SHADER_SET("ProjectionMatrix", &SM.mprjview);
 
 	WorldDrawObjects(nullptr);
 
@@ -476,7 +476,7 @@ void WorldDrawObjects(bool* bCulled)
 			else
 			{
 				ShaderSetUniform(nLocSize, g_WorldState.WorldObjects[i].vSize);
-				ShaderSetUniform(nLocModelView, g_WorldState.WorldObjects[i].mObjectToWorld);
+				ShaderSetUniform(nLocModelView, &g_WorldState.WorldObjects[i].mObjectToWorld);
 				ShaderSetUniform(nLocColor, v3fromcolor(g_WorldState.WorldObjects[i].nColor));
 				MeshDraw(GetBaseMesh(MESH_BOX_FLAT));
 			}
@@ -484,7 +484,7 @@ void WorldDrawObjects(bool* bCulled)
 		else
 		{
 			ShaderSetUniform(nLocSize, g_WorldState.WorldObjects[i].vSize);
-			ShaderSetUniform(nLocModelView, g_WorldState.WorldObjects[i].mObjectToWorld);
+			ShaderSetUniform(nLocModelView, &g_WorldState.WorldObjects[i].mObjectToWorld);
 			MeshDraw(GetBaseMesh(MESH_BOX_FLAT));
 		}
 	}
@@ -592,6 +592,67 @@ void WorldRender()
 	uplotfnxt("DEBUG POS %f %f %f", vPos.x, vPos.y, vPos.z);
 
 	//fesetenv(FE_DFL_DISABLE_SSE_DENORMS_ENV)
+
+
+
+
+	{{
+		if(g_KeyboardState.keys[SDL_SCANCODE_F3] & BUTTON_RELEASED)
+		{
+			BspDebugNextDrawMode(g_Bsp);
+		}
+
+		if(g_KeyboardState.keys[SDL_SCANCODE_F4] & BUTTON_RELEASED)
+		{
+			BspDebugNextDrawClipResult(g_Bsp);
+		}
+
+		if(g_KeyboardState.keys[SDL_SCANCODE_V] & BUTTON_RELEASED)
+		{
+			BspDebugNextPoly(g_Bsp);
+		}
+		if(g_KeyboardState.keys[SDL_SCANCODE_C] & BUTTON_RELEASED)
+		{
+			BspDebugPreviousPoly(g_Bsp);
+		}
+		if(g_KeyboardState.keys[SDL_SCANCODE_F8] & BUTTON_RELEASED)
+			BspDebugShowClipLevelNext(g_Bsp);
+		if(g_KeyboardState.keys[SDL_SCANCODE_F7] & BUTTON_RELEASED)
+			BspDebugShowClipLevelPrevious(g_Bsp);
+
+
+		if(g_KeyboardState.keys[SDL_SCANCODE_END] & BUTTON_RELEASED)
+			BspDebugToggleInsideOutside(g_Bsp);
+
+		// f(g_KeyboardState.keys[SDL_SCANCODE_F5] & BUTTON_RELEASED)
+		// 	g_nShowClipLevel++;
+		// if(g_KeyboardState.keys[SDL_SCANCODE_F6] & BUTTON_RELEASED)
+		// 	g_nShowClipLevel--;
+
+
+//		if((int)g_nShowClipLevel >= 0)
+		{
+
+			bool bShift = 0 != ((g_KeyboardState.keys[SDL_SCANCODE_RSHIFT]|g_KeyboardState.keys[SDL_SCANCODE_LSHIFT]) & BUTTON_DOWN);
+
+			if(!bShift && (g_KeyboardState.keys[SDL_SCANCODE_F4] & BUTTON_RELEASED))
+				BspDebugClipLevelSubNext(g_Bsp);
+			if(bShift && 0 != (g_KeyboardState.keys[SDL_SCANCODE_F4] & BUTTON_RELEASED))
+				BspDebugClipLevelSubPrev(g_Bsp);
+
+
+		// uint32 g_nShowClipLevelSubCounter = 0;
+		// uint32 g_nShowClipLevelSub = 0
+		// uint32 g_nShowClipLevelMax = 0;
+		}
+
+		if(g_KeyboardState.keys[SDL_SCANCODE_F10] & BUTTON_RELEASED)
+		{
+			BspDebugDumpFrame(g_Bsp);
+		}
+
+	}}
+
 	
 	_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 
@@ -881,8 +942,8 @@ void WorldRender()
 	SHADER_SET("MaxLightTileIndex", nLightIndex);
 	SHADER_SET("vWorldEye", g_WorldState.Camera.vPosition);
 	m mprjview = mmult(g_WorldState.Camera.mprj, g_WorldState.Camera.mview);
-	SHADER_SET("ProjectionMatrix", mprjview);
-	SHADER_SET("ShadowMatrix", g_SM.mprjviewtex);
+	SHADER_SET("ProjectionMatrix", &mprjview);
+	SHADER_SET("ShadowMatrix", &g_SM.mprjviewtex);
 	SHADER_SET("mode", g_Mode);
 	#define MAX_FAIL 32
 	static SWorldObject* pFailObjects[MAX_FAIL];
@@ -905,7 +966,7 @@ void WorldRender()
 				v3 vSizeScaled = pObject->vSize;
 				vSizeScaled *= BSP_BOX_SCALE;
 				ShaderSetUniform(nLocSize, vSizeScaled);
-				ShaderSetUniform(nLocModelView, pObject->mObjectToWorld);
+				ShaderSetUniform(nLocModelView, &pObject->mObjectToWorld);
 				MeshDraw(GetBaseMesh(MESH_BOX_FLAT));
 			}
 		}
@@ -923,7 +984,7 @@ void WorldRender()
 			if(pObject->nFlags & SObject::OCCLUSION_TEST)
 			{
 				ShaderSetUniform(nLocSize, pObject->vSize);
-				ShaderSetUniform(nLocModelView, pObject->mObjectToWorld);
+				ShaderSetUniform(nLocModelView, &pObject->mObjectToWorld);
 
 				glBeginQuery(GL_SAMPLES_PASSED, Queries[i]);
 
@@ -1024,7 +1085,7 @@ void WorldRender()
 			glDepthFunc(GL_LEQUAL);
 			{
 				//ShaderUse(VS_LIGHTING, PS_LIGHTING2);
-				SHADER_SET("ProjectionMatrix", mprjview);
+				SHADER_SET("ProjectionMatrix", &mprjview);
 				MICROPROFILE_SCOPEGPUI("GPU", "zpass", 0x9900ee);
 				glColorMask(0,0,0,0);
 				WorldDrawObjects(&bCulled[0]);

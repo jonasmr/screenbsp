@@ -30,3 +30,15 @@ void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, S
 bool BspCullObject(SOccluderBsp* pBsp, SWorldObject* pObject);
 void BspGetStats(SOccluderBsp* pBsp, SOccluderBspStats* pStats);
 
+
+
+void BspDebugNextDrawMode(SOccluderBsp* pBsp);
+void BspDebugNextDrawClipResult(SOccluderBsp* pBsp);
+void BspDebugNextPoly(SOccluderBsp* pBsp);
+void BspDebugPreviousPoly(SOccluderBsp* pBsp);
+void BspDebugShowClipLevelNext(SOccluderBsp* pBsp);
+void BspDebugShowClipLevelPrevious(SOccluderBsp* pBsp);
+void BspDebugToggleInsideOutside(SOccluderBsp* pBsp);
+void BspDebugClipLevelSubNext(SOccluderBsp* pBsp);
+void BspDebugClipLevelSubPrev(SOccluderBsp* pBsp);
+void BspDebugDumpFrame(SOccluderBsp* pBsp);

@@ -1,25 +1,23 @@
-#include "base.h"
-#include "math.h"
+// #include "base.h"
+// #include "math.h"
 #include "fixedarray.h"
-#include "text.h"
-#include "program.h"
-#include "input.h"
+// #include "text.h"
+// #include "program.h"
+// #include "input.h"
 #include "bsp.h"
 #include "microprofileinc.h"
+#include "mathsse.h"
 
-
-#include "smmintrin.h"
-#include "xmmintrin.h"
 // todo:
 //  prioritize after clipping vs frustum
 //  make prioritization use proper area
 //  rename cull to isvisible
-//  optimize!
+//  optimize! [..]
 // test vs intel
 
 //test list:
-// test branchless shift 
-// try and merge planetests into loop
+// test branchless shift [0 gain]
+// try and merge planetests into loop [0 gain]
 
 #include <algorithm>
 #define OCCLUDER_EMPTY (0xc000)
@@ -31,7 +29,7 @@
 #define USE_EXCLUDE_MASK 1
 #define USE_EXCLUDE_MASK_OVERLAP 0
 
-#define BSP_DUMP_PRINTF(...) do{if(g_nDumpFrame){ uprintf(__VA_ARGS__); } }while(0)
+#define BSP_DUMP_PRINTF(pBsp, ...) do{if(pBsp->Debug.DumpFrame){ uprintf(__VA_ARGS__); } }while(0)
 
 //#define BspCullObjectSafe BspCullObject
 //#define BspCullObjectSSE BspCullObject
@@ -42,24 +40,6 @@
 
 
 
-uint32 g_nBspOccluderDebugDrawClipResult = 0;
-uint32 g_nBspOccluderDrawEdges = 2;
-uint32 g_nBspOccluderDrawOccluders = 0;//2
-uint32 g_nBreakOnClipIndex = -1;
-uint32 g_nBspDebugPlane = -1;
-uint32 g_nBspDebugPlaneCounter = 0;
-uint32 g_nInsideOutSide = 0x3;
-uint32 g_nCheck = 0;
-uint32 g_nDumpFrame = 0;
-uint32 g_nDumpAdd = -1;
-
-
-uint32 g_nShowClipLevelSubCounter = 0;
-uint32 g_nShowClipLevelSub = 0;
-int g_nShowClipLevel = -1;
-int g_EdgeMask = 0xff;
-
-uint32 g_nFirst = 0;
 struct SOccluderPlane;
 struct SBspEdgeIndex;
 struct SOccluderBspNode;
@@ -150,6 +130,49 @@ struct SOccluderBsp
 	TFixedArray<SOccluderBspNodeExtra, MAX_NODES> NodesExtra;
 
 	SOccluderBspStats Stats;
+
+	//debugging helpers
+	struct
+	{
+		uint32 OccluderDebugDrawClipResult;
+		uint32 OccluderDrawEdges;
+		uint32 OccluderDrawOccluders;
+		uint32 BreakOnClipIndex;
+		uint32 DebugPlane;
+		uint32 BspDebugPlaneCounter;
+		uint32 nInsideOutSide;
+		uint32 Check;
+		uint32 DumpFrame;
+		uint32 nDumpAdd;
+		uint32 nDrawPoly;
+		uint32 nShowClipLevelSubCounter;
+		uint32 nShowClipLevelSub;
+		int nShowClipLevel;
+		uint32 nFirst;
+		uint32 nDrawCount;
+	} Debug;
+
+	SOccluderBsp()
+	{
+		Debug.OccluderDebugDrawClipResult = 0;
+		Debug.OccluderDrawEdges = 2;
+		Debug.OccluderDrawOccluders = 0;
+		Debug.BreakOnClipIndex = -1;
+		Debug.DebugPlane = -1;
+		Debug.BspDebugPlaneCounter = 0;
+		Debug.nInsideOutSide = 0x3;
+		Debug.Check = 0;
+		Debug.DumpFrame = 0;
+		Debug.nDumpAdd = -1;
+		Debug.nShowClipLevelSubCounter = 0;
+		Debug.nShowClipLevelSub = 0;
+		Debug.nShowClipLevel = -1;
+		Debug.nFirst = 0;
+		Debug.nDrawPoly = 0;
+
+	}
+
+
 };
 float BspPlaneTestNew(v4 plane0, v4 plane1, v4 ptest);
 
@@ -221,8 +244,8 @@ float BspAreaEstimate(v4* vPlanes, uint32 nNumPlanes);
 float BspAreaEstimate(SOccluderBsp* pBsp, uint16* pIndices, uint32 nNumPlanes);
 
 
-uint32_t g_nDrawCount = 0;
-uint32_t g_nDebugDrawPoly = 1;
+
+// uint32_t g_nDebugDrawPoly = 1;
 
 v3 BspPlaneIntersection(v4 p0, v4 p1, v4 p2)
 {
@@ -288,6 +311,8 @@ v2 BspRotate2(v2 v, float fAngle)
 	return r;
 }
 
+#if 0
+//debugging, intentionallly not removed
 void BspDebugTest(v3 vEye)
 {
 	static float r0 = 0.f, r1 = 0.f, r2 = 0.f;
@@ -350,6 +375,7 @@ void BspDebugTest(v3 vEye)
 	else
 		ZDEBUG_DRAWPLANE(vNormal2, vStart2,0xffff0000);
 }
+#endif
 
 bool BspCanAddNodes(SOccluderBsp* pBsp, uint32 nNumNodes)
 {
@@ -491,7 +517,7 @@ bool BspAddPotentialQuad(SOccluderBsp* pBsp, SBspPotentialOccluders& PotentialOc
 		pPlanes[i] = v4init(vNormal, 0.f);
 		if(bFlip) 
 			pPlanes[i] = -pPlanes[i];
-		if(g_nBspOccluderDrawEdges & 1)
+		if(pBsp->Debug.OccluderDrawEdges & 1)
 		{
 			v0 = mtransform(pBsp->mfrombsp, v0);
 			v1 = mtransform(pBsp->mfrombsp, v1);
@@ -697,7 +723,7 @@ void BspAddFrustum(SOccluderBsp *pBsp, SBspPotentialOccluders& P, v3 vLocalDirec
 		//pBsp->Planes[0] = v4init(vLocalDirection, 0.1f);
 
 
-		if(g_nBspOccluderDrawEdges & 2)
+		if(pBsp->Debug.OccluderDrawEdges & 2)
 		{
 			v3 vCornersWorldSpace[4];
 			v3 vWorldOrigin = pBsp->DescOrg.vOrigin;
@@ -717,84 +743,85 @@ void BspAddFrustum(SOccluderBsp *pBsp, SBspPotentialOccluders& P, v3 vLocalDirec
 	}
 }
 
+void BspDebugNextDrawMode(SOccluderBsp* pBsp)
+{
+	pBsp->Debug.OccluderDrawOccluders = (pBsp->Debug.OccluderDrawOccluders + 1) % 2;
+
+}
+void BspDebugNextDrawClipResult(SOccluderBsp* pBsp)
+{
+	pBsp->Debug.OccluderDebugDrawClipResult = (pBsp->Debug.OccluderDebugDrawClipResult + 1) % 2;
+}
+
+void BspDebugNextPoly(SOccluderBsp* pBsp)
+{
+	pBsp->Debug.nDrawPoly++;
+}
+
+void BspDebugPreviousPoly(SOccluderBsp* pBsp)
+{
+	pBsp->Debug.nDrawPoly--;
+}
+void BspDebugShowClipLevelNext(SOccluderBsp* pBsp)
+{
+	pBsp->Debug.nShowClipLevel++;
+}
+void BspDebugShowClipLevelPrevious(SOccluderBsp* pBsp)
+{
+	pBsp->Debug.nShowClipLevel++;
+}
+
+void BspDebugToggleInsideOutside(SOccluderBsp* pBsp)
+{
+	pBsp->Debug.nInsideOutSide = (pBsp->Debug.nInsideOutSide%3)+1;
+}
+
+void BspDebugClipLevelSubNext(SOccluderBsp* pBsp)
+{
+	pBsp->Debug.nShowClipLevelSub++;
+}
+void BspDebugClipLevelSubPrev(SOccluderBsp* pBsp)
+{
+	pBsp->Debug.nShowClipLevelSub--;
+}
+
+void BspDebugDumpFrame(SOccluderBsp* pBsp)
+{
+	pBsp->Debug.DumpFrame = 1;
+}
+
 void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders,
 			  SWorldObject *pWorldObjects, uint32 nNumWorldObjects,
 			  const SOccluderBspViewDesc &Desc)
 {
 	g_pBsp = pBsp;
 	MICROPROFILE_SCOPEIC("BSP", "Build");
-	if(g_KeyboardState.keys[SDL_SCANCODE_F3] & BUTTON_RELEASED)
-	{
-		g_nBspOccluderDrawOccluders = (g_nBspOccluderDrawOccluders + 1) % 2;
-	}
 
-	if(g_KeyboardState.keys[SDL_SCANCODE_F4] & BUTTON_RELEASED)
-	{
-		g_nBspOccluderDebugDrawClipResult = (g_nBspOccluderDebugDrawClipResult + 1) % 2;
-	}
 
-	if(g_KeyboardState.keys[SDL_SCANCODE_V] & BUTTON_RELEASED)
-	{
-		g_nDebugDrawPoly++;
-	}
-	if(g_KeyboardState.keys[SDL_SCANCODE_C] & BUTTON_RELEASED)
-	{
-		g_nDebugDrawPoly--;
-	}
-
-	g_nCheck = 0;
-	g_nBspDebugPlaneCounter = 0;
-	g_nDrawCount = 0;
-
-	uplotfnxt("OCCLUDER Occluders:(f3)%d Clipresult:(f4)%d", g_nBspOccluderDrawOccluders,
-			  g_nBspOccluderDebugDrawClipResult);
-	if(g_KeyboardState.keys[SDL_SCANCODE_F8] & BUTTON_RELEASED)
-		g_nBspDebugPlane++;
-	if(g_KeyboardState.keys[SDL_SCANCODE_F7] & BUTTON_RELEASED)
-		g_nBspDebugPlane--;
-	if((int)g_nBspDebugPlane >= 0)
-		uplotfnxt("BSP DEBUG PLANE %d", g_nBspDebugPlane);
-
-	if(g_KeyboardState.keys[SDL_SCANCODE_END] & BUTTON_RELEASED)
-		g_nInsideOutSide = (g_nInsideOutSide%3)+1;
-	uplotfnxt("INSIDEOUTSIDE %x", g_nInsideOutSide);
+	pBsp->Debug.Check = 0;
+	pBsp->Debug.BspDebugPlaneCounter = 0;
 	
 
+	uplotfnxt("OCCLUDER Occluders:(f3)%d Clipresult:(f4)%d", pBsp->Debug.OccluderDrawOccluders,
+			  pBsp->Debug.OccluderDebugDrawClipResult);
+	if((int)pBsp->Debug.DebugPlane >= 0)
+		uplotfnxt("BSP DEBUG PLANE %d", pBsp->Debug.DebugPlane);
 
-	if(g_KeyboardState.keys[SDL_SCANCODE_F5] & BUTTON_RELEASED)
-		g_nShowClipLevel++;
-	if(g_KeyboardState.keys[SDL_SCANCODE_F6] & BUTTON_RELEASED)
-		g_nShowClipLevel--;
-	if((int)g_nShowClipLevel >= 0)
-	{
+	uplotfnxt("INSIDEOUTSIDE %x", pBsp->Debug.nInsideOutSide);
+	
 
-		bool bShift = 0 != ((g_KeyboardState.keys[SDL_SCANCODE_RSHIFT]|g_KeyboardState.keys[SDL_SCANCODE_LSHIFT]) & BUTTON_DOWN);
-
-		if(!bShift && (g_KeyboardState.keys[SDL_SCANCODE_F4] & BUTTON_RELEASED))
-			g_nShowClipLevelSub++;
-		if(bShift && 0 != (g_KeyboardState.keys[SDL_SCANCODE_F4] & BUTTON_RELEASED))
-		{
-			g_nShowClipLevelSub--;
-		}
-
-		uplotfnxt("**BSPShowClipLevel: level %d SUB %d ", g_nShowClipLevel, g_nShowClipLevelSub);
-
-	// uint32 g_nShowClipLevelSubCounter = 0;
-	// uint32 g_nShowClipLevelSub = 0
-	// uint32 g_nShowClipLevelMax = 0;
-	}
 
 	long seed = rand();
 	srand(42);
 	randseed(0xed32babe, 0xdeadf39c);
-	g_nDumpFrame = 0;
+	pBsp->Debug.DumpFrame = 0;
 	pBsp->nDepth = 0;
 	pBsp->Nodes.Clear();
 	pBsp->NodesExtra.Clear();
 	pBsp->Planes.Clear();
 	pBsp->Corners.Clear();
 	memset(&pBsp->Stats, 0, sizeof(pBsp->Stats));
-	g_nFirst = 0;
+	pBsp->Debug.nFirst = 0;
 	pBsp->DescOrg = Desc;
 	m mtobsp = mcreate(Desc.vDirection, Desc.vRight, Desc.vOrigin);
 
@@ -850,10 +877,6 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 		);
 	}
 
-	if(g_KeyboardState.keys[SDL_SCANCODE_F10] & BUTTON_RELEASED)
-	{
-		g_nDumpFrame = 1;
-	}
 
 
 	{
@@ -866,7 +889,7 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 			{
 				continue;
 			}
-			if(g_nDumpAdd == i)
+			if(pBsp->Debug.nDumpAdd == i)
 			{
 				BspDump(pBsp, 0, 0);
 			}
@@ -886,8 +909,8 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 
 
 
-	g_nCheck = 1;
-	if(g_nDumpFrame)
+	pBsp->Debug.Check = 1;
+	if(pBsp->Debug.DumpFrame)
 		BspDump(pBsp, 0, 0);
 
 	uplotfnxt("BSP: NODES[%03d] PLANES[%03d] DEPTH[%03d]", pBsp->Nodes.Size(), pBsp->Planes.Size(),
@@ -1243,7 +1266,7 @@ int BspAddInternal(SOccluderBsp *pBsp, uint16 nParent, bool bOutsideParent, uint
 		else
 			pBsp->Nodes[nParent].nInside = nNewIndex;
 	}
-	if(g_nBspOccluderDrawOccluders)
+	if(pBsp->Debug.OccluderDrawOccluders)
 		BspDrawPoly(pBsp, pIndices, nNumPlanes, randcolor(), randcolor(), 1);
 	return nNewIndex;
 }
@@ -1339,7 +1362,7 @@ ClipPolyResult BspClipPolySafe(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pI
 
 	v4 vLastPlane = BspGetPlane(pBsp, pIndices[ 0 ]);
 	v4 vFirstPlane = vLastPlane;
-	//bool bDebug = 0 == g_nFirst++;
+	//bool bDebug = 0 == pBsp->Debug.nFirst++;
 	for(int i = 1; i < nNumEdges; ++i)
 	{
 		v4 p1 = BspGetPlane(pBsp, pIndices[i]);
@@ -1555,7 +1578,7 @@ ClipPolyResult BspClipPolySafe2(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *p
 
 	v4 vLastPlane = BspGetPlane(pBsp, pIndices[ 0 ]);
 	v4 vFirstPlane = vLastPlane;
-	//bool bDebug = 0 == g_nFirst++;
+	//bool bDebug = 0 == pBsp->Debug.nFirst++;
 	for(int i = 1; i < nNumEdges; ++i)
 	{
 		v4 p1 = BspGetPlane(pBsp, pIndices[i]);
@@ -1771,7 +1794,7 @@ ClipPolyResult BspClipPolySingleTest(SOccluderBsp *pBsp, uint16 nClipPlane, uint
 
 	v4 vLastPlane = BspGetPlane(pBsp, pIndices[ 0 ]);
 	v4 vFirstPlane = vLastPlane;
-	//bool bDebug = 0 == g_nFirst++;
+	//bool bDebug = 0 == pBsp->Debug.nFirst++;
 	for(int i = 1; i < nNumEdges; ++i)
 	{
 		v4 p1 = BspGetPlane(pBsp, pIndices[i]);
@@ -2022,7 +2045,7 @@ ClipPolyResult BspClipPolySingleTest0(SOccluderBsp *pBsp, uint16 nClipPlane, uin
 
 	v4 vLastPlane = BspGetPlane(pBsp, pIndices[ 0 ]);
 	v4 vFirstPlane = vLastPlane;
-	//bool bDebug = 0 == g_nFirst++;
+	//bool bDebug = 0 == pBsp->Debug.nFirst++;
 	for(int i = 1; i < nNumEdges; ++i)
 	{
 		v4 p1 = BspGetPlane(pBsp, pIndices[i]);
@@ -2275,7 +2298,7 @@ ClipPolyResult BspClipPolySingleNoMask(SOccluderBsp *pBsp, uint16 nClipPlane, ui
 
 	v4 vLastPlane = BspGetPlane(pBsp, pIndices[ 0 ]);
 	v4 vFirstPlane = vLastPlane;
-	//bool bDebug = 0 == g_nFirst++;
+	//bool bDebug = 0 == pBsp->Debug.nFirst++;
 	for(int i = 1; i < nNumEdges; ++i)
 	{
 		v4 p1 = BspGetPlane(pBsp, pIndices[i]);
@@ -2383,7 +2406,7 @@ ClipPolyResult BspClipPolySingle(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *
 	bool *bCorners = (bool *)alloca(nNumPlanes);
 	v4 vLastPlane = BspGetPlane(pBsp, pIndices[ 0 ]);
 	v4 vFirstPlane = vLastPlane;
-	//bool bDebug = 0 == g_nFirst++;
+	//bool bDebug = 0 == pBsp->Debug.nFirst++;
 	for(int i = 1; i < nNumEdges; ++i)
 	{
 		v4 p1 = BspGetPlane(pBsp, pIndices[i]);
@@ -2613,7 +2636,7 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 		float fMaxDot = 0.f;
 
 		v4 vNormalPlane = BspGetPlane(pBsp, pIndices[nNumIndices - 1]);
-		BSP_DUMP_PRINTF("Plane Overlap %d\n", nBspIndex);
+		BSP_DUMP_PRINTF(pBsp, "Plane Overlap %d\n", nBspIndex);
 		for(int i = 0; i < nNumIndices - 1; ++i)
 		{
 			v4 p0 = BspGetPlane(pBsp, pIndices[i]);
@@ -2621,7 +2644,7 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 			v3 vIntersect = BspPlaneIntersection(p0, p1, vNormalPlane);
 			float fDot = v4dot(v4init(vIntersect, 1.f), vPlane);
 
-			BSP_DUMP_PRINTF("Plane Overlap %d %d:%f\n", nBspIndex, i, fDot);
+			BSP_DUMP_PRINTF(pBsp, "Plane Overlap %d %d:%f\n", nBspIndex, i, fDot);
 			if(fDot < -0.001f)
 				nA++;
 			if(fDot > 0.001f)
@@ -2634,7 +2657,7 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 
 
 		{
-			BSP_DUMP_PRINTF("Plane Overlap %d maxdot %f dotsum %f\n", nBspIndex, fMaxDot, fDotSum);
+			BSP_DUMP_PRINTF(pBsp, "Plane Overlap %d maxdot %f dotsum %f\n", nBspIndex, fMaxDot, fDotSum);
 			if(fMaxDot>1.f)
 			{
 				if(fDotSum < -0.001f)
@@ -2654,7 +2677,7 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 			}
 			else
 			{
-				BSP_DUMP_PRINTF("Plane Overlap Reject %d\n", nBspIndex);
+				BSP_DUMP_PRINTF(pBsp, "Plane Overlap Reject %d\n", nBspIndex);
 			}
 		}
 	}
@@ -2675,7 +2698,7 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 	ZASSERT(Node.nInside != OCCLUDER_EMPTY);
 	ZASSERT(Node.nOutside != OCCLUDER_LEAF);
 	{
-		if((ECPR_INSIDE & CR) != 0 && (g_nInsideOutSide&1))
+		if((ECPR_INSIDE & CR) != 0 && (pBsp->Debug.nInsideOutSide&1))
 		{
 			if(Node.nInside == OCCLUDER_LEAF)
 			{
@@ -2689,7 +2712,7 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 			}
 		}
 
-		if((ECPR_OUTSIDE & CR) != 0&& (g_nInsideOutSide&2))
+		if((ECPR_OUTSIDE & CR) != 0&& (pBsp->Debug.nInsideOutSide&2))
 		{
 			if(Node.nOutside == OCCLUDER_EMPTY)
 			{
@@ -2713,13 +2736,13 @@ bool BspCullObjectR(SOccluderBsp *pBsp, uint32 Index, uint16 *Poly, uint32 nNumE
 	SOccluderBspNode Node = pBsp->Nodes[Index];
 	v4 vPlane = BspGetPlane(pBsp, Node.nPlaneIndex);
 
-	BSP_DUMP_PRINTF("%sCULLR %08x P[%4x] In[%08x] Out[%08x]\n", Spaces(nClipLevel*2), Index, 
+	BSP_DUMP_PRINTF(pBsp, "%sCULLR %08x P[%4x] In[%08x] Out[%08x]\n", Spaces(nClipLevel*2), Index, 
 		nNumEdges,
 		Node.nInside,
 		Node.nOutside);
 
 
-	if(g_nBspDebugPlane == g_nBspDebugPlaneCounter)
+	if(pBsp->Debug.DebugPlane == pBsp->Debug.BspDebugPlaneCounter)
 	{
 		uplotfnxt("debug testing %d", nNumEdges);
 		BspDrawPoly(pBsp, Poly, nNumEdges, 0xff000000|randredcolor(), 0, 1);
@@ -2739,7 +2762,7 @@ bool BspCullObjectR(SOccluderBsp *pBsp, uint32 Index, uint16 *Poly, uint32 nNumE
 
 
 
-		if(g_nBreakOnClipIndex && g_nBspDebugPlane == g_nBspDebugPlaneCounter)
+		if(pBsp->Debug.BreakOnClipIndex && pBsp->Debug.DebugPlane == pBsp->Debug.BspDebugPlaneCounter)
 		{
 			//uprintf("BREAK\n");
 		}
@@ -2759,16 +2782,16 @@ bool BspCullObjectR(SOccluderBsp *pBsp, uint32 Index, uint16 *Poly, uint32 nNumE
 			bVisible = bVisible || fDot < 0.f;
 			bCulled = bCulled && fDot < 0.f;
 		}
-		if(bVisible && g_nBspOccluderDebugDrawClipResult)
+		if(bVisible && pBsp->Debug.OccluderDebugDrawClipResult)
 		{
 			BspDrawPoly(pBsp, Poly, nNumEdges, 0xff000000 | randredcolor(), 0, 1);
 		}
-		BSP_DUMP_PRINTF("%sLEAF_TEST %08x CULLED %d\n", Spaces(2+nClipLevel*2), Index, bVisible ? 0 : 1);
+		BSP_DUMP_PRINTF(pBsp, "%sLEAF_TEST %08x CULLED %d\n", Spaces(2+nClipLevel*2), Index, bVisible ? 0 : 1);
 
 
-		if(g_nShowClipLevel == nClipLevel)
+		if(pBsp->Debug.nShowClipLevel == nClipLevel)
 		{
-			if(g_nShowClipLevelSubCounter++ == (g_nShowClipLevelSub))
+			if(pBsp->Debug.nShowClipLevelSubCounter++ == (pBsp->Debug.nShowClipLevelSub))
 			{
 				uplotfnxt("**BSPShowClipLevel: LEAF TEST  %d.. child in %d out %d", Index, Node.nInside, Node.nOutside);
 				uplotfnxt("**BSPShowClipLevel: bVisible %d ", bVisible);
@@ -2810,18 +2833,18 @@ bool BspCullObjectR(SOccluderBsp *pBsp, uint32 Index, uint16 *Poly, uint32 nNumE
 	// 								ClippedPolyOut, nIn, nOut, nExclusionIn, nExclusionOut);
 
 
-	if(g_nBspDebugPlane == g_nBspDebugPlaneCounter)
+	if(pBsp->Debug.DebugPlane == pBsp->Debug.BspDebugPlaneCounter)
 	{
 		uplotfnxt("debug test in %d out %d", nIn, nOut);
 	}
 
 
-	g_nBspDebugPlaneCounter++;
+	pBsp->Debug.BspDebugPlaneCounter++;
 
 	bool bFail = false;
-	if(g_nShowClipLevel == nClipLevel)
+	if(pBsp->Debug.nShowClipLevel == nClipLevel)
 	{
-		if(g_nShowClipLevelSubCounter++ == (g_nShowClipLevelSub))
+		if(pBsp->Debug.nShowClipLevelSubCounter++ == (pBsp->Debug.nShowClipLevelSub))
 		{
 			uplotfnxt("**BSPShowClipLevel: Drawing %d.. child in %d out %d", Index, Node.nInside, Node.nOutside);
 			uplotfnxt("**BSPShowClipLevel: INSIDE %d OUTSIDE %d", nIn, nOut);
@@ -2861,7 +2884,7 @@ bool BspCullObjectR(SOccluderBsp *pBsp, uint32 Index, uint16 *Poly, uint32 nNumE
 		}
 		else if(!BspCullObjectR(pBsp, Node.nInside, ClippedPolyIn, nIn, nClipLevel + 1))
 		{
-			if(!g_nBspOccluderDebugDrawClipResult)
+			if(!pBsp->Debug.OccluderDebugDrawClipResult)
 				return false;
 			bFail = true;
 			//	uplotfnxt("FAIL INSIDE");
@@ -2869,9 +2892,9 @@ bool BspCullObjectR(SOccluderBsp *pBsp, uint32 Index, uint16 *Poly, uint32 nNumE
 	}
 	if(CR & ECPR_OUTSIDE)
 	{
-		if(g_nBspOccluderDebugDrawClipResult && Node.nOutside == OCCLUDER_EMPTY)
+		if(pBsp->Debug.OccluderDebugDrawClipResult && Node.nOutside == OCCLUDER_EMPTY)
 		{
-			if(g_nShowClipLevel < 0)
+			if(pBsp->Debug.nShowClipLevel < 0)
 				BspDrawPoly(pBsp, ClippedPolyOut, nOut, 0xff000000 | randredcolor(), 0, 1);
 		}
 
@@ -2879,8 +2902,6 @@ bool BspCullObjectR(SOccluderBsp *pBsp, uint32 Index, uint16 *Poly, uint32 nNumE
 		if((Node.nOutside == OCCLUDER_EMPTY ||
 			!BspCullObjectR(pBsp, Node.nOutside, ClippedPolyOut, nOut, nClipLevel + 1)))
 		{
-			// uplotfnxt("FAIL OUTSIDE %d :: %d,%d", Index, Node.nOccluderIndex, Node.nEdge);
-
 			return false;
 		}
 	}
@@ -2896,13 +2917,13 @@ bool BspCullObjectSafe(SOccluderBsp *pBsp, SWorldObject *pObject)
 	MICROPROFILE_SCOPEIC("BSP", "Cull");
 	if(!pBsp->Nodes.Size())
 		return false;
-	g_nBspDebugPlaneCounter = 0;
+	pBsp->Debug.BspDebugPlaneCounter = 0;
 	long seed = rand();
 	srand((int)(uintptr)pObject);
 	randseed(0xed32babe, 0xdeadf39c);
 
 
-	g_nShowClipLevelSubCounter = 0;
+	pBsp->Debug.nShowClipLevelSubCounter = 0;
 
 
 
@@ -2992,11 +3013,11 @@ bool BspCullObjectSSE(SOccluderBsp *pBsp, SWorldObject *pObject)
 	pBsp->Stats.nNumObjectsTested++;
 	if(!pBsp->Nodes.Size())
 		return false;
-	g_nBspDebugPlaneCounter = 0;
+	pBsp->Debug.BspDebugPlaneCounter = 0;
 	long seed = rand();
 	srand((int)(uintptr)pObject);
 	randseed(0xed32babe, 0xdeadf39c);
-	g_nShowClipLevelSubCounter = 0;
+	pBsp->Debug.nShowClipLevelSubCounter = 0;
 
 
 	// SBspEdgeIndex Poly[5];
@@ -3083,301 +3104,6 @@ bool BspCullObjectSSE(SOccluderBsp *pBsp, SWorldObject *pObject)
 }
 
 
-#if 1
-
-struct Mat
-{
-	__m128 x;
-	__m128 y;
-	__m128 z;
-	__m128 w;
-};
-
-
-inline
-__m128 vsetwzero(__m128 v)
-{
-	__m128 r = v;
-	r[3] = 0.f;
-	return r;
-}
-
-
-
-inline float vgetx(__m128 v)
-{
-	return v[0];
-}
-inline float vgety(__m128 v)
-{
-	return v[0];
-}
-inline float vgetz(__m128 v)
-{
-	return v[0];
-}
-inline float vgetw(__m128 v)
-{
-	return v[0];
-}
-
-inline Mat loadmat(void* p)
-{
-	Mat r;
-	float* pf = (float*)p;
-	r.x = _mm_loadu_ps(pf);
-	r.y = _mm_loadu_ps(pf + 4);
-	r.z = _mm_loadu_ps(pf + 8);
-	r.w = _mm_loadu_ps(pf + 12);
-	return r;
-}
-inline __m128 load3u(void* p)
-{
-	__m128 r = _mm_loadu_ps((float*)p);
-	return r;
-}
-inline __m128 load4u(void* p)
-{
-	__m128 r = _mm_loadu_ps((float*)p);
-	return r;
-
-}
-inline void store3uzero(void* p, __m128 v)
-{
-	v = _mm_and_ps(v, (__m128)_mm_set_epi32(0,-1,-1,-1));
-	_mm_storeu_ps((float*)p, v);
-}
-
-inline void store4u(void* pDst, __m128 v)
-{
-	_mm_storeu_ps((float*)pDst, v);
-}
-
-inline __m128 rsqrt_(__m128 x)
-{
-	__m128 v = _mm_rsqrt_ps(x);
-	__m128 halfx = _mm_mul_ps(x, _mm_set1_ps(-0.5f));
-	__m128 x2 = _mm_mul_ps(v, v);
-	__m128 foo = _mm_mul_ps(v, _mm_add_ps(_mm_set1_ps(1.5f), _mm_mul_ps(x2, halfx)));
-	return foo;
-}
-
-inline __m128 v3normalize_(__m128 v)
-{
-	v[3] = 0;// = _mm_insert_ps(v, v, 0x8);
-	__m128 r0 = _mm_mul_ps(v, v);
-	__m128 r1 = _mm_hadd_ps(r0, r0);
-	__m128 r2 = _mm_hadd_ps(r1, r1);
-	__m128 result = _mm_mul_ps(rsqrt_(r2), v);
-	return result;
-
-
-}
-inline __m128 v3cross_(__m128 l, __m128 r)
-{
-	// r.x = v0.y * v1.z - v0.z * v1.y;
-	// r.y = v0.z * v1.x - v0.x * v1.z;
-	// r.z = v0.x * v1.y - v0.y * v1.x;
-	__m128 v0yzx = _mm_shuffle_ps(l, l, _MM_SHUFFLE(0, 0, 2, 1));
-	__m128 v1zxy = _mm_shuffle_ps(r, r, _MM_SHUFFLE(0, 1, 0, 2));
-	__m128 v0zxy = _mm_shuffle_ps(l, l, _MM_SHUFFLE(0, 1, 0, 2));
-	__m128 v1yzx = _mm_shuffle_ps(r, r, _MM_SHUFFLE(0, 0, 2, 1));
-
-	return _mm_sub_ps(_mm_mul_ps(v0yzx, v1zxy), _mm_mul_ps(v0zxy, v1yzx));
-}
-inline __m128 v3dot_(__m128 l, __m128 r)
-{
-	l = vsetwzero(l);
-	__m128 r0 = _mm_mul_ps(l, r);
-	__m128 r1 = _mm_hadd_ps(r0, r0);
-	__m128 r2 = _mm_hadd_ps(r1, r1);
-	return r2;
-
-}
-inline __m128 v4dot_(__m128 l, __m128 r)
-{
-	__m128 r0 = _mm_mul_ps(l, r);
-	__m128 r1 = _mm_hadd_ps(r0, r0);
-	__m128 r2 = _mm_hadd_ps(r1, r1);
-	return r2;
-}
-#define v4set(x,y,z,w) _mm_set_ps(w,z,y,x)
-
-inline __m128 v4init_(__m128 v, float w)
-{
-	__m128 r = _mm_insert_ps(v, _mm_loadu_ps(&w), 0x30);
-	return r;
-}
-inline
-Mat mmult_(const Mat& m0_, const Mat& m1_)
-{
-	__m128 m0_x = m0_.x;
-	__m128 m0_y = m0_.y;
-	__m128 m0_z = m0_.z;
-	__m128 m0_w = m0_.w;
-	__m128 m1_x = m1_.x;
-	__m128 m1_y = m1_.y;
-	__m128 m1_z = m1_.z;
-	__m128 m1_w = m1_.w;
-
-	__m128 rx = _mm_mul_ps(m0_x, _mm_shuffle_ps(m1_x, m1_x, 0));
-	rx = _mm_add_ps(rx, _mm_mul_ps(m0_y, _mm_shuffle_ps(m1_x,m1_x, 0x55)));
-	rx = _mm_add_ps(rx, _mm_mul_ps(m0_z, _mm_shuffle_ps(m1_x, m1_x, 0xaa)));
-	rx = _mm_add_ps(rx, _mm_mul_ps(m0_w, _mm_shuffle_ps(m1_x, m1_x, 0xff)));
-	__m128 ry = _mm_mul_ps(m0_x, _mm_shuffle_ps(m1_y, m1_y, 0));
-	ry = _mm_add_ps(ry, _mm_mul_ps(m0_y, _mm_shuffle_ps(m1_y, m1_y, 0x55)));
-	ry = _mm_add_ps(ry, _mm_mul_ps(m0_z, _mm_shuffle_ps(m1_y, m1_y, 0xaa)));
-	ry = _mm_add_ps(ry, _mm_mul_ps(m0_w, _mm_shuffle_ps(m1_y, m1_y, 0xff)));
-	__m128 rz = _mm_mul_ps(m0_x, _mm_shuffle_ps(m1_z, m1_z, 0));
-	rz = _mm_add_ps(rz, _mm_mul_ps(m0_y, _mm_shuffle_ps(m1_z, m1_z, 0x55)));
-	rz = _mm_add_ps(rz, _mm_mul_ps(m0_z, _mm_shuffle_ps(m1_z, m1_z, 0xaa)));
-	rz = _mm_add_ps(rz, _mm_mul_ps(m0_w, _mm_shuffle_ps(m1_z, m1_z, 0xff)));
-	__m128 rw = _mm_mul_ps(m0_x, _mm_shuffle_ps(m1_w, m1_w, 0));
-	rw = _mm_add_ps(rw, _mm_mul_ps(m0_y, _mm_shuffle_ps(m1_w,m1_w, 0x55)));
-	rw = _mm_add_ps(rw, _mm_mul_ps(m0_z, _mm_shuffle_ps(m1_w, m1_w, 0xaa)));
-	rw = _mm_add_ps(rw, _mm_mul_ps(m0_w, _mm_shuffle_ps(m1_w, m1_w, 0xff)));
-
-	Mat r;
-	r.x = rx;
-	r.y = ry;
-	r.z = rz;
-	r.w = rw;
-	return r;
-}
-
-inline
-__m128 obbtoaabb_(Mat mrotation, __m128 vHalfSize)
-{
-	__m128 AbsMask = _mm_set1_epi32(0x7fffffff);
-	__m128 SizeX = _mm_shuffle_ps(vHalfSize, vHalfSize, _MM_SHUFFLE(0,0,0,0));
-	__m128 SizeY = _mm_shuffle_ps(vHalfSize, vHalfSize, _MM_SHUFFLE(1,1,1,1));
-	__m128 SizeZ = _mm_shuffle_ps(vHalfSize, vHalfSize, _MM_SHUFFLE(2,2,2,2));
-	__m128 vx = _mm_and_ps(_mm_mul_ps(mrotation.x, SizeX), AbsMask);
-	__m128 vy = _mm_and_ps(_mm_mul_ps(mrotation.y, SizeY), AbsMask);
-	__m128 vz = _mm_and_ps(_mm_mul_ps(mrotation.z, SizeZ), AbsMask);
-	return _mm_add_ps(_mm_add_ps(vx,vy),vz);
-}
-
-
-inline float BspPlaneTestNew_(__m128 plane0, __m128 plane1, __m128 ptest)
-{
-	__m128 xp = v3cross_(plane0, plane1);
-	__m128 r = v3dot_(ptest, xp);
-	return r[0];
-}
-
-__m128 v4makeplane_(__m128 p, __m128 normal)
-{
-
-	__m128 fDot = v3dot_(normal,p);
-	__m128 fNegDot = _mm_xor_ps(fDot, _mm_set1_epi32(0x80000000)); //neg
-	//__m128 r = _mm_insert_ps(normal, fNegDot, 0x30);
-	__m128 r = normal;//_mm_insert_ps(normal, fNegDot, 0x30);
-	r[3] = fNegDot[0];
-	#if 0
-	//__m128 vPlaneTest = _mm_insert_ps(p, _mm_set1_ps(1.f), 0x30);
-	__m128 vPlaneTest = p;//_mm_insert_ps(p, _mm_set1_ps(1.f), 0x30);
-	vPlaneTest[3] = 1.f;
-	__m128 f4dot = v4dot_(vPlaneTest, r);
-	float vDot = vgetx(f4dot);
-	if(fabsf(vDot) > 0.01f)
-	{
-		v3 p_ = { p[0], p[1], p[2]};
-		v3 normal_ = {normal[0], normal[1], normal[2]};
-		v4 lala = v4makeplane(p_, normal_);
-		ZBREAK();
-	}
-	#endif
-	return r;
-}
-
-inline Mat minverserotation_(Mat m)
-{
-	Mat r;
-	// r.x.z = mat.z.x;
-	// r.z.x = mat.x.z;
-
-	// r.x.y = mat.y.x;
-	// r.y.x = mat.x.y;
-
-	// r.y.z = mat.z.y;
-	// r.z.y = mat.y.z;
-	__m128 x = m.x;
-	__m128 y = m.y;
-	__m128 z = m.z;
-
-	__m128 zx_zy_zz = _mm_shuffle_ps(z, z, _MM_SHUFFLE(0, 2, 1, 0));
-
-	__m128 xx_oo_yx = _mm_shuffle_ps(x, y, _MM_SHUFFLE(0,0,0,0));
-	__m128 xy_oo_yy = _mm_shuffle_ps(x, y, _MM_SHUFFLE(0,1,0,1));
-	__m128 xz_oo_yz = _mm_shuffle_ps(x, y, _MM_SHUFFLE(0,2,0,2));
-
-	__m128 xx_yx_zx = _mm_shuffle_ps(xx_oo_yx, zx_zy_zz, _MM_SHUFFLE(0,0,2,0));
-	__m128 xy_yy_zy = _mm_shuffle_ps(xy_oo_yy, zx_zy_zz, _MM_SHUFFLE(0,1,2,0));
-	__m128 xz_yz_zz = _mm_shuffle_ps(xz_oo_yz, zx_zy_zz, _MM_SHUFFLE(0,2,2,0));
-
-	r.x = xx_yx_zx;
-	r.y = xy_yy_zy; // xz yz zz
-	r.z = xz_yz_zz; // xz yz zz
-	r.w = m.w;
-	return r;
-
-}
-
-inline
-__m128 mrotate_(Mat mat, __m128 pos)
-{
-	// r.x = mat.x.x * point.x + mat.y.x * point.y + mat.z.x * point.z;
-	// r.y = mat.x.y * point.x + mat.y.y * point.y + mat.z.y * point.z;
-	// r.z = mat.x.z * point.x + mat.y.z * point.y + mat.z.z * point.z;
-	__m128 rx = _mm_mul_ps(mat.x, _mm_shuffle_ps(pos, pos, _MM_SHUFFLE(0,0,0,0)));
-	__m128 ry = _mm_mul_ps(mat.y, _mm_shuffle_ps(pos, pos, _MM_SHUFFLE(1,1,1,1)));
-	__m128 rz = _mm_mul_ps(mat.z, _mm_shuffle_ps(pos, pos, _MM_SHUFFLE(2,2,2,2)));
-	return _mm_add_ps(rx, _mm_add_ps(ry, rz));
-}
-
-Mat maffineinverse_(Mat mat)
-{
-	// p = trans + rot * x
-	// p - trans = rot * x
-	// rot^ * (p - trans) = x
-	// rot^ * p + rot^ * (-trans) = x
-
-	Mat mrot = minverserotation_(mat);
-	__m128 trans = mrotate_(mrot, -mat.w);//_mm_xor_ps(mat.w, _mm_set1_epi32(0x80000000)); //neg
-	trans[3]= 1.f;
-	mrot.w = trans;//_mm_insert_ps(trans, _mm_set1_ps(1.f), 0x30);
-	return mrot;
-}
-__m128 mtransform_affine_point_(Mat m, __m128 point)
-{
-
-	__m128 PX = _mm_shuffle_ps(point, point, _MM_SHUFFLE(0,0,0,0));
-	__m128 PY = _mm_shuffle_ps(point, point, _MM_SHUFFLE(1,1,1,1));
-	__m128 PZ = _mm_shuffle_ps(point, point, _MM_SHUFFLE(2,2,2,2));
-
-	__m128 r = _mm_mul_ps(m.x, PX);
-	r = _mm_add_ps(r, _mm_mul_ps(m.y, PY));
-	r = _mm_add_ps(r, _mm_mul_ps(m.z, PZ));
-	r = _mm_add_ps(r, m.w);
-
-
-	return r;
-	// v3 r;
-	// r.x = mat.x.x * point.x + mat.y.x * point.y + mat.z.x * point.z;
-	// r.y = mat.x.y * point.x + mat.y.y * point.y + mat.z.y * point.z;
-	// r.z = mat.x.z * point.x + mat.y.z * point.y + mat.z.z * point.z;
-	// r += v3init(mat.trans);
-	// return r;
-}
-
-inline
-__m128 vsetw(__m128 v, float f)
-{
-	__m128 r = v;
-	r[3] = f;
-	return r;
-}
 
 
 bool BspCullObjectSSE2(SOccluderBsp *pBsp, SWorldObject *pObject)
@@ -3387,96 +3113,64 @@ bool BspCullObjectSSE2(SOccluderBsp *pBsp, SWorldObject *pObject)
 	pBsp->Stats.nNumObjectsTested++;
 	if(!pBsp->Nodes.Size())
 		return false;
-	g_nBspDebugPlaneCounter = 0;
+	pBsp->Debug.BspDebugPlaneCounter = 0;
 	long seed = rand();
 	srand((int)(uintptr)pObject);
 	randseed(0xed32babe, 0xdeadf39c);
-	g_nShowClipLevelSubCounter = 0;
+	pBsp->Debug.nShowClipLevelSubCounter = 0;
 
 
-	// SBspEdgeIndex Poly[5];
 	uint16_t Poly[5];
 	uint32 nSize = pBsp->Planes.Size();
 	pBsp->Planes.Resize(nSize + 5); // TODO use thread specific blocks
 	v4 *pPlanes = pBsp->Planes.Ptr() + nSize;
 	{
-		////MICROPROFILE_SCOPEIC("BSP", "CullPrepare");
-		Mat mObjectToWorld = loadmat(&pObject->mObjectToWorld);
-		Mat mToBsp = loadmat(&pBsp->mtobsp);
-		Mat mObjectToBsp = mmult_(mToBsp, mObjectToWorld);
-		__m128 vTrans = load4u(&pObject->mObjectToWorld.trans);
-		__m128 vHalfSize = load3u(&pObject->vSize);
-		__m128 vCenterWorld = mtransform_affine_point_(mToBsp, vTrans);
-		//v3 vCenterWorld = v3init(vCenterWorld_);
-
-		// uprintf("distance is %f\n", v3distance(vCenterWorld1, vCenterWorld));
-		// ZASSERT(abs(v3distance(vCenterWorld1, vCenterWorld)) < 1e-3f);
-		__m128 vToCenter = v3normalize_(vCenterWorld);
-		__m128 vUp = v4set(0.f, 1.f, 0.f, 0.f); // replace with camera up.
-		if(vgetx(v3dot_(vUp, vToCenter)) > 0.9f)
+		mat mObjectToWorld = mload44(&pObject->mObjectToWorld);
+		mat mToBsp = mload44(&pBsp->mtobsp);
+		mat mObjectToBsp = mmult(mToBsp, mObjectToWorld);
+		vec vTrans = vload4(&pObject->mObjectToWorld.trans);
+		vec vHalfSize = vload3(&pObject->vSize);
+		vec vCenterWorld = mtransformaffine(mToBsp, vTrans);
+		vec vToCenter = vnormalize3(vCenterWorld);
+		vec vUp = vset(0.f, 1.f, 0.f, 0.f); // replace with camera up.
+		if(vgetx(vdot3(vUp, vToCenter)) > 0.9f)
 		{
-			vUp = v4set(1.f, 0.f, 0.f, 0.f);
+			vUp = vset(1.f, 0.f, 0.f, 0.f);
 		}
-		__m128 vRight = v3normalize_(v3cross_(vToCenter, vUp));
-		vUp = v3normalize_(v3cross_(-vToCenter, vRight));
+		vec vRight = vnormalize3(vcross3(vToCenter, vUp));
+		vUp = vnormalize3(vcross3(vneg(vToCenter), vRight));
 
-		// CA HER
 
-		//m mbox = mcreate(vToCenter, vRight, vCenterWorld);
-		__m128 zero = _mm_set1_ps(0.f);
-		__m128 one = _mm_set1_ps(1.f);
-		Mat mboxinv;
-
+		mat mboxinv;
 		mboxinv.x = vsetw(vRight, 0.f);
 		mboxinv.y = vsetw(vUp, 0.f);
 		mboxinv.z = vsetw(-vToCenter, 0.f);
 		mboxinv.w = vsetw(vCenterWorld, 1.f);
-		Mat mbox = maffineinverse_(mboxinv);
+		mat mbox = maffineinverse(mboxinv);
 
-		Mat mcomposite = mmult_(mbox, mObjectToBsp);
-		__m128 AABB = obbtoaabb_(mcomposite, vHalfSize);
-
-		// vRight = mgetxaxis(mboxinv);
-		// vUp = mgetyaxis(mboxinv);
-// inline v3 mgetxaxis(const m& mat){v3 r; r.x = mat.x.x; r.y = mat.x.y; r.z = mat.x.z; return r;}
-// inline v3 mgetyaxis(const m& mat){v3 r; r.x = mat.y.x; r.y = mat.y.y; r.z = mat.y.z; return r;}
-// inline v3 mgetzaxis(const m& mat){v3 r; r.x = mat.z.x; r.y = mat.z.y; r.z = mat.z.z; return r;}
-		//v = _mm_shuffle_ps(xy, z, _MM_SHUFFLE(2, 0, 2, 0));
-		__m128 AABBx = _mm_shuffle_ps(AABB, AABB, _MM_SHUFFLE(0,0,0,0));
-		__m128 AABBy = _mm_shuffle_ps(AABB, AABB, _MM_SHUFFLE(1,1,1,1));
-		__m128 AABBz = _mm_shuffle_ps(AABB, AABB, _MM_SHUFFLE(2,2,2,2));
-		__m128 vCenterQuad = _mm_sub_ps(vCenterWorld, _mm_mul_ps(vToCenter, _mm_mul_ps(AABBz, _mm_set1_ps(1.1f))));
-//		v3 vCenterQuad = vCenterWorld - vToCenter * AABB.z * 1.1f;
-		__m128 vRightx = _mm_mul_ps(vRight, AABBx);
-		__m128 vUpy = _mm_mul_ps(vUp, AABBy);
-		//v3 v0 = vCenterQuad + vRight * AABB.x + vUp * AABB.y;
-		__m128 v0 = _mm_add_ps(_mm_add_ps(vCenterQuad, vRightx), vUpy);
-		//v3 v1 = vCenterQuad + vRight * -AABB.x + vUp * AABB.y;
-		__m128 v1 = _mm_add_ps(_mm_sub_ps(vCenterQuad, vRightx), vUpy);
-		//v3 v2 = vCenterQuad + vRight * -AABB.x + vUp * -AABB.y;
-		__m128 v2 = _mm_sub_ps(_mm_sub_ps(vCenterQuad, vRightx), vUpy);
-		//v3 p3 = vCenterQuad + vRight * AABB.x + vUp * -AABB.y;
-		__m128 p3 = _mm_sub_ps(_mm_add_ps(vCenterQuad, vRightx), vUpy);
-
-
-
-		__m128 n0 = v3normalize_(v3cross_(v0, _mm_sub_ps(v0 ,v1)));
-		__m128 n1 = v3normalize_(v3cross_(v1, _mm_sub_ps(v1 ,v2)));
-		__m128 n2 = v3normalize_(v3cross_(v2, _mm_sub_ps(v2 ,p3)));
-		__m128 n3 = v3normalize_(v3cross_(p3, _mm_sub_ps(p3 ,v0)));
-		store3uzero(pPlanes + 0, n0);
-		store3uzero(pPlanes + 1, n1);
-		store3uzero(pPlanes + 2, n2);
-		store3uzero(pPlanes + 3, n3);
-		// pPlanes[0] = v4init(n0, 0.f);
-		// pPlanes[1] = v4init(n1, 0.f);
-		// pPlanes[2] = v4init(n2, 0.f);
-		// pPlanes[3] = v4init(n3, 0.f);
-		__m128 plane = v4makeplane_(p3, v3normalize_(vToCenter));
-		store4u(pPlanes + 4, plane);
-		//pPlanes[4] = v4makeplane(p3, v3normalize(vToCenter));
-
-		float fTest = BspPlaneTestNew_(n0, n1, n2);
+		mat mcomposite = mmult(mbox, mObjectToBsp);
+		vec AABB = obbtoaabb(mcomposite, vHalfSize);
+		vec AABBx = vsplatx(AABB);
+		vec AABBy = vsplaty(AABB);
+		vec AABBz = vsplatz(AABB);
+		vec vCenterQuad = vsub(vCenterWorld, vmul(vToCenter, vmul(AABBz, vrep(1.1f))));
+		vec vRightx = vmul(vRight, AABBx);
+		vec vUpy = vmul(vUp, AABBy);
+		vec v0 = vadd(vadd(vCenterQuad, vRightx), vUpy);
+		vec v1 = vadd(vsub(vCenterQuad, vRightx), vUpy);
+		vec v2 = vsub(vsub(vCenterQuad, vRightx), vUpy);
+		vec p3 = vsub(vadd(vCenterQuad, vRightx), vUpy);
+		vec n0 = vnormalize3(vcross3(v0, vsub(v0 ,v1)));
+		vec n1 = vnormalize3(vcross3(v1, vsub(v1 ,v2)));
+		vec n2 = vnormalize3(vcross3(v2, vsub(v2 ,p3)));
+		vec n3 = vnormalize3(vcross3(p3, vsub(p3 ,v0)));
+		vstore4(pPlanes + 0, vsetwzero(n0));
+		vstore4(pPlanes + 1, vsetwzero(n1));
+		vstore4(pPlanes + 2, vsetwzero(n2));
+		vstore4(pPlanes + 3, vsetwzero(n3));
+		vec plane = vmakeplane(p3, vnormalize3(vToCenter));
+		vstore4(pPlanes + 4, plane);
+		float fTest = tripleproduct(n0, n1, n2);
 		if(fTest > 0.f)
 		{
 			for(int i = 0; i < 5; ++i)
@@ -3503,8 +3197,6 @@ bool BspCullObjectSSE2(SOccluderBsp *pBsp, SWorldObject *pObject)
 
 	return bResult;
 }
-#endif
-
 #define PLANE_DEBUG_TESSELATION 20
 #define PLANE_DEBUG_SIZE 5
 

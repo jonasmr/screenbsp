@@ -202,7 +202,7 @@ namespace
 	void DebugDrawBox(const SDebugDrawBounds& Box)
 	{
 
-		SHADER_SET("ModelViewMatrix", Box.mat);
+		SHADER_SET("ModelViewMatrix", &Box.mat);
 		SHADER_SET("UseVertexColor", 1.f);
 		SHADER_SET("Size", Box.vSize);
 		uint32_t nColor = Box.nColor|0xff000000;
@@ -252,7 +252,7 @@ namespace
 
 		v3 vScale = Bounds.vSize;
 		vScale = v3max(vScale, 0.1f) * 1.07f;
-		SHADER_SET("ModelViewMatrix", Bounds.mat);
+		SHADER_SET("ModelViewMatrix", &Bounds.mat);
 		SHADER_SET("UseVertexColor", 1.f);
 		SHADER_SET("Size", vScale);
 		uint32_t nColor = Bounds.nColor;
@@ -344,8 +344,9 @@ void DebugDrawFlush(m mprj)
 		ShaderUse(VS_DEBUG, PS_DEBUG);
 
 		SHADER_SET("Color", v4init(1,0,0,1));
-		SHADER_SET("ProjectionMatrix", mprj);
-		SHADER_SET("ModelViewMatrix", mid());
+		SHADER_SET("ProjectionMatrix", &mprj);
+		m id = mid();
+		SHADER_SET("ModelViewMatrix", &id);
 		SHADER_SET("UseVertexColor", 1.f);
 		SHADER_SET("Size", v3init(1,1,1));
 
@@ -365,8 +366,8 @@ void DebugDrawFlush(m mprj)
 		glDepthMask(1);
 		ShaderUse(VS_DEBUG, PS_DEBUG);
 		SHADER_SET("Color", v4init(1,0,0,0));
-		SHADER_SET("ProjectionMatrix", mprj);
-		SHADER_SET("ModelViewMatrix", mid());
+		SHADER_SET("ProjectionMatrix", &mprj);
+		SHADER_SET("ModelViewMatrix", &id);
 		SHADER_SET("UseVertexColor", 1.f);
 		SHADER_SET("Size", v3init(1,1,1));
 
@@ -416,8 +417,8 @@ void DebugDrawFlush(m mprj)
 
 		ShaderUse(VS_DEBUG, PS_DEBUG);
 		SHADER_SET("Color", v4init(1,0,0,0));
-		SHADER_SET("ProjectionMatrix", mprj);
-		SHADER_SET("ModelViewMatrix", mid());
+		SHADER_SET("ProjectionMatrix", &mprj);
+		SHADER_SET("ModelViewMatrix", &id);
 		SHADER_SET("UseVertexColor", 1.f);
 		SHADER_SET("Size", v3init(1,1,1));
 
@@ -431,8 +432,8 @@ void DebugDrawFlush(m mprj)
 		{
 			ShaderUse(VS_DEBUG, PS_DEBUG);
 			SHADER_SET("Color", v4init(1,0,0,0));
-			SHADER_SET("ProjectionMatrix", mprj);
-			SHADER_SET("ModelViewMatrix", mid());
+			SHADER_SET("ProjectionMatrix", &mprj);
+			SHADER_SET("ModelViewMatrix", &id);
 			SHADER_SET("UseVertexColor", 1.f);
 			SHADER_SET("Size", v3init(1,1,1));
 
@@ -466,8 +467,8 @@ void DebugDrawFlush(m mprj)
 			int nColorLoc = ShaderGetLocation("Color");
 			SHADER_SET("UseVertexColor", 1.f);
 			SHADER_SET("Color", v4init(1,0,0,0));
-			SHADER_SET("ProjectionMatrix", mprj);
-			SHADER_SET("ModelViewMatrix", mid());
+			SHADER_SET("ProjectionMatrix", &mprj);
+			SHADER_SET("ModelViewMatrix", &id);
 			SHADER_SET("Size", v3init(1,1,1));
 
 
@@ -480,7 +481,7 @@ void DebugDrawFlush(m mprj)
 				m0.trans = v4init(vPos, 1.f);
 				ShaderSetUniform(nSizeLoc, v3rep(Sphere.fRadius));
 				ShaderSetUniform(nColorLoc, v4fromcolor(Sphere.nColor));
-				SHADER_SET("ModelViewMatrix", m0);
+				SHADER_SET("ModelViewMatrix", &m0);
 				SHADER_SET("ConstantColor", v4fromcolor(Sphere.nColor|0xff000000));
 				MeshDraw(GetBaseMesh(MESH_SPHERE_1));
 				uplotfnxt("SPHERE %f %f %f :: radius %f", vPos.x, vPos.y, vPos.z, Sphere.fRadius);
@@ -492,8 +493,8 @@ void DebugDrawFlush(m mprj)
 
 
 		SHADER_SET("Color", v4init(1,0,0,0));
-		SHADER_SET("ProjectionMatrix", mprj);
-		SHADER_SET("ModelViewMatrix", mid());
+		SHADER_SET("ProjectionMatrix", &mprj);
+		SHADER_SET("ModelViewMatrix", &id);
 		SHADER_SET("UseVertexColor", 1.f);
 		SHADER_SET("Size", v3init(1,1,1));
 
