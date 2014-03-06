@@ -50,7 +50,7 @@ void usleep(__int64 usec)
 #endif
 
 //SDL_Surface* g_Surface;
-#if 1 //#ifdef _WIN32
+#ifdef _WIN32
 #define START_WIDTH 1280
 #define START_HEIGHT 1024
 #else
@@ -517,33 +517,60 @@ int main(int argc, char* argv[])
 		MicroProfileMousePosition(g_MicroProfileMouseX, g_MicroProfileMouseY, g_MicroProfileMouseDelta);
 		g_MicroProfileMouseDelta = 0;
 		CheckGLError();
+		// MicroProfileFlip();
+		// {
+		// 	MICROPROFILE_SCOPEGPUI("GPU", "MicroProfileDraw", 0x88dd44);
+
+		// 	// CheckGLError();
+		// 	// glMatrixMode(GL_PROJECTION);
+		// 	// glLoadIdentity();
+		// 	// CheckGLError();
+		// 	// glOrtho(0.0, g_Width, g_Height, 0, -1.0, 1.0);
+		// 	// CheckGLError();
+		// 	// glMatrixMode(GL_MODELVIEW);
+		// 	// glLoadIdentity();
+		// 	m prj = morthogl(0.0, g_Width, g_Height, 0, -1.0, 1.0);
+		// 	glDisable(GL_DEPTH_TEST);
+		// 	glDisable(GL_CULL_FACE);
+		// 	CheckGLError();
+		// 	glColorMask(1,1,1,1);
+
+		// 	CheckGLError();
+		// 	MicroProfileBeginDraw(g_Width, g_Height, (float*)&prj);
+		// 	MicroProfileDraw(g_Width, g_Height);
+		// 	CheckGLError();
+		// 	MicroProfileEndDraw();
+		// 	CheckGLError();
+		// }
+		
 		MicroProfileFlip();
 		{
 			MICROPROFILE_SCOPEGPUI("GPU", "MicroProfileDraw", 0x88dd44);
+			float projection[16];
+			float left = 0.f;
+			float right = g_Width;
+			float bottom = g_Height;
+			float top = 0.f;
+			float near = -1.f;
+			float far = 1.f;
+			memset(&projection[0], 0, sizeof(projection));
 
-			// CheckGLError();
-			// glMatrixMode(GL_PROJECTION);
-			// glLoadIdentity();
-			// CheckGLError();
-			// glOrtho(0.0, g_Width, g_Height, 0, -1.0, 1.0);
-			// CheckGLError();
-			// glMatrixMode(GL_MODELVIEW);
-			// glLoadIdentity();
-			m prj = morthogl(0.0, g_Width, g_Height, 0, -1.0, 1.0);
-			glDisable(GL_DEPTH_TEST);
-			glDisable(GL_CULL_FACE);
-			CheckGLError();
-			glColorMask(1,1,1,1);
+			projection[0] = 2.0f / (right - left);
+			projection[5] = 2.0f / (top - bottom);
+			projection[10] = -2.0f / (far - near);
+			projection[12] = - (right + left) / (right - left);
+			projection[13] = - (top + bottom) / (top - bottom);
+			projection[14] = - (far + near) / (far - near);
+			projection[15] = 1.f; 
+ 
+ 			glEnable(GL_BLEND);
+ 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-			CheckGLError();
-			MicroProfileBeginDraw(g_Width, g_Height, (float*)&prj);
+			MicroProfileBeginDraw(g_Width, g_Height, &projection[0]);
 			MicroProfileDraw(g_Width, g_Height);
-			CheckGLError();
 			MicroProfileEndDraw();
-			CheckGLError();
+			glDisable(GL_BLEND);
 		}
-		
-
 
 
 		if(g_KeyboardState.keys[SDL_SCANCODE_Z]&BUTTON_RELEASED)

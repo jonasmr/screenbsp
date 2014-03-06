@@ -37,7 +37,7 @@ void ShaderSetUniform(int location, v2 v);
 void ShaderSetUniform(int location, v3 v);
 void ShaderSetUniform(int location, v4 v);
 void ShaderSetUniform(int location, const m* mat);
-void ShaderSetUniform(int location, const m& mat);
+
 
 // I HEREBY WOW NEVER TO USE MACROS AGAIN
 //#define SHADER_SET(name, v)do{ int i = ShaderGetLocation(name); ShaderSetUniform(i, v);} while(0)
