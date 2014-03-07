@@ -18,8 +18,8 @@ enum
 
 struct __ALIGN16 SObject
 {
-	m mObjectToWorld;
-	v3 vSize;
+	m mObjectToWorld;//!!must follow each other to remain compatible with SOccluderDesc
+	v3 vSize;		 //!!must follow each other to remain compatible with SOccluderDesc
 	uint32_t nColor;
 	uint32_t nFlags;
 

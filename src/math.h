@@ -99,7 +99,13 @@ struct __attribute__((aligned(16))) m
 	// 	v4 r3;
 	// };
 };
-
+inline
+m mload(const float* pFloats)
+{
+	m temp;
+	memcpy(&temp, pFloats, 16*sizeof(float));
+	return temp;
+}
 inline
 bool operator ==(const m& l, const m& r)
 {
@@ -214,6 +220,16 @@ v3 v3init(float x, float y, float z){v3 r; r.x = x; r.y = y;r.z = z; return r;}
 inline 
 v3 v3init(v4 v)
 { v3 r; r.x = v.x; r.y = v.y; r.z = v.z; return r;}
+
+inline
+v3 v3load(float* f)
+{
+	v3 r;
+	r.x = f[0];
+	r.y = f[1];
+	r.z = f[2];
+	return r;
+}
 
 inline
 v3 v3lerp(v3 from_, v3 to_, float fLerp) { return from_ + (to_-from_) * fLerp; }
