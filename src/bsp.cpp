@@ -45,7 +45,7 @@ struct SBspEdgeIndex;
 struct SOccluderBspNode;
 
 
-bool BspCullObjectSSE2(SOccluderBsp *pBsp, SWorldObject *pObject);
+bool BspCullObjectSSE2(SOccluderBsp *pBsp, SOccluderBsp* pObject);
 
 TFixedArray<uint32, 512> g_BspSkip;
 
@@ -577,19 +577,20 @@ bool BspAddPotentialBoxQuad(SOccluderBsp* pBsp, SBspPotentialOccluders& Potentia
 }
 
 
-void BspAddPotentialBoxes(SOccluderBsp* pBsp, SBspPotentialOccluders& PotentialOccluders, SWorldObject *pWorldObjects, uint32 nNumWorldObjects)
+void BspAddPotentialBoxes(SOccluderBsp* pBsp, SBspPotentialOccluders& PotentialOccluders, SOccluderDesc** pBoxOccluders, uint32 nNumBoxOccluders)
 {
 	v3 vLocalOrigin = v3zero();
 	m mtobsp = pBsp->mtobsp;
-	for(uint32 i = 0; i < nNumWorldObjects; ++i)
+	for(uint32 i = 0; i < nNumBoxOccluders; ++i)
 	{
-		SWorldObject *pObject = i + pWorldObjects;
-		if(pObject->nFlags & SObject::OCCLUDER_BOX)
+		SOccluderDesc* pObject = pBoxOccluders[i];
 		{
-			m mat = pObject->mObjectToWorld;
+			m mat;
+			memcpy(&mat, pObject->ObjectToWorld, sizeof(mat));
 			mat = mmult(mtobsp, mat);
 
-			v3 vSize = pObject->vSize;
+			v3 vSize;
+			memcpy(&vSize, pObject->Size, sizeof(vSize));
 			v3 vCenter = mat.trans.tov3();
 			v3 vX = mat.x.tov3();
 			v3 vY = mat.y.tov3();
@@ -617,15 +618,15 @@ void BspAddPotentialBoxes(SOccluderBsp* pBsp, SBspPotentialOccluders& PotentialO
 			vCenterY = bFrontY ? vCenterY : vCenterYNeg;
 			vCenterZ = bFrontZ ? vCenterZ : vCenterZNeg;
 
-			if(0 == (pObject->nFlags & SObject::OCCLUSION_BOX_SKIP_X))
+			//if(0 == (pObject->nFlags & SObject::OCCLUSION_BOX_SKIP_X))
 			{
 				BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterY, vY, vZ, vSize.z, vX, vSize.x, true);
 			}
-			if(0 == (pObject->nFlags & SObject::OCCLUSION_BOX_SKIP_Y))
+			//if(0 == (pObject->nFlags & SObject::OCCLUSION_BOX_SKIP_Y))
 			{
 				BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterX, vX, vY, vSize.y, vZ, vSize.z, true);
 			}
-			if(0 == (pObject->nFlags & SObject::OCCLUSION_BOX_SKIP_Z))
+			//if(0 == (pObject->nFlags & SObject::OCCLUSION_BOX_SKIP_Z))
 			{
 				BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterZ, vZ, vY, vSize.y, vX, vSize.x, true);
 			}
@@ -633,23 +634,25 @@ void BspAddPotentialBoxes(SOccluderBsp* pBsp, SBspPotentialOccluders& PotentialO
 	}
 }
 
-void BspAddPotentialOccluders(SOccluderBsp *pBsp, SBspPotentialOccluders &P, SOccluder *pOccluders,
-							  uint32 nNumOccluders)
+void BspAddPotentialOccluders(SOccluderBsp *pBsp, SBspPotentialOccluders &P, SOccluderDesc** pPlaneOccluders,
+							  uint32 nNumPlaneOccluders)
 {
 	m mtobsp = pBsp->mtobsp;
-	for(uint32 k = 0; k < nNumOccluders; ++k)
+	for(uint32 k = 0; k < nNumPlaneOccluders; ++k)
 	{
 		v3 vCorners[4];
-		SOccluder Occ = pOccluders[k];
-		m mat = mmult(mtobsp, Occ.mObjectToWorld);
+		SOccluderDesc Occ = *pPlaneOccluders[k];
+		m temp;
+		memcpy(&temp, &Occ.ObjectToWorld, sizeof(temp));
+		m mat = mmult(mtobsp, temp);
 		v3 vNormal = mat.z.tov3();
 		v3 vUp = mat.y.tov3();
 		v3 vLeft = v3cross(vNormal, vUp);
 		v3 vCenter = mat.trans.tov3();
-		vCorners[0] = vCenter + vUp * Occ.vSize.y + vLeft * Occ.vSize.x;
-		vCorners[1] = vCenter - vUp * Occ.vSize.y + vLeft * Occ.vSize.x;
-		vCorners[2] = vCenter - vUp * Occ.vSize.y - vLeft * Occ.vSize.x;
-		vCorners[3] = vCenter + vUp * Occ.vSize.y - vLeft * Occ.vSize.x;
+		vCorners[0] = vCenter + vUp * Occ.Size[1] + vLeft * Occ.Size[0];
+		vCorners[1] = vCenter - vUp * Occ.Size[1] + vLeft * Occ.Size[0];
+		vCorners[2] = vCenter - vUp * Occ.Size[1] - vLeft * Occ.Size[0];
+		vCorners[3] = vCenter + vUp * Occ.Size[1] - vLeft * Occ.Size[0];
 		BspAddPotentialQuad(pBsp, P, &vCorners[0], 4);
 		// BspAddOccluder(pBsp, &vCorners[0], 4);
 		vCorners[0] = mtransform(pBsp->mfrombsp, vCorners[0]);
@@ -790,9 +793,16 @@ void BspDebugDumpFrame(SOccluderBsp* pBsp)
 	pBsp->Debug.DumpFrame = 1;
 }
 
-void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders,
-			  SWorldObject *pWorldObjects, uint32 nNumWorldObjects,
-			  const SOccluderBspViewDesc &Desc)
+void BspBuild(SOccluderBsp* pBsp, 
+			  SOccluderDesc** pPlaneOccluders, uint32 nNumPlaneOccluders,
+			  SOccluderDesc** pBoxOccluders, uint32 nNumBoxOccluders,
+			  const SOccluderBspViewDesc& Desc)
+
+
+
+	// SOccluderDesc *pOccluderDesc, uint32 nNumOccluders, uint32 nOccluderDescStride,
+	// 		  SOccluderDesc *pWorldObjects, uint32 nNumWorldObjects, uint32 nWorldObjectStride,
+	// 		  const SOccluderBspViewDesc &Desc)
 {
 	g_pBsp = pBsp;
 	MICROPROFILE_SCOPEIC("BSP", "Build");
@@ -849,8 +859,8 @@ void BspBuild(SOccluderBsp *pBsp, SOccluder *pOccluderDesc, uint32 nNumOccluders
 	{
 		MICROPROFILE_SCOPEIC("BSP", "Build_AddPotential");
 		BspAddFrustum(pBsp, P, vLocalDirection, vLocalRight, vLocalUp, vLocalOrigin);
-		BspAddPotentialBoxes(pBsp, P, pWorldObjects, nNumWorldObjects);
-		BspAddPotentialOccluders(pBsp, P, pOccluderDesc, nNumOccluders);
+		BspAddPotentialBoxes(pBsp, P, pBoxOccluders, nNumBoxOccluders);
+		BspAddPotentialOccluders(pBsp, P, pPlaneOccluders, nNumPlaneOccluders);
 	}
 
 
@@ -2908,10 +2918,10 @@ bool BspCullObjectR(SOccluderBsp *pBsp, uint32 Index, uint16 *Poly, uint32 nNumE
 	return !bFail;
 }
 
-bool BspCullObjectSafe(SOccluderBsp *pBsp, SWorldObject *pObject)
+bool BspCullObjectSafe(SOccluderBsp *pBsp, SOccluderDesc *pObject)
 {
-	if(0 == (pObject->nFlags & SObject::OCCLUSION_TEST))
-		return false;
+	// if(0 == (pObject->nFlags & SObject::OCCLUSION_TEST))
+	// 	return false;
 	pBsp->Stats.nNumObjectsTested++;
 
 	MICROPROFILE_SCOPEIC("BSP", "Cull");
@@ -2933,11 +2943,11 @@ bool BspCullObjectSafe(SOccluderBsp *pBsp, SWorldObject *pObject)
 	uint32 nSize = pBsp->Planes.Size();
 	{
 		//MICROPROFILE_SCOPEIC("BSP", "CullPrepare");
-		m mObjectToWorld = pObject->mObjectToWorld;
+		const m mObjectToWorld = mload(pObject->ObjectToWorld);
 		m mObjectToBsp = mmult(pBsp->mtobsp, mObjectToWorld);
 		//m mObjectToBsp = mmult_sse(&pBsp->mtobsp, &mObjectToWorld);
-		v3 vHalfSize = pObject->vSize;
-		v4 vCenterWorld_ = mtransform(pBsp->mtobsp, pObject->mObjectToWorld.trans);
+		v3 vHalfSize = v3load(pObject->Size);
+		v4 vCenterWorld_ = mtransform(pBsp->mtobsp, mObjectToWorld.trans);
 		v4 vCenterWorld_1 = mObjectToBsp.trans;
 		v3 vCenterWorld = v3init(vCenterWorld_);
 		v3 vCenterWorld1 = v3init(vCenterWorld_1);
@@ -3006,10 +3016,10 @@ bool BspCullObjectSafe(SOccluderBsp *pBsp, SWorldObject *pObject)
 }
 
 
-bool BspCullObjectSSE(SOccluderBsp *pBsp, SWorldObject *pObject)
+bool BspCullObjectSSE(SOccluderBsp *pBsp, SOccluderDesc* pObject)
 {
-	if(0 == (pObject->nFlags & SObject::OCCLUSION_TEST))
-		return false;
+	// if(0 == (pObject->nFlags & SObject::OCCLUSION_TEST))
+	// 	return false;
 	pBsp->Stats.nNumObjectsTested++;
 	if(!pBsp->Nodes.Size())
 		return false;
@@ -3025,10 +3035,10 @@ bool BspCullObjectSSE(SOccluderBsp *pBsp, SWorldObject *pObject)
 	uint32 nSize = pBsp->Planes.Size();
 	//{
 		////MICROPROFILE_SCOPEIC("BSP", "CullPrepare");
-		m mObjectToWorld = pObject->mObjectToWorld;
+		m mObjectToWorld = mload(pObject->ObjectToWorld);
 		m mObjectToBsp = mmult_sse(&pBsp->mtobsp, &mObjectToWorld);
-		v3 vHalfSize = pObject->vSize;
-		v4 vCenterWorld_ = mtransform(pBsp->mtobsp, pObject->mObjectToWorld.trans);
+		v3 vHalfSize = v3load(pObject->Size);
+		v4 vCenterWorld_ = mtransform(pBsp->mtobsp, mObjectToWorld.trans);
 		v3 vCenterWorld = v3init(vCenterWorld_);
 
 		// uprintf("distance is %f\n", v3distance(vCenterWorld1, vCenterWorld));
@@ -3106,10 +3116,8 @@ bool BspCullObjectSSE(SOccluderBsp *pBsp, SWorldObject *pObject)
 
 
 
-bool BspCullObjectSSE2(SOccluderBsp *pBsp, SWorldObject *pObject)
+bool BspCullObjectSSE2(SOccluderBsp *pBsp, SOccluderDesc *pObject)
 {
-	if(0 == (pObject->nFlags & SObject::OCCLUSION_TEST))
-		return false;
 	pBsp->Stats.nNumObjectsTested++;
 	if(!pBsp->Nodes.Size())
 		return false;
@@ -3125,11 +3133,11 @@ bool BspCullObjectSSE2(SOccluderBsp *pBsp, SWorldObject *pObject)
 	pBsp->Planes.Resize(nSize + 5); // TODO use thread specific blocks
 	v4 *pPlanes = pBsp->Planes.Ptr() + nSize;
 	{
-		mat mObjectToWorld = mload44(&pObject->mObjectToWorld);
+		mat mObjectToWorld = mload44(&pObject->ObjectToWorld);
 		mat mToBsp = mload44(&pBsp->mtobsp);
 		mat mObjectToBsp = mmult(mToBsp, mObjectToWorld);
-		vec vTrans = vload4(&pObject->mObjectToWorld.trans);
-		vec vHalfSize = vload3(&pObject->vSize);
+		vec vTrans = mObjectToWorld.w;
+		vec vHalfSize = vload3(&pObject->Size[0]);
 		vec vCenterWorld = mtransformaffine(mToBsp, vTrans);
 		vec vToCenter = vnormalize3(vCenterWorld);
 		vec vUp = vset(0.f, 1.f, 0.f, 0.f); // replace with camera up.

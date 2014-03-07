@@ -255,7 +255,58 @@ void RenderShadowMap(ShadowMap& SM, v3 vEye, v3 vDir, v3* vCorners)
 	glViewport(0, 0, g_Width, g_Height);
 	CheckGLError();
 }
+void DoBuildBsp(SOccluderBspViewDesc& ViewDesc)
+{
+	MICROPROFILE_SCOPEI("CullTest", "Build", 0xff00ff00);
+	uint32 nNumPlaneOccluders = 0, nNumBoxOccluders = 0;
+	for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
+	{
+		if(g_WorldState.WorldObjects[i].nFlags & SObject::OCCLUDER_BOX)
+		{
+			nNumBoxOccluders ++;
+		}
+	}
+	for(uint32 i = 0; i < g_WorldState.nNumOccluders; ++i)
+	{
+		if(g_WorldState.Occluders[i].nFlags & SObject::OCCLUDER_BOX)
+		{
+			nNumPlaneOccluders ++;
+		}
+		else
+		{
+			ZBREAK();
+		}
+	}
 
+	SOccluderDesc** pPlaneOccluders = (SOccluderDesc**)alloca(sizeof(SOccluderDesc*)*nNumPlaneOccluders);
+	SOccluderDesc** pBoxOccluders = (SOccluderDesc**)alloca(sizeof(SOccluderDesc*)*nNumBoxOccluders);
+	int PlaneIdx = 0, BoxIdx = 0;
+	for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
+	{
+		if(g_WorldState.WorldObjects[i].nFlags & SObject::OCCLUDER_BOX)
+		{
+			pBoxOccluders[BoxIdx++] = (SOccluderDesc*)&g_WorldState.WorldObjects[i].mObjectToWorld;
+		}
+	}
+
+	for(uint32 i = 0; i < g_WorldState.nNumOccluders; ++i)
+	{
+		if(g_WorldState.Occluders[i].nFlags & SObject::OCCLUDER_BOX)
+		{
+			pPlaneOccluders[PlaneIdx++] = (SOccluderDesc*)&g_WorldState.Occluders[i].mObjectToWorld;
+		}
+		else
+		{
+			ZBREAK();
+		}
+	}
+
+
+	BspBuild(g_Bsp, 
+		pPlaneOccluders, nNumPlaneOccluders,
+		pBoxOccluders, nNumBoxOccluders,
+		ViewDesc);
+}
 
 void RunTestOnly()
 {
@@ -282,13 +333,7 @@ void RunTestOnly()
 		ViewDesc.nNodeCap = g_nBspNodeCap;
 		_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 		{
-			MICROPROFILE_SCOPEI("CullTest", "Build", 0xff00ff00);
-			BspBuild(g_Bsp, &g_WorldState.Occluders[0], 
-				g_WorldState.nNumOccluders,
-				&g_WorldState.WorldObjects[0], 
-				g_WorldState.nNumWorldObjects, 
-				//0,//2,
-				ViewDesc);
+			DoBuildBsp(ViewDesc);
 		}
 
 		memset(bCulled, 0, g_WorldState.nNumWorldObjects);
@@ -296,7 +341,17 @@ void RunTestOnly()
 			MICROPROFILE_SCOPEI("CullTest", "Cull", 0xff00ff00);
 			for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
 			{
-				bCulled[i] = BspCullObject(g_Bsp, &g_WorldState.WorldObjects[i]);
+	// if(0 == (pObject->nFlags & SObject::OCCLUSION_TEST))
+	// 	return false;
+
+				if(0 != (g_WorldState.WorldObjects[i].nFlags & SObject::OCCLUSION_TEST))
+				{
+					bCulled[i] = BspCullObject(g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[i].mObjectToWorld);
+				}
+				else
+				{
+					bCulled[i] = false;
+				}
 			}
 		}
 		MicroProfileFlip();
@@ -658,12 +713,7 @@ void WorldRender()
 
 	{
 		MICROPROFILE_SCOPEI("CullTest", "Build", 0xff00ff00);
-		BspBuild(g_Bsp, &g_WorldState.Occluders[0], 
-			nNumOccluders,
-			&g_WorldState.WorldObjects[0], 
-			g_WorldState.nNumWorldObjects, 
-			//0,//2,
-			ViewDesc);
+		DoBuildBsp(ViewDesc);
 	}
 
 	uint32 nNumObjects = g_WorldState.nNumWorldObjects;
@@ -678,7 +728,17 @@ void WorldRender()
 		MICROPROFILE_SCOPEI("CullTest", "Cull", 0xff00ff00);
 		for(uint32 i = 0; i < nNumObjects; ++i)
 		{
-			bCulled[i] = BspCullObject(g_Bsp, &g_WorldState.WorldObjects[i]);
+			// if(0 == (pObject->nFlags & SObject::OCCLUSION_TEST))
+	// 	return false;	
+			SWorldObject* pObject = &g_WorldState.WorldObjects[i];
+			if(0 == (pObject->nFlags & SObject::OCCLUSION_TEST))
+			{
+				bCulled[i] = false;
+			}
+			else
+			{
+				bCulled[i] = BspCullObject(g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[i].mObjectToWorld);
+			}
 		}
 	}
 	SOccluderBspStats Stats;

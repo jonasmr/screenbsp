@@ -1,6 +1,6 @@
 #pragma once
-#include "base.h"
-#include "program.h"
+//#include "base.h"
+//#include "program.h"
 
 #define BSP_BOX_SCALE 1.02f
 struct SOccluderBsp;
@@ -25,9 +25,20 @@ struct SOccluderBspStats
 	uint32 nNumObjectsTested;
 	uint32 nNumObjectsTestedVisible;
 };
+
+struct SOccluderDesc
+{
+	float ObjectToWorld[16];
+	float Size[3];
+};	
+
+
 void BspDestroy(SOccluderBsp* pBsp);
-void BspBuild(SOccluderBsp* pBsp, SOccluder* pOccluders, uint32 nNumOccluders, SWorldObject* pWorldObject, uint32 nNumWorldObjects, const SOccluderBspViewDesc& Desc);
-bool BspCullObject(SOccluderBsp* pBsp, SWorldObject* pObject);
+void BspBuild(SOccluderBsp* pBsp, 
+			  SOccluderDesc** pPlaneOccluders, uint32 nNumPlaneOccluders,
+			  SOccluderDesc** pBoxOccluders, uint32 nNumBoxOccluders,
+			  const SOccluderBspViewDesc& Desc);
+bool BspCullObject(SOccluderBsp* pBsp, SOccluderDesc* pObject);
 void BspGetStats(SOccluderBsp* pBsp, SOccluderBspStats* pStats);
 
 
