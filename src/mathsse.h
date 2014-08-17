@@ -15,10 +15,26 @@ struct mat
 };
 
 
+
+inline
+vec vec_cast(__m128d v)
+{
+	return _mm_castpd_ps(v);
+}
+inline
+vec vec_cast(__m128i v)
+{
+	return _mm_castsi128_ps(v);
+}
+
 inline vec vsetw(vec v, float f)
 {
 	vec r = v;
+#ifdef _WIN32
+	r.m128_f32[3] = f;
+#else
 	r[3] = f;
+#endif
 	return r;
 }
 
@@ -27,45 +43,79 @@ inline vec vsetw(vec v, float f)
 inline vec vsetxzero(vec v)
 {
 	vec r = v;
+#ifdef _WIN32
+	r.m128_f32[0] = 0.f;
+#else
 	r[0] = 0.f;
+#endif
 	return r;
 }
 inline vec vsetyzero(vec v)
 {
 	vec r = v;
+#ifdef _WIN32
+	r.m128_f32[1] = 0.f;
+#else
 	r[1] = 0.f;
+#endif
 	return r;
 }
 inline vec vsetzzero(vec v)
 {
 	vec r = v;
+#ifdef _WIN32
+	r.m128_f32[2] = 0.f;
+#else
 	r[2] = 0.f;
+#endif
+
 	return r;
 }
 
 inline vec vsetwzero(vec v)
 {
 	vec r = v;
+#ifdef _WIN32
+	r.m128_f32[3] = 0.f;
+#else
 	r[3] = 0.f;
+#endif
+
 	return r;
 }
 
 
 inline float vgetx(vec v)
 {
+#ifdef _WIN32
+	return v.m128_f32[0];
+#else
 	return v[0];
+#endif
 }
 inline float vgety(vec v)
 {
+#ifdef _WIN32
+	return v.m128_f32[1];
+#else
 	return v[1];
+#endif
 }
 inline float vgetz(vec v)
 {
+#ifdef _WIN32
+	return v.m128_f32[2];
+#else
 	return v[2];
+#endif
 }
 inline float vgetw(vec v)
 {
+#ifdef _WIN32
+	return v.m128_f32[3];
+#else
 	return v[3];
+#endif
 }
 
 inline mat mload44(void* p)
@@ -87,7 +137,7 @@ inline vec vload1(void* p)
 
 inline vec vload2(void* p)
 {
-	vec r = (vec)_mm_load_sd((double*)p);
+	vec r = vec_cast(_mm_load_sd((double*)p));
 	return r;
 }
 
@@ -112,14 +162,14 @@ inline void vstore4(void* pDst, vec v)
 inline void vstore3(void* p, vec v)
 {
 	//v = _mm_and_ps(v, (vec)_mm_set_epi32(0,-1,-1,-1));
-	_mm_maskmoveu_si128((__m128i)v, (__m128i)_mm_set_epi32(0,-1,-1,-1), (char*)p);
+	_mm_maskmoveu_si128(_mm_castps_si128(v), (__m128i)_mm_set_epi32(0,-1,-1,-1), (char*)p);
 	//_mm_storeu_ps((float*)p, v);
 }
 
 inline void vstore2(void* p, vec v)
 {
 	//v = _mm_and_ps(v, (vec)_mm_set_epi32(0,-1,-1,-1));
-	_mm_store_sd((double*)p, (__m128d)v);
+	_mm_store_sd((double*)p, _mm_castps_pd(v));
 	//_mm_storeu_ps((float*)p, v);
 }
 inline void vstore1(void* p, vec v)
@@ -170,7 +220,7 @@ inline vec vrep(float f)
 
 inline vec vneg(vec v)
 {
-	return _mm_xor_ps(v, (vec)_mm_set1_epi32(0x80000000));
+	return _mm_xor_ps(v, vec_cast(_mm_set1_epi32(0x80000000)));
 }
 inline vec vrsqrt(vec x)
 {
@@ -266,7 +316,7 @@ mat mmult(const mat& m0_, const mat& m1_)
 inline
 vec obbtoaabb(mat mrotation, vec vHalfSize)
 {
-	vec AbsMask = _mm_set1_epi32(0x7fffffff);
+	vec AbsMask = _mm_castsi128_ps(_mm_set1_epi32(0x7fffffff));
 	vec SizeX = _mm_shuffle_ps(vHalfSize, vHalfSize, _MM_SHUFFLE(0,0,0,0));
 	vec SizeY = _mm_shuffle_ps(vHalfSize, vHalfSize, _MM_SHUFFLE(1,1,1,1));
 	vec SizeZ = _mm_shuffle_ps(vHalfSize, vHalfSize, _MM_SHUFFLE(2,2,2,2));
@@ -281,17 +331,17 @@ inline float tripleproduct(vec plane0, vec plane1, vec ptest)
 {
 	vec xp = vcross3(plane0, plane1);
 	vec r = vdot3(ptest, xp);
-	return r[0];
+	return vgetx(r);
 }
 
 vec vmakeplane(vec p, vec normal)
 {
 
 	vec fDot = vdot3(normal,p);
-	vec fNegDot = _mm_xor_ps(fDot, _mm_set1_epi32(0x80000000)); //neg
+	vec fNegDot = _mm_xor_ps(fDot, _mm_castsi128_ps(_mm_set1_epi32(0x80000000))); //neg
 	//vec r = _mm_insert_ps(normal, fNegDot, 0x30);
 	vec r = normal;//_mm_insert_ps(normal, fNegDot, 0x30);
-	r[3] = fNegDot[0];
+	r = vsetw(r, vgetx(fNegDot));
 	return r;
 }
 
@@ -348,8 +398,8 @@ mat maffineinverse(mat m)
 	// rot^ * p + rot^ * (-trans) = x
 
 	mat mrot = minverserotation(m);
-	vec trans = mrotate(mrot, -m.w);//_mm_xor_ps(mat.w, _mm_set1_epi32(0x80000000)); //neg
-	trans[3]= 1.f;
+	vec trans = mrotate(mrot, vneg(m.w));//_mm_xor_ps(mat.w, _mm_set1_epi32(0x80000000)); //neg
+	trans = vsetw(trans, 1.f);
 	mrot.w = trans;//_mm_insert_ps(trans, _mm_set1_ps(1.f), 0x30);
 	return mrot;
 }

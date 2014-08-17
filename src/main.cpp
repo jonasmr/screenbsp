@@ -21,6 +21,8 @@
 #include "physics.h"
 
 #ifdef _WIN32
+#undef near
+#undef far
 #include <windows.h>
 void usleep(__int64 usec) 
 { 
