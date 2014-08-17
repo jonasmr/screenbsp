@@ -79,7 +79,13 @@ struct v4
 /// x y z w  * y
 /// x y z w    z
 /// x y z w    w
-struct __attribute__((aligned(16))) m
+#ifdef _WIN32
+#define ALIGN16 __declspecl(align(16))
+#else
+#define ALIGN16 __attribute__((aligned(16)))
+#endif
+
+struct m
 {
 	//{
 		v4 x;
