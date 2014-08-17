@@ -21,6 +21,7 @@
 
 #include <algorithm>
 #define OCCLUDER_EMPTY (0xc000)
+#define OCCLUDER_INVALID (0xffff)
 #define OCCLUDER_LEAF (0x8000)
 #define OCCLUDER_CLIP_MAX 0x100
 #define USE_FRUSTUM 1
@@ -111,6 +112,13 @@ struct SOccluderBspNodeExtra
 	bool bLeaf;
 	bool bSpecial;
 };
+
+struct SOccluderBspNodes
+{
+	TFixedArray<SOccluderBspNode, MAX_NODES> Nodes;
+	TFixedArray<SOccluderBspNodeExtra, MAX_NODES> NodesExtra;
+};
+
 struct SOccluderBsp
 {
 	static const int MAX_PLANES = 1024 * 4;
@@ -126,9 +134,10 @@ struct SOccluderBsp
 	v4 vFrustumPlanes[4];
 	TFixedArray<v4, MAX_PLANES> Planes;
 	TFixedArray<v3, MAX_PLANES> Corners;
+	
 	TFixedArray<SOccluderBspNode, MAX_NODES> Nodes;
 	TFixedArray<SOccluderBspNodeExtra, MAX_NODES> NodesExtra;
-
+	//SOccluderBspNodes Node;
 	SOccluderBspStats Stats;
 
 	//debugging helpers
@@ -3115,6 +3124,69 @@ bool BspCullObjectSSE(SOccluderBsp *pBsp, SOccluderDesc* pObject)
 
 
 
+void BspBuildPlanes(v4* pPlanes, uint16_t Poly[5], SOccluderBsp* pBsp, SOccluderDesc* pObject)
+{
+	mat mObjectToWorld = mload44(&pObject->ObjectToWorld);
+	mat mToBsp = mload44(&pBsp->mtobsp);
+	mat mObjectToBsp = mmult(mToBsp, mObjectToWorld);
+	vec vTrans = mObjectToWorld.w;
+	vec vHalfSize = vload3(&pObject->Size[0]);
+	vec vCenterWorld = mtransformaffine(mToBsp, vTrans);
+	vec vToCenter = vnormalize3(vCenterWorld);
+	vec vUp = vset(0.f, 1.f, 0.f, 0.f); // replace with camera up.
+	if(vgetx(vdot3(vUp, vToCenter)) > 0.9f)
+	{
+		vUp = vset(1.f, 0.f, 0.f, 0.f);
+	}
+	vec vRight = vnormalize3(vcross3(vToCenter, vUp));
+	vUp = vnormalize3(vcross3(vneg(vToCenter), vRight));
+
+
+	mat mboxinv;
+	mboxinv.x = vsetw(vRight, 0.f);
+	mboxinv.y = vsetw(vUp, 0.f);
+	mboxinv.z = vsetw(vneg(vToCenter), 0.f);
+	mboxinv.w = vsetw(vCenterWorld, 1.f);
+	mat mbox = maffineinverse(mboxinv);
+
+	mat mcomposite = mmult(mbox, mObjectToBsp);
+	vec AABB = obbtoaabb(mcomposite, vHalfSize);
+	vec AABBx = vsplatx(AABB);
+	vec AABBy = vsplaty(AABB);
+	vec AABBz = vsplatz(AABB);
+	vec vCenterQuad = vsub(vCenterWorld, vmul(vToCenter, vmul(AABBz, vrep(1.1f))));
+	vec vRightx = vmul(vRight, AABBx);
+	vec vUpy = vmul(vUp, AABBy);
+	vec v0 = vadd(vadd(vCenterQuad, vRightx), vUpy);
+	vec v1 = vadd(vsub(vCenterQuad, vRightx), vUpy);
+	vec v2 = vsub(vsub(vCenterQuad, vRightx), vUpy);
+	vec p3 = vsub(vadd(vCenterQuad, vRightx), vUpy);
+	vec n0 = vnormalize3(vcross3(v0, vsub(v0 ,v1)));
+	vec n1 = vnormalize3(vcross3(v1, vsub(v1 ,v2)));
+	vec n2 = vnormalize3(vcross3(v2, vsub(v2 ,p3)));
+	vec n3 = vnormalize3(vcross3(p3, vsub(p3 ,v0)));
+	vstore4(pPlanes + 0, vsetwzero(n0));
+	vstore4(pPlanes + 1, vsetwzero(n1));
+	vstore4(pPlanes + 2, vsetwzero(n2));
+	vstore4(pPlanes + 3, vsetwzero(n3));
+	vec plane = vmakeplane(p3, vnormalize3(vToCenter));
+	vstore4(pPlanes + 4, plane);
+	float fTest = tripleproduct(n0, n1, n2);
+	if(fTest > 0.f)
+	{
+		for(int i = 0; i < 5; ++i)
+			Poly[i] = nSize + i;
+	}
+	else
+	{
+		Poly[4] = nSize + 4;
+		Poly[0] = nSize + 3;
+		Poly[1] = nSize + 2;
+		Poly[2] = nSize + 1;
+		Poly[3] = nSize + 0;
+	}
+}
+
 
 bool BspCullObjectSSE2(SOccluderBsp *pBsp, SOccluderDesc *pObject)
 {
@@ -3132,67 +3204,7 @@ bool BspCullObjectSSE2(SOccluderBsp *pBsp, SOccluderDesc *pObject)
 	uint32 nSize = pBsp->Planes.Size();
 	pBsp->Planes.Resize(nSize + 5); // TODO use thread specific blocks
 	v4 *pPlanes = pBsp->Planes.Ptr() + nSize;
-	{
-		mat mObjectToWorld = mload44(&pObject->ObjectToWorld);
-		mat mToBsp = mload44(&pBsp->mtobsp);
-		mat mObjectToBsp = mmult(mToBsp, mObjectToWorld);
-		vec vTrans = mObjectToWorld.w;
-		vec vHalfSize = vload3(&pObject->Size[0]);
-		vec vCenterWorld = mtransformaffine(mToBsp, vTrans);
-		vec vToCenter = vnormalize3(vCenterWorld);
-		vec vUp = vset(0.f, 1.f, 0.f, 0.f); // replace with camera up.
-		if(vgetx(vdot3(vUp, vToCenter)) > 0.9f)
-		{
-			vUp = vset(1.f, 0.f, 0.f, 0.f);
-		}
-		vec vRight = vnormalize3(vcross3(vToCenter, vUp));
-		vUp = vnormalize3(vcross3(vneg(vToCenter), vRight));
-
-
-		mat mboxinv;
-		mboxinv.x = vsetw(vRight, 0.f);
-		mboxinv.y = vsetw(vUp, 0.f);
-		mboxinv.z = vsetw(vneg(vToCenter), 0.f);
-		mboxinv.w = vsetw(vCenterWorld, 1.f);
-		mat mbox = maffineinverse(mboxinv);
-
-		mat mcomposite = mmult(mbox, mObjectToBsp);
-		vec AABB = obbtoaabb(mcomposite, vHalfSize);
-		vec AABBx = vsplatx(AABB);
-		vec AABBy = vsplaty(AABB);
-		vec AABBz = vsplatz(AABB);
-		vec vCenterQuad = vsub(vCenterWorld, vmul(vToCenter, vmul(AABBz, vrep(1.1f))));
-		vec vRightx = vmul(vRight, AABBx);
-		vec vUpy = vmul(vUp, AABBy);
-		vec v0 = vadd(vadd(vCenterQuad, vRightx), vUpy);
-		vec v1 = vadd(vsub(vCenterQuad, vRightx), vUpy);
-		vec v2 = vsub(vsub(vCenterQuad, vRightx), vUpy);
-		vec p3 = vsub(vadd(vCenterQuad, vRightx), vUpy);
-		vec n0 = vnormalize3(vcross3(v0, vsub(v0 ,v1)));
-		vec n1 = vnormalize3(vcross3(v1, vsub(v1 ,v2)));
-		vec n2 = vnormalize3(vcross3(v2, vsub(v2 ,p3)));
-		vec n3 = vnormalize3(vcross3(p3, vsub(p3 ,v0)));
-		vstore4(pPlanes + 0, vsetwzero(n0));
-		vstore4(pPlanes + 1, vsetwzero(n1));
-		vstore4(pPlanes + 2, vsetwzero(n2));
-		vstore4(pPlanes + 3, vsetwzero(n3));
-		vec plane = vmakeplane(p3, vnormalize3(vToCenter));
-		vstore4(pPlanes + 4, plane);
-		float fTest = tripleproduct(n0, n1, n2);
-		if(fTest > 0.f)
-		{
-			for(int i = 0; i < 5; ++i)
-				Poly[i] = nSize + i;
-		}
-		else
-		{
-			Poly[4] = nSize + 4;
-			Poly[0] = nSize + 3;
-			Poly[1] = nSize + 2;
-			Poly[2] = nSize + 1;
-			Poly[3] = nSize + 0;
-		}
-	}
+	BspBuildPlanes(pPlanes, Poly, pBsp, pObject);
 
 	
 
@@ -3251,3 +3263,172 @@ void BspGetStats(SOccluderBsp* pBsp, SOccluderBspStats* pStats)
 {
 	memcpy(pStats, &pBsp->Stats, sizeof(SOccluderBspStats));
 }
+
+
+//SOccluderBspNodes	TFixedArray<SOccluderBspNode, MAX_NODES> Nodes;
+//TFixedArray<SOccluderBspNodeExtra, MAX_NODES> NodesExtra;
+
+
+//struct SOccluderBspNodes
+//{
+//	TFixedArray<SOccluderBspNode, MAX_NODES> Nodes;
+//	TFixedArray<SOccluderBspNodeExtra, MAX_NODES> NodesExtra;
+//};
+
+
+uint16_t BspBuildSubBspR(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, uint32_t nIndex, uint16_t* pPoly, uint32_t nNumEdges)
+{
+	ZASSERT(Index != OCCLUDER_LEAF);
+	ZASSERT(Index != OCCLUDER_EMPTY);
+	SOccluderBspNode Node = pBsp->Nodes[Index];
+	v4 vPlane = BspGetPlane(pBsp, Node.nPlaneIndex);
+	//if all inside
+	ClipPolyResult CR = ECPR_CLIPPED;
+	uint16_t nAdded = OCCLUDER_EMPTY;
+	if(Node.nInside == OCCLUDER_LEAF && vPlane.w != 0.f)
+	{
+
+		v4 vNormalPlane = BspGetPlane(pBsp, Poly[nNumEdges - 1]);
+		bool bVisible = false;
+		bool bCulled = true;
+		for(int i = 0; i < nNumEdges - 1; ++i)
+		{
+			v4 p0 = BspGetPlane(pBsp, Poly[i]);
+			v4 p1 = BspGetPlane(pBsp, Poly[(i + 1) % (nNumEdges - 1)]);
+			v3 vIntersect = BspPlaneIntersection(p0, p1, vNormalPlane);
+			float fDot = v4dot(v4init(vIntersect, 1.f), vPlane);
+			bVisible = bVisible || fDot < 0.f;
+			bCulled = bCulled && fDot < 0.f;
+			if(fDot < 0.f)
+			{
+				CR |= ECPR_INSIDE;
+			}
+			else
+			{
+				CR |= ECPR_OUTSIDE;
+			}
+		}
+
+		if(CR == ECPR_INSIDE)
+		{
+			//all inside, clip
+		}
+		else
+		{
+			ZASSERT(CR == ECPR_OUTSIDE || CR == ECPR_BOTH);
+			nAdded = NodeBsp.Nodes.Size();
+			{
+				SOccluderBspNode* pNode = NodeBsp.Nodes.PushBack();
+				SOccluderBspNodeExtra* pNodeExtra = NodeBsp.NodesExtra.PushBack();
+				*pNode = pBsp->Nodes[Index];
+				*pNodeExtra = pBsp->NodesExtra[Index];
+			}
+
+			ZASSERT(Node.nOutside != OCCLUDER_EMPTY);
+			uint16_t nAddedOut = BspBuildSubBspR(NodeBsp, pBsp, Node.nOutside, pPoly, nNumEdges);
+			NodeBsp.Nodes[nAdded].nOutside = nAddedOut;
+		}
+	}
+	else
+	{
+		ZASSERT(Node.nInside != OCCLUDER_LEAF);
+
+		uint32 nMaxEdges = (nNumEdges + 1);
+		uint16 *ClippedPolyIn = (uint16 *)alloca(nMaxEdges * sizeof(uint16));
+		uint16 *ClippedPolyOut = (uint16 *)alloca(nMaxEdges * sizeof(uint16));
+		uint32 nIn = 0;
+		uint32 nOut = 0;
+		uint32 nExclusionIn = 0, nExclusionOut = 0;
+		ClipPolyResult CR = BspClipPolyCull(pBsp, Node.nPlaneIndex, Poly, nNumEdges, ClippedPolyIn,
+							ClippedPolyOut, nIn, nOut);
+
+		switch(CR)
+		{
+		case ECPR_CLIPPED:
+			ZBREAK();
+			break;
+		case ECPR_INSIDE:
+			nAdded = BspBuildSubBspR(NodeBsp, pBsp, Node.nInside, pPolyIn, nIn);
+			break;
+		case ECPR_OUTSIDE:
+			nAdded = BspBuildSubBspR(NodeBsp, pBsp, Node.nOutside, pPolyOut, nOut);
+			break;
+		case ECPR_BOTH:
+			//both sides, add node. continue with subpolys.
+			nAdded = NodeBsp.Nodes.Size();
+			{
+				SOccluderBspNode* pNode = NodeBsp.Nodes.PushBack();
+				SOccluderBspNodeExtra* pNodeExtra = NodeBsp.NodesExtra.PushBack();
+				*pNode = pBsp->Nodes[Index];
+				*pNodeExtra = pBsp->NodesExtra[Index];
+			}
+			uint16_t nAddedIn  = BspBuildSubBspR(NodeBsp, pBsp, Node.nInside, pPolyIn, nSize, pQuad);
+			uint16_t nAddedOut = BspBuildSubBspR(NodeBsp, pBsp, Node.nOutside, pIndices, nNumIndices, nSize, pQuad);
+			NodeBsp.Nodes[nAdded].nInside = nAddedIn;
+			NodeBsp.Nodes[nAdded].nOutside = nAddedOut;
+			ZASSERT(!NodeBsp.Nodes[nAdded].bLeaf);			
+			break;
+		}
+	}
+	return nAdded;
+}
+
+bool BspBuildSubBsp(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, uint32_t nIndex)
+{
+	pBsp->Stats.nNumChildBspsCreated++;
+	NodeBsp.Nodes.Clear();
+	NodeBsp.NodesExtra.Clear();
+	if(!pBsp->Nodes.Size())
+		return false;
+	pBsp->Debug.BspDebugPlaneCounter = 0;
+	long seed = rand();
+	srand((int)(uintptr)pObject);
+	randseed(0xed32babe, 0xdeadf39c);
+
+	uint16_t Poly[5];
+	uint32 nSize = pBsp->Planes.Size();
+	pBsp->Planes.Resize(nSize + 5); // TODO use thread specific blocks
+	v4 *pPlanes = pBsp->Planes.Ptr() + nSize;
+	BspBuildPlanes(pPlanes, Poly, pBsp, pObject);
+
+
+	//uint16_t BspBuildSubBspR(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, uint32_t nIndex, uint16_t* pPoly, uint32_t nNumEdges)
+	uint16_t nAdded = BspBuildSubBspR(NodeBsp, pBsp, 0, pPoly, 5);
+
+	pBsp->Planes.Resize(nSize);
+	srand(seed);
+	return nAdded != OCCLUDER_EMPTY;
+
+}
+
+
+	// pBsp->Stats.nNumObjectsTested++;
+	// if(!pBsp->Nodes.Size())
+	// 	return false;
+	// pBsp->Debug.BspDebugPlaneCounter = 0;
+	// long seed = rand();
+	// srand((int)(uintptr)pObject);
+	// randseed(0xed32babe, 0xdeadf39c);
+	// pBsp->Debug.nShowClipLevelSubCounter = 0;
+
+
+	// uint16_t Poly[5];
+	// uint32 nSize = pBsp->Planes.Size();
+	// pBsp->Planes.Resize(nSize + 5); // TODO use thread specific blocks
+	// v4 *pPlanes = pBsp->Planes.Ptr() + nSize;
+	// BspBuildPlanes(pPlanes, Poly, pBsp, pObject);
+	// {
+
+	// }
+
+	
+
+
+	// bool bResult = BspCullObjectR(pBsp, 0, &Poly[0], 5, 0);
+	// pBsp->Planes.Resize(nSize);
+	// srand(seed);
+	// if(!bResult)
+	// 	pBsp->Stats.nNumObjectsTestedVisible++;
+
+	// return bResult;
+
