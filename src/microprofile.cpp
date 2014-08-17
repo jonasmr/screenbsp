@@ -27,6 +27,7 @@
 #include <stdarg.h>
 
 #include <windows.h>
+#if 0
 void uprintf(const char* fmt, ...)
 {
 	char buffer[32*1024];
@@ -36,6 +37,9 @@ void uprintf(const char* fmt, ...)
 	OutputDebugString(&buffer[0]);
 	va_end (args);
 }
+#else
+void uprintf(const char* fmt, ...);
+#endif
 //change printf function to dump in debugger
 #define MICROPROFILE_PRINTF uprintf
 #endif

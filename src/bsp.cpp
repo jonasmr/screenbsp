@@ -3152,7 +3152,7 @@ bool BspCullObjectSSE2(SOccluderBsp *pBsp, SOccluderDesc *pObject)
 		mat mboxinv;
 		mboxinv.x = vsetw(vRight, 0.f);
 		mboxinv.y = vsetw(vUp, 0.f);
-		mboxinv.z = vsetw(-vToCenter, 0.f);
+		mboxinv.z = vsetw(vneg(vToCenter), 0.f);
 		mboxinv.w = vsetw(vCenterWorld, 1.f);
 		mat mbox = maffineinverse(mboxinv);
 
