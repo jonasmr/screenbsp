@@ -1,6 +1,7 @@
 #pragma once
 //#include "base.h"
 //#include "program.h"
+#include "fixedarray.h"
 
 #define BSP_BOX_SCALE 1.02f
 #define OCCLUDER_BSP_MAX_PLANES (1024 * 4)
@@ -37,6 +38,26 @@ struct SOccluderDesc
 	float Size[3];
 };	
 
+struct SOccluderBspNode
+{
+	uint16 nPlaneIndex;
+	uint16 nInside;
+	uint16 nOutside;
+};
+
+struct SOccluderBspNodeExtra
+{
+	v3 vDebugCorner;
+	bool bLeaf;
+	bool bSpecial;
+};
+
+struct SOccluderBspNodes
+{
+	TFixedArray<SOccluderBspNode, OCCLUDER_BSP_MAX_NODES> Nodes;
+	TFixedArray<SOccluderBspNodeExtra, OCCLUDER_BSP_MAX_NODES> NodesExtra;
+};
+
 
 void BspDestroy(SOccluderBsp* pBsp);
 void BspBuild(SOccluderBsp* pBsp, 
@@ -58,3 +79,5 @@ void BspDebugToggleInsideOutside(SOccluderBsp* pBsp);
 void BspDebugClipLevelSubNext(SOccluderBsp* pBsp);
 void BspDebugClipLevelSubPrev(SOccluderBsp* pBsp);
 void BspDebugDumpFrame(SOccluderBsp* pBsp);
+
+bool BspBuildSubBsp(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, SOccluderDesc *pObject);

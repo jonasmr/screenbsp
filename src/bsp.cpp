@@ -28,7 +28,7 @@
 #define BSP_ADD_FRONT 1
 #define PLANE_TEST_EPSILON 0.0000001f
 #define USE_EXCLUDE_MASK 1
-#define USE_EXCLUDE_MASK_OVERLAP 0
+#define USE_EXCLUDE_MASK_OVERLAP 1
 
 #define BSP_DUMP_PRINTF(pBsp, ...) do{if(pBsp->Debug.DumpFrame){ uprintf(__VA_ARGS__); } }while(0)
 
@@ -100,24 +100,8 @@ bool SkipIndex(uint32 nIndex)
 			return true;
 	return false;
 }
-struct SOccluderBspNode
-{
-	uint16 nPlaneIndex;
-	uint16 nInside;
-	uint16 nOutside;
-};
-struct SOccluderBspNodeExtra
-{
-	v3 vDebugCorner;
-	bool bLeaf;
-	bool bSpecial;
-};
 
-struct SOccluderBspNodes
-{
-	TFixedArray<SOccluderBspNode, OCCLUDER_BSP_MAX_NODES> Nodes;
-	TFixedArray<SOccluderBspNodeExtra, OCCLUDER_BSP_MAX_NODES> NodesExtra;
-};
+
 
 struct SOccluderBsp
 {
@@ -2597,7 +2581,7 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 					#if USE_EXCLUDE_MASK_OVERLAP
 					nExcludeMask |= (1 << i);
 					#endif
-					bPlaneOverlap = true;
+					//bPlaneOverlap = true;
 				}
 			}
 		}
@@ -3399,34 +3383,4 @@ bool BspBuildSubBsp(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, SOccluderDes
 
 }
 
-
-	// pBsp->Stats.nNumObjectsTested++;
-	// if(!pBsp->Nodes.Size())
-	// 	return false;
-	// pBsp->Debug.BspDebugPlaneCounter = 0;
-	// long seed = rand();
-	// srand((int)(uintptr)pObject);
-	// randseed(0xed32babe, 0xdeadf39c);
-	// pBsp->Debug.nShowClipLevelSubCounter = 0;
-
-
-	// uint16_t Poly[5];
-	// uint32 nSize = pBsp->Planes.Size();
-	// pBsp->Planes.Resize(nSize + 5); // TODO use thread specific blocks
-	// v4 *pPlanes = pBsp->Planes.Ptr() + nSize;
-	// BspBuildPlanes(pPlanes, Poly, pBsp, pObject);
-	// {
-
-	// }
-
-	
-
-
-	// bool bResult = BspCullObjectR(pBsp, 0, &Poly[0], 5, 0);
-	// pBsp->Planes.Resize(nSize);
-	// srand(seed);
-	// if(!bResult)
-	// 	pBsp->Stats.nNumObjectsTestedVisible++;
-
-	// return bResult;
 

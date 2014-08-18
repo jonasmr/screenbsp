@@ -380,7 +380,7 @@ void WorldInit()
 	g_WorldState.nNumOccluders = 0;
 
 
-	if(1)
+	if(0)
 	{
 		g_WorldState.nNumWorldObjects = 0;
 		WorldInitOcclusionTest();
@@ -1512,56 +1512,62 @@ void foo()
 
 void ProgramInit()
 {
-	m mroty = mrotatey(45.f * TORAD);
-#if 0
-	g_WorldState.Camera.vDir = mtransform(mroty, v3init(0,0,-1));
-	g_WorldState.Camera.vRight = mtransform(mroty, v3init(1,0,0));
+	m mroty = 
+		mid()
+		;//mrotatey(45.f * TORAD);
+	g_WorldState.Camera.vDir = v3normalize(v3init(0.7,0,-0.7));
+	g_WorldState.Camera.vRight = v3normalize(v3init(0.7,0,0.7));
 	g_WorldState.Camera.vPosition = g_WorldState.Camera.vDir * -5.f;
-#else
-	g_WorldState.Camera.vPosition = v3init(133.101120,116.293892,111.730286);
-	g_WorldState.Camera.vDir = v3init(-0.690784,-0.394744,-0.605801);
-	g_WorldState.Camera.vRight = v3init(0.659345,0.000000,-0.751839);
-	g_WorldState.Camera.vPosition = v3init(133.308350,116.412315,111.912018);
-	g_WorldState.Camera.vDir = v3init(-0.690784,-0.394744,-0.605801);
-	g_WorldState.Camera.vRight = v3init(0.659345,0.000000,-0.751839);
-
-	g_WorldState.Camera.vPosition = v3init(159.291046,139.451385,93.022232);
-	g_WorldState.Camera.vDir = v3init(-0.639705,-0.636078,0.431487);
-	g_WorldState.Camera.vRight = v3init(-0.559192,0.000000,-0.829037);
-
-	g_WorldState.Camera.vPosition = v3init(-0.681794,2.844925,2.245514);
-	g_WorldState.Camera.vDir = v3init(0.558653,-0.573573,-0.599083);
-	g_WorldState.Camera.vRight = v3init(0.731347,0.000000,0.681993);
-
-	g_WorldState.Camera.vPosition = v3init(-138.117203,110.280533,88.949966);
-	g_WorldState.Camera.vDir = v3init(0.734251,-0.678798,-0.009613);
-	g_WorldState.Camera.vRight = v3init(0.013089,0.000000,0.999906);
-
-#ifndef _WIN32
-	g_WorldState.Camera.vPosition = v3init(-20.517357,74.954018,237.506470);
-	g_WorldState.Camera.vDir = v3init(0.686040,-0.300704,-0.662503);
-	g_WorldState.Camera.vRight = v3init(0.694652,0.000000,0.719334);
-#endif
-
-#if __APPLE__
-g_WorldState.Camera.vPosition = v3init(43.465141,0.424568,-110.558350);
-g_WorldState.Camera.vDir = v3init(0.722574,0.263033,-0.639282);
-g_WorldState.Camera.vRight = v3init(0.662614,0.000000,0.748949);
-#endif
-
-
-g_WorldState.Camera.vPosition = v3init(92.796921,10.000000,-196.202789);
-g_WorldState.Camera.vDir = v3init(-0.427102,-0.046025,0.903031);
-g_WorldState.Camera.vRight = v3init(-0.903989,0.000000,-0.427555);
-
-g_WorldState.Camera.vPosition = v3init(246.143951,10.000000,225.857758);
-g_WorldState.Camera.vDir = v3init(-0.736488,-0.029921,-0.675789);
-g_WorldState.Camera.vRight = v3init(0.676092,0.000000,-0.736817);
-
-#endif
-g_WorldState.Camera.vPosition = v3init(218.461838,10.000000,-28.306690);
-g_WorldState.Camera.vDir = v3init(-0.990690,-0.045348,0.128366);
-g_WorldState.Camera.vRight = v3init(-0.128499,0.000000,-0.991710);
+//
+//#if 0
+//	g_WorldState.Camera.vDir = mtransform(mroty, v3init(0,0,-1));
+//	g_WorldState.Camera.vRight = mtransform(mroty, v3init(1,0,0));
+//	g_WorldState.Camera.vPosition = g_WorldState.Camera.vDir * -5.f;
+//#else
+//	g_WorldState.Camera.vPosition = v3init(133.101120,116.293892,111.730286);
+//	g_WorldState.Camera.vDir = v3init(-0.690784,-0.394744,-0.605801);
+//	g_WorldState.Camera.vRight = v3init(0.659345,0.000000,-0.751839);
+//	g_WorldState.Camera.vPosition = v3init(133.308350,116.412315,111.912018);
+//	g_WorldState.Camera.vDir = v3init(-0.690784,-0.394744,-0.605801);
+//	g_WorldState.Camera.vRight = v3init(0.659345,0.000000,-0.751839);
+//
+//	g_WorldState.Camera.vPosition = v3init(159.291046,139.451385,93.022232);
+//	g_WorldState.Camera.vDir = v3init(-0.639705,-0.636078,0.431487);
+//	g_WorldState.Camera.vRight = v3init(-0.559192,0.000000,-0.829037);
+//
+//	g_WorldState.Camera.vPosition = v3init(-0.681794,2.844925,2.245514);
+//	g_WorldState.Camera.vDir = v3init(0.558653,-0.573573,-0.599083);
+//	g_WorldState.Camera.vRight = v3init(0.731347,0.000000,0.681993);
+//
+//	g_WorldState.Camera.vPosition = v3init(-138.117203,110.280533,88.949966);
+//	g_WorldState.Camera.vDir = v3init(0.734251,-0.678798,-0.009613);
+//	g_WorldState.Camera.vRight = v3init(0.013089,0.000000,0.999906);
+//
+//#ifndef _WIN32
+//	g_WorldState.Camera.vPosition = v3init(-20.517357,74.954018,237.506470);
+//	g_WorldState.Camera.vDir = v3init(0.686040,-0.300704,-0.662503);
+//	g_WorldState.Camera.vRight = v3init(0.694652,0.000000,0.719334);
+//#endif
+//
+//#if __APPLE__
+//g_WorldState.Camera.vPosition = v3init(43.465141,0.424568,-110.558350);
+//g_WorldState.Camera.vDir = v3init(0.722574,0.263033,-0.639282);
+//g_WorldState.Camera.vRight = v3init(0.662614,0.000000,0.748949);
+//#endif
+//
+//
+//g_WorldState.Camera.vPosition = v3init(92.796921,10.000000,-196.202789);
+//g_WorldState.Camera.vDir = v3init(-0.427102,-0.046025,0.903031);
+//g_WorldState.Camera.vRight = v3init(-0.903989,0.000000,-0.427555);
+//
+//g_WorldState.Camera.vPosition = v3init(246.143951,10.000000,225.857758);
+//g_WorldState.Camera.vDir = v3init(-0.736488,-0.029921,-0.675789);
+//g_WorldState.Camera.vRight = v3init(0.676092,0.000000,-0.736817);
+//
+//#endif
+//g_WorldState.Camera.vPosition = v3init(218.461838,10.000000,-28.306690);
+//g_WorldState.Camera.vDir = v3init(-0.990690,-0.045348,0.128366);
+//g_WorldState.Camera.vRight = v3init(-0.128499,0.000000,-0.991710);
 
 	g_WorldState.Camera.fFovY = 45.f;
 	g_WorldState.Camera.fNear = 0.1f;
