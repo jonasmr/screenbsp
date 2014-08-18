@@ -3,6 +3,10 @@
 //#include "program.h"
 
 #define BSP_BOX_SCALE 1.02f
+#define OCCLUDER_BSP_MAX_PLANES (1024 * 4)
+#define OCCLUDER_BSP_MAX_NODES (1024)
+
+
 struct SOccluderBsp;
 SOccluderBsp* BspCreate();
 
@@ -24,6 +28,7 @@ struct SOccluderBspStats
 	uint32 nNumPlanesConsidered;
 	uint32 nNumObjectsTested;
 	uint32 nNumObjectsTestedVisible;
+	uint32 nNumChildBspsCreated;
 };
 
 struct SOccluderDesc
