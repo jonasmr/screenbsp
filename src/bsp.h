@@ -30,6 +30,7 @@ struct SOccluderBspStats
 	uint32 nNumObjectsTested;
 	uint32 nNumObjectsTestedVisible;
 	uint32 nNumChildBspsCreated;
+	uint32 nNunSubBspTests;
 };
 
 struct SOccluderDesc
@@ -56,6 +57,15 @@ struct SOccluderBspNodes
 {
 	TFixedArray<SOccluderBspNode, OCCLUDER_BSP_MAX_NODES> Nodes;
 	TFixedArray<SOccluderBspNodeExtra, OCCLUDER_BSP_MAX_NODES> NodesExtra;
+	SOccluderBspNode& operator[](const int i)
+	{
+		return Nodes[i];
+	}
+	const SOccluderBspNode& operator[](const int i) const
+	{
+		return Nodes[i];
+	}
+	uint32_t Size(){return Nodes.Size();}
 };
 
 
@@ -64,7 +74,7 @@ void BspBuild(SOccluderBsp* pBsp,
 			  SOccluderDesc** pPlaneOccluders, uint32 nNumPlaneOccluders,
 			  SOccluderDesc** pBoxOccluders, uint32 nNumBoxOccluders,
 			  const SOccluderBspViewDesc& Desc);
-bool BspCullObject(SOccluderBsp* pBsp, SOccluderDesc* pObject);
+bool BspCullObject(SOccluderBsp* pBsp, SOccluderDesc* pObject, SOccluderBspNodes* pSubBsp = 0);
 void BspGetStats(SOccluderBsp* pBsp, SOccluderBspStats* pStats);
 
 
