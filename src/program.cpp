@@ -726,6 +726,7 @@ void WorldRender()
 	memset(nCulledRef, 0, nNumObjects*4);
 	{
 		MICROPROFILE_SCOPEI("CullTest", "Cull", 0xff00ff00);
+		SOccluderBspNodes NodeBsp;
 		for(uint32 i = 0; i < nNumObjects; ++i)
 		{
 			// if(0 == (pObject->nFlags & SObject::OCCLUSION_TEST))
@@ -738,6 +739,10 @@ void WorldRender()
 			else
 			{
 				bCulled[i] = BspCullObject(g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[i].mObjectToWorld);
+//				bool BspBuildSubBsp(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, SOccluderDesc *pObject)
+				bool bRes = BspBuildSubBsp(NodeBsp, g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[i].mObjectToWorld);
+				uplotfnxt("EQQQQQ %d, nodes %d", (bRes == bCulled[i]) ? 1 : 0, NodeBsp.Nodes.Size());
+				uplotfnxt("culled for %d is %d, %d", i, bRes, bCulled[i]);
 			}
 		}
 	}
