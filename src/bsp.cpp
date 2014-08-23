@@ -290,6 +290,8 @@ void BspDump(SOccluderBsp *pBsp, int nNode, int nLevel)
 
 void BspDumpNodes(SOccluderBspNodes *ppNodes, int nNode, int nLevel)
 {
+	if(!ppNodes->Size())
+		return;
 	SOccluderBspNode *pNode = &ppNodes->Nodes[nNode];
 	uprintf("D%s0x%04x: plane[%04x]   [i:%04x,o:%04x] parent %04x\n", Spaces(3 * nLevel), nNode,
 			pNode->nPlaneIndex, pNode->nInside, pNode->nOutside, BspFindParent(ppNodes, nNode));
@@ -1300,7 +1302,7 @@ int BspAddInternal(SOccluderBsp *pBsp, uint16 nParent, bool bOutsideParent, uint
 	return nNewIndex;
 }
 #define OCCLUDER_POLY_MAX 12
-enum ClipPolyResult
+enum ClipPolyResult : int
 {
 	ECPR_CLIPPED = 0,
 	ECPR_INSIDE = 0x1,
@@ -1366,7 +1368,7 @@ void BspDumpPlanes(const char* prefix, SOccluderBsp *pBsp, uint16 *pIndices, uin
 //#define BspClipPoly BspClipPolyChecked
 
 //#define BspClipPolyCull BspClipPolySingleTest0
-#define BspClipPolyCull BspClipPolySingleNoMask
+//#define BspClipPolyCull BspClipPolySingleNoMask
 //#define BspClipPolyCull BspClipPolySafe
 uint32 g_nPolyExtraDump = 0;
 ClipPolyResult BspClipPolySafe(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndices,
@@ -2306,7 +2308,8 @@ ClipPolyResult BspClipPolySingleTest0(SOccluderBsp *pBsp, uint16 nClipPlane, uin
 	}
 	return ClipPolyResult((nEdgesIn ? 0x1 : 0) | (nEdgesOut ? 0x2 : 0));
 }
-ClipPolyResult BspClipPolySingleNoMask(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndices,
+
+ClipPolyResult BspClipPolyCull(SOccluderBsp *pBsp, uint16 nClipPlane, uint16 *pIndices,
 						   uint16 nNumPlanes, uint16 *pPolyIn,
 						   uint16 *pPolyOut, uint32 &nEdgesIn_, uint32 &nEdgesOut_)
 {
@@ -2857,7 +2860,7 @@ bool BspCullObjectR(SOccluderBsp *pBsp, SOccluderBspNodes* pNodes, uint32 Index,
 	uint32 nOut = 0;
 	uint32 nExclusionIn = 0, nExclusionOut = 0;
 
-	ClipPolyResult CR = BspClipPolyCull(pBsp, Node.nPlaneIndex, Poly, nNumEdges, ClippedPolyIn,
+	int CR = BspClipPolyCull(pBsp, Node.nPlaneIndex, Poly, nNumEdges, ClippedPolyIn,
 									ClippedPolyOut, nIn, nOut);
 
 	// ClipPolyResult CR = BspClipPolyCull(pBsp, Node.nPlaneIndex, Poly, nNumEdges, 0, ClippedPolyIn,
@@ -3303,7 +3306,7 @@ void BspGetStats(SOccluderBsp* pBsp, SOccluderBspStats* pStats)
 //};
 
 
-int BspClipLeaf(SOccluderBsp* pBsp, v4 vPlane, uint16* Poly, uint32 nNumEdges)
+ClipPolyResult BspClipLeaf(SOccluderBsp* pBsp, v4 vPlane, uint16* Poly, uint32 nNumEdges)
 {
 	ZASSERT(vPlane.w != 0.f);
 	ZASSERT(vPlane.w != 0.f);
@@ -3318,7 +3321,7 @@ int BspClipLeaf(SOccluderBsp* pBsp, v4 vPlane, uint16* Poly, uint32 nNumEdges)
 		v3 vIntersect = BspPlaneIntersection(p0, p1, vNormalPlane);
 		float fDot = v4dot(v4init(vIntersect, 1.f), vPlane);
 		//verify sign lalalala
-		if(fDot < 0.f)
+		if(fDot > 0.f)
 		{
 			CR |= ECPR_INSIDE;
 		}
@@ -3329,7 +3332,7 @@ int BspClipLeaf(SOccluderBsp* pBsp, v4 vPlane, uint16* Poly, uint32 nNumEdges)
 		// bVisible = bVisible || fDot < 0.f;
 		// bCulled = bCulled && fDot < 0.f;
 	}
-	return CR;
+	return (ClipPolyResult)CR;
 }
 
 uint16_t BspBuildSubBspR(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, uint32_t nIndex, uint16_t* Poly, uint32_t nNumEdges, int& Clipped)
@@ -3344,7 +3347,7 @@ uint16_t BspBuildSubBspR(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, uint32_
 	SOccluderBspNode Node = pBsp->Nodes[nIndex];
 	v4 vPlane = BspGetPlane(pBsp, Node.nPlaneIndex);
 	//if all inside
-	int CR = ECPR_CLIPPED;
+	ClipPolyResult CR = ECPR_CLIPPED;
 	uint16_t nAdded = OCCLUDER_EMPTY;
 
 
@@ -3414,12 +3417,12 @@ uint16_t BspBuildSubBspR(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, uint32_
 	}
 	else
 	{
-		ZASSERT(Node.nInside != OCCLUDER_LEAF);
+////		ZASSERT(Node.nInside != OCCLUDER_LEAF);
+
 		ClippedPolyIn = (uint16 *)alloca(nMaxEdges * sizeof(uint16));
 		ClippedPolyOut = (uint16 *)alloca(nMaxEdges * sizeof(uint16));
 
-
-		ClipPolyResult CR = BspClipPolyCull(pBsp, Node.nPlaneIndex, Poly, nNumEdges, ClippedPolyIn,
+		CR = BspClipPolyCull(pBsp, Node.nPlaneIndex, Poly, nNumEdges, ClippedPolyIn,
 							ClippedPolyOut, nIn, nOut);
 	}
 	switch(CR)
@@ -3464,12 +3467,26 @@ uint16_t BspBuildSubBspR(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, uint32_
 		int ClippedIn = 2, ClippedOut = 2;
 		uint16_t nAddedIn  = BspBuildSubBspR(NodeBsp, pBsp, Node.nInside, ClippedPolyIn, nIn, ClippedIn);
 		uint16_t nAddedOut = BspBuildSubBspR(NodeBsp, pBsp, Node.nOutside, ClippedPolyOut, nOut, ClippedOut);
-		NodeBsp.Nodes[nAdded].nInside = nAddedIn;
-		NodeBsp.Nodes[nAdded].nOutside = nAddedOut;
+		//
+		if(nAddedIn == nAddedOut)
+		{
+			ZASSERT(nAddedIn == OCCLUDER_EMPTY);
+			ZASSERT(NodeBsp.Nodes.Size() == nAdded+1);
+			//both sides end up empty, so discard.
+			NodeBsp.Nodes.PopBack();
+			NodeBsp.NodesExtra.PopBack();
+			int a = 0;
+			nAdded = OCCLUDER_EMPTY;
+		}
+		else
+		{
+			NodeBsp.Nodes[nAdded].nInside = nAddedIn;
+			NodeBsp.Nodes[nAdded].nOutside = nAddedOut;
+			ZASSERT(NodeBsp.Nodes[nAdded].nOutside != OCCLUDER_LEAF);
+		}
 		ZASSERT(ClippedIn < 2);
 		ZASSERT(ClippedOut < 2);
 		Clipped = (ClippedIn == 1 && ClippedOut == 1) ? 1 : 0;
-		ZASSERT(NodeBsp.Nodes[nAdded].nOutside != OCCLUDER_LEAF);
 		break;
 	}
 
