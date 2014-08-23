@@ -636,11 +636,11 @@ void BspAddPotentialBoxes(SOccluderBsp* pBsp, SBspPotentialOccluders& PotentialO
 
 			//if(0 == (pObject->nFlags & SObject::OCCLUSION_BOX_SKIP_X))
 			{
-				//BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterY, vY, vZ, vSize.z, vX, vSize.x, true);
+				BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterY, vY, vZ, vSize.z, vX, vSize.x, true);
 			}
 			//if(0 == (pObject->nFlags & SObject::OCCLUSION_BOX_SKIP_Y))
 			{
-				//BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterX, vX, vY, vSize.y, vZ, vSize.z, true);
+				BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterX, vX, vY, vSize.y, vZ, vSize.z, true);
 			}
 			//if(0 == (pObject->nFlags & SObject::OCCLUSION_BOX_SKIP_Z))
 			{
@@ -2801,8 +2801,9 @@ bool BspCullObjectR(SOccluderBsp *pBsp, SOccluderBspNodes* pNodes, uint32 Index,
 		}
 	}
 	ZASSERT(Node.nOutside != OCCLUDER_LEAF);
-	if(Node.nInside == OCCLUDER_LEAF && vPlane.w != 0.f)
+	if(vPlane.w != 0.f)
 	{
+		ZASSERT(Node.nInside == OCCLUDER_LEAF);
 		ZASSERT(vPlane.w != 0.f);
 		v4 vNormalPlane = BspGetPlane(pBsp, Poly[nNumEdges - 1]);
 		bool bVisible = false;
