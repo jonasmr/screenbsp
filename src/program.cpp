@@ -741,7 +741,9 @@ void WorldRender()
 				bCulled[i] = BspCullObject(g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[i].mObjectToWorld);
 //				bool BspBuildSubBsp(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, SOccluderDesc *pObject)
 				bool bRes = BspBuildSubBsp(NodeBsp, g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[i].mObjectToWorld);
+				bool bCull1 = BspCullObject(g_Bsp,  (SOccluderDesc*)&g_WorldState.WorldObjects[i].mObjectToWorld, &NodeBsp);
 				uplotfnxt("EQQQQQ %d, nodes %d", (bRes == bCulled[i]) ? 1 : 0, NodeBsp.Nodes.Size());
+				uplotfnxt("E22222 %d", (bCull1 == bCulled[i]) ? 1 : 0);
 				uplotfnxt("culled for %d is %d, %d", i, bRes, bCulled[i]);
 			}
 		}
