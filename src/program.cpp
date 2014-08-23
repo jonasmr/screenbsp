@@ -380,7 +380,7 @@ void WorldInit()
 	g_WorldState.nNumOccluders = 0;
 
 
-	if(0)
+	if(1)
 	{
 		g_WorldState.nNumWorldObjects = 0;
 		WorldInitOcclusionTest();
@@ -741,10 +741,15 @@ void WorldRender()
 				bCulled[i] = BspCullObject(g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[i].mObjectToWorld);
 //				bool BspBuildSubBsp(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, SOccluderDesc *pObject)
 				bool bRes = BspBuildSubBsp(NodeBsp, g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[i].mObjectToWorld);
-				bool bCull1 = BspCullObject(g_Bsp,  (SOccluderDesc*)&g_WorldState.WorldObjects[i].mObjectToWorld, &NodeBsp);
+				ZASSERT(bRes == bCulled[i]);
 				uplotfnxt("EQQQQQ %d, nodes %d", (bRes == bCulled[i]) ? 1 : 0, NodeBsp.Nodes.Size());
-				uplotfnxt("E22222 %d", (bCull1 == bCulled[i]) ? 1 : 0);
-				uplotfnxt("culled for %d is %d, %d", i, bRes, bCulled[i]);
+				if(!bRes)
+				{
+					bool bCull1 = BspCullObject(g_Bsp,  (SOccluderDesc*)&g_WorldState.WorldObjects[i].mObjectToWorld, &NodeBsp);
+					ZASSERT(bCull1 == bCulled[i]);
+					uplotfnxt("E22222 %d", (bCull1 == bCulled[i]) ? 1 : 0);
+					uplotfnxt("culled for %d is %d, %d", i, bRes, bCulled[i]);
+				}
 			}
 		}
 	}
@@ -1525,6 +1530,7 @@ void ProgramInit()
 	g_WorldState.Camera.vDir = v3normalize(v3init(0.7,0,-0.7));
 	g_WorldState.Camera.vRight = v3normalize(v3init(0.7,0,0.7));
 	g_WorldState.Camera.vPosition = g_WorldState.Camera.vDir * -5.f;
+	g_WorldState.Camera.vPosition.y = 25.f;
 //
 //#if 0
 //	g_WorldState.Camera.vDir = mtransform(mroty, v3init(0,0,-1));
