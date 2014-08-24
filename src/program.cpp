@@ -741,14 +741,17 @@ void WorldRender()
 				bCulled[i] = BspCullObject(g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[i].mObjectToWorld);
 //				bool BspBuildSubBsp(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, SOccluderDesc *pObject)
 				bool bRes = BspBuildSubBsp(NodeBsp, g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[i].mObjectToWorld);
-				ZASSERT(bRes == bCulled[i]);
-				uplotfnxt("EQQQQQ %d, nodes %d", (bRes == bCulled[i]) ? 1 : 0, NodeBsp.Nodes.Size());
+				if(bRes != bCulled[i])
+				{
+					uprintf("fail for %d\n", i);
+				}
+				//uplotfnxt("EQQQQQ %d, nodes %d", (bRes == bCulled[i]) ? 1 : 0, NodeBsp.Nodes.Size());
 				if(!bRes)
 				{
 					bool bCull1 = BspCullObject(g_Bsp,  (SOccluderDesc*)&g_WorldState.WorldObjects[i].mObjectToWorld, &NodeBsp);
 					ZASSERT(bCull1 == bCulled[i]);
-					uplotfnxt("E22222 %d", (bCull1 == bCulled[i]) ? 1 : 0);
-					uplotfnxt("culled for %d is %d, %d", i, bRes, bCulled[i]);
+					//uplotfnxt("E22222 %d", (bCull1 == bCulled[i]) ? 1 : 0);
+					//uplotfnxt("culled for %d is %d, %d", i, bRes, bCulled[i]);
 				}
 			}
 		}

@@ -502,7 +502,7 @@ inline __m128 rsqrt(__m128 x)
 inline v3 v3normalize(v3 v_)
 {
 #if 1
-	__m128 r, v;
+	__m128 v;
 	__m128 x = _mm_load_ss(&v_.x);
 	__m128 y = _mm_load_ss(&v_.y);
 	__m128 z = _mm_load_ss(&v_.z);
