@@ -39,7 +39,8 @@
 //BspCullObjectSSE2
 //#define BspCullObjectSafe BspCullObject
 
-
+#pragma warning( disable : 4018 )
+#pragma warning( disable : 4996 )
 
 struct SOccluderPlane;
 struct SBspEdgeIndex;
@@ -174,7 +175,7 @@ inline bool BspIsLeafNode(const SOccluderBspNode &Node)
 	return Node.nInside == OCCLUDER_LEAF;
 }
 
-inline inline v4 BspGetPlane(SOccluderBsp *pBsp, uint16 nIndex)
+inline v4 BspGetPlane(SOccluderBsp *pBsp, uint16 nIndex)
 {
 	v4 vPlane = pBsp->Planes[nIndex & ~SOccluderBsp::PLANE_FLIP_BIT];
 	if(SOccluderBsp::PLANE_FLIP_BIT & nIndex)
@@ -2911,7 +2912,10 @@ bool BspCullObjectR(SOccluderBsp *pBsp, SOccluderBspNodes* pNodes, uint32 Index,
 	}
 	if(CR & ECPR_INSIDE)
 	{
-		ZASSERT(Node.nInside != OCCLUDER_EMPTY);
+		if(Node.nInside == OCCLUDER_EMPTY)
+		{
+			return false;
+		}
 		if(Node.nInside == OCCLUDER_LEAF)
 		{
 			//			ZASSERT(Node.nEdge == 4);
@@ -3522,8 +3526,10 @@ bool BspBuildSubBsp(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, SOccluderDes
 	pBsp->Planes.Resize(nSize);
 	srand(seed);
 
+#if 0
 	uprintf("test res is %d, size is %d\n", nAdded != OCCLUDER_EMPTY ? 1 : 0, NodeBsp.Nodes.Size());
 	BspDumpNodes(&NodeBsp, 0, 0);
+#endif
 	return Clipped == 1;
 
 }
