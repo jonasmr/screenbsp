@@ -18,7 +18,13 @@
 //test list:
 // test branchless shift [0 gain]
 // try and merge planetests into loop [0 gain]
+ 
 
+
+///make stats reliable.stats
+///make it robust.
+///make cull work identically
+//debug difference
 #include <algorithm>
 #define OCCLUDER_EMPTY (0xc000)
 #define OCCLUDER_INVALID (0xffff)
@@ -274,8 +280,17 @@ static const char *Spaces(int n)
 void BspDump(SOccluderBsp *pBsp, int nNode, int nLevel)
 {
 	SOccluderBspNode *pNode = pBsp->Nodes.Nodes.Ptr() + nNode;
-	uprintf("D%s0x%04x: plane[%04x]   [i:%04x,o:%04x] parent %04x\n", Spaces(3 * nLevel), nNode,
-			pNode->nPlaneIndex, pNode->nInside, pNode->nOutside, BspFindParent(&pBsp->Nodes, nNode));
+	v4 vPlane = BspGetPlane(pBsp, pNode->nPlaneIndex);
+	int iParent = BspFindParent(&pBsp->Nodes, nNode);
+	float dot3 = 0.f;
+	if(iParent >= 0)
+	{
+		v4 vParentPlane = BspGetPlane(pBsp, pBsp->Nodes[iParent].nPlaneIndex);
+		dot3 = v3dot(vParentPlane.tov3(), vPlane.tov3());
+
+	}
+	uprintf("D%s0x%04x: plane[%04x][i:%04x,o:%04x] p %04x %f %f %f %f:: d3 %f\n", Spaces(3 * nLevel), nNode,
+			pNode->nPlaneIndex, pNode->nInside, pNode->nOutside, iParent, vPlane.x, vPlane.y, vPlane.z, vPlane.w, dot3);
 	if(0 == (0x8000 & pNode->nInside))
 		BspDump(pBsp, pNode->nInside, nLevel + 1);
 	else
@@ -637,7 +652,7 @@ void BspAddPotentialBoxes(SOccluderBsp* pBsp, SBspPotentialOccluders& PotentialO
 
 			//if(0 == (pObject->nFlags & SObject::OCCLUSION_BOX_SKIP_X))
 			{
-				BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterY, vY, vZ, vSize.z, vX, vSize.x, true);
+				// BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterY, vY, vZ, vSize.z, vX, vSize.x, true);
 			}
 			//if(0 == (pObject->nFlags & SObject::OCCLUSION_BOX_SKIP_Y))
 			{
@@ -645,7 +660,7 @@ void BspAddPotentialBoxes(SOccluderBsp* pBsp, SBspPotentialOccluders& PotentialO
 			}
 			//if(0 == (pObject->nFlags & SObject::OCCLUSION_BOX_SKIP_Z))
 			{
-				BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterZ, vZ, vY, vSize.y, vX, vSize.x, true);
+			//	BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterZ, vZ, vY, vSize.y, vX, vSize.x, true);
 			}
 		}
 	}
@@ -763,6 +778,11 @@ void BspAddFrustum(SOccluderBsp *pBsp, SBspPotentialOccluders& P, v3 vLocalDirec
 	}
 }
 
+void BspDebugPlane(SOccluderBsp* pBsp, int nPlane)
+{
+	pBsp->Debug.DebugPlane = nPlane;
+}
+
 void BspDebugNextDrawMode(SOccluderBsp* pBsp)
 {
 	pBsp->Debug.OccluderDrawOccluders = (pBsp->Debug.OccluderDrawOccluders + 1) % 2;
@@ -808,6 +828,10 @@ void BspDebugClipLevelSubPrev(SOccluderBsp* pBsp)
 void BspDebugDumpFrame(SOccluderBsp* pBsp)
 {
 	pBsp->Debug.DumpFrame = 1;
+	uprintf("****************************FULL TREE DUMP\n");
+	BspDump(pBsp, 0, 0);
+	uprintf("****************************FULL TREE DUMP\n");
+
 }
 
 void BspBuild(SOccluderBsp* pBsp, 
@@ -2599,7 +2623,9 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 {
 	SOccluderBspNode Node = pBsp->Nodes[nBspIndex];
 	v4 vPlane = BspGetPlane(pBsp, Node.nPlaneIndex);
+
 	bool bPlaneOverlap = false;
+	#if 0
 	{
 		for(int i = 0; i < nNumIndices - 1; ++i)
 		{
@@ -2619,6 +2645,7 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 			}
 		}
 	}
+	#endif
 
 	uint32 nCount = (nNumIndices+1)*4;
 	uint16 ClippedPolyIn[OCCLUDER_POLY_MAX];
@@ -2770,15 +2797,16 @@ bool BspCullObjectR(SOccluderBsp *pBsp, SOccluderBspNodes* pNodes, uint32 Index,
 	SOccluderBspNode Node = pNodes->Nodes[Index];
 	v4 vPlane = BspGetPlane(pBsp, Node.nPlaneIndex);
 
-	BSP_DUMP_PRINTF(pBsp, "%sCULLR %08x P[%4x] In[%08x] Out[%08x]\n", Spaces(nClipLevel*2), Index, 
+	BSP_DUMP_PRINTF(pBsp, "%sCULLR %08x P[%4x] In[%08x] Out[%08x] Plane[%f,%f,%f,%f]\n", Spaces(nClipLevel*2), Index, 
 		nNumEdges,
 		Node.nInside,
-		Node.nOutside);
+		Node.nOutside, vPlane.x, vPlane.y, vPlane.z, vPlane.w);
 
 
 	if(pBsp->Debug.DebugPlane == pBsp->Debug.BspDebugPlaneCounter)
 	{
 		uplotfnxt("debug testing %d", nNumEdges);
+		uplotfnxt("DEBUG PLANE USING node %d", Index);
 		BspDrawPoly(pBsp, Poly, nNumEdges, 0xff000000|randredcolor(), 0, 1);
 		int iParent = Index;
 		uint32 nColor = 0xff00ff00;
@@ -3221,6 +3249,8 @@ void BspBuildPlanes(v4* pPlanes, uint16_t Poly[5], SOccluderBsp* pBsp, SOccluder
 
 bool BspCullObjectSSE2(SOccluderBsp *pBsp, SOccluderDesc *pObject, SOccluderBspNodes* pNodes)
 {
+	BSP_DUMP_PRINTF(pBsp, "CULL %p nodes %p, size %d\n", pObject, pNodes, pNodes? pNodes->Size() : 0);
+
 	pBsp->Stats.nNumObjectsTested++;
 	if(pNodes)
 	{
@@ -3299,6 +3329,13 @@ void BspGetStats(SOccluderBsp* pBsp, SOccluderBspStats* pStats)
 	memcpy(pStats, &pBsp->Stats, sizeof(SOccluderBspStats));
 }
 
+void BspClearCullStats(SOccluderBsp* pBsp)
+{
+	pBsp->Stats.nNumObjectsTested = 0;
+	pBsp->Stats.nNumObjectsTestedVisible = 0;
+	pBsp->Stats.nNumChildBspsCreated = 0;
+	pBsp->Stats.nNunSubBspTests = 0;
+}
 
 //SOccluderBspNodes	TFixedArray<SOccluderBspNode, OCCLUDER_BSP_MAX_NODES> Nodes;
 //TFixedArray<SOccluderBspNodeExtra, OCCLUDER_BSP_MAX_NODES> NodesExtra;
