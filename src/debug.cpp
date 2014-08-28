@@ -52,7 +52,7 @@ struct SDebugDrawState
 	TFixedArray<SDebugDrawPlane, 128> Planes;
 	TFixedArray<SDebugDrawPoly, 2048> Poly;
 
-	TFixedArray<v4, 2048*4> PolyVert;
+	TFixedArray<v4,64<<10> PolyVert;
 
 	TFixedArray<SDebugDrawSphere, 16<<10 > Spheres;
 	TFixedArray<SDebugDrawBounds, 16<<10 > Bounds;

@@ -652,7 +652,7 @@ void BspAddPotentialBoxes(SOccluderBsp* pBsp, SBspPotentialOccluders& PotentialO
 
 			//if(0 == (pObject->nFlags & SObject::OCCLUSION_BOX_SKIP_X))
 			{
-				// BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterY, vY, vZ, vSize.z, vX, vSize.x, true);
+				BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterY, vY, vZ, vSize.z, vX, vSize.x, true);
 			}
 			//if(0 == (pObject->nFlags & SObject::OCCLUSION_BOX_SKIP_Y))
 			{
@@ -660,7 +660,7 @@ void BspAddPotentialBoxes(SOccluderBsp* pBsp, SBspPotentialOccluders& PotentialO
 			}
 			//if(0 == (pObject->nFlags & SObject::OCCLUSION_BOX_SKIP_Z))
 			{
-			//	BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterZ, vZ, vY, vSize.y, vX, vSize.x, true);
+				BspAddPotentialBoxQuad(pBsp, PotentialOccluders, vCenterZ, vZ, vY, vSize.y, vX, vSize.x, true);
 			}
 		}
 	}
@@ -2794,6 +2794,7 @@ void BspAddRecursive(SOccluderBsp *pBsp, uint32 nBspIndex, uint16 *pIndices, uin
 bool BspCullObjectR(SOccluderBsp *pBsp, SOccluderBspNodes* pNodes, uint32 Index, uint16 *Poly, uint32 nNumEdges,
 					int nClipLevel)
 {	
+
 	SOccluderBspNode Node = pNodes->Nodes[Index];
 	v4 vPlane = BspGetPlane(pBsp, Node.nPlaneIndex);
 

@@ -677,7 +677,7 @@ void WorldRender()
 			BspDebugShowClipLevelNext(g_Bsp);
 		if(g_KeyboardState.keys[SDL_SCANCODE_F7] & BUTTON_RELEASED)
 			BspDebugShowClipLevelPrevious(g_Bsp);
-		static int debugplane = 0;
+		static int debugplane = -1;
 		if(g_KeyboardState.keys[SDL_SCANCODE_F12] & BUTTON_RELEASED)
 		{
 			debugplane++;
@@ -1552,7 +1552,7 @@ void ProgramInit()
 	g_WorldState.Camera.vDir = v3normalize(v3init(0.7,0,-0.7));
 	g_WorldState.Camera.vRight = v3normalize(v3init(0.7,0,0.7));
 	g_WorldState.Camera.vPosition = g_WorldState.Camera.vDir * -5.f;
-	g_WorldState.Camera.vPosition.y = 25.f;
+	// g_WorldState.Camera.vPosition.y = 25.f;
 //
 //#if 0
 //	g_WorldState.Camera.vDir = mtransform(mroty, v3init(0,0,-1));
@@ -1605,10 +1605,11 @@ void ProgramInit()
 //g_WorldState.Camera.vRight = v3init(-0.128499,0.000000,-0.991710);
 
 
+#if 0
 g_WorldState.Camera.vPosition = v3init(42.626808,20.487385,38.569298);
 g_WorldState.Camera.vDir = v3init(0.897161,-0.258819,-0.357930);
 g_WorldState.Camera.vRight = v3init(0.370557,0.000000,0.928810);
-
+#endif
 
 	g_WorldState.Camera.fFovY = 45.f;
 	g_WorldState.Camera.fNear = 0.1f;
