@@ -4,6 +4,7 @@
 #include "test.h"
 #include "microprofile.h"
 #include "debug.h"
+#include "bsp.h"
 #include <functional>
 
 
@@ -11,6 +12,8 @@
 uint32 g_nRunTest = 0;
 FILE* g_TestOut = 0;
 FILE* g_TestFailOut = 0;
+
+uint32_t g_nBaseObjects = 0;
 
 
 int32 g_nTestIndex = 0; //0:bsp, 1:software occl
@@ -37,23 +40,91 @@ extern uint32 g_nBspNodeCap;
 #define OCCLUSION_TEST_HALF_SIZE 300
 #define OCCLUSION_TEST_MIN (-OCCLUSION_TEST_HALF_SIZE)
 #define OCCLUSION_TEST_MAX OCCLUSION_TEST_HALF_SIZE
-#if 1
-#define OCCLUSION_NUM_LARGE 10
-#define OCCLUSION_NUM_SMALL 100
-#define OCCLUSION_NUM_LONG 20
-#define OCCLUSION_NUM_OBJECTS 2000
-#define OCCLUSION_USE_GROUND 0
-#else
-
-#define OCCLUSION_NUM_LARGE 10
-#define OCCLUSION_NUM_SMALL 0
-#define OCCLUSION_NUM_LONG 0
-#define OCCLUSION_NUM_OBJECTS 500
-#define OCCLUSION_USE_GROUND 1
 
 
-#endif
 #define OCCLUSION_GROUND_Y -1.0f
+
+
+
+
+SWorldGrid g_Grid3;
+SWorldGrid g_Grid4;
+SWorldGrid g_Grid5;
+SWorldGrid g_Grid8;
+SWorldGrid g_Grid10;
+
+
+void BuildGrid(SWorldGrid& Grid, int nSplit, uint32 nObjectStart, uint32 nObjectEnd)
+{
+	Grid.nNumNodes = 0;
+	Grid.nNumSectors = 0;
+	// int lala[OCCLUSION_NUM_OBJECTS] = {0};
+	for(int x = 0; x < nSplit; ++x)
+	{
+		for(int z = 0; z < nSplit; ++z)
+		{
+			int nStart = Grid.nNumNodes;
+			float fMinX = OCCLUSION_TEST_MIN + (OCCLUSION_TEST_MAX-OCCLUSION_TEST_MIN) * x / nSplit;
+			float fMaxX = OCCLUSION_TEST_MIN + (OCCLUSION_TEST_MAX-OCCLUSION_TEST_MIN) * (x+1) / nSplit;
+			float fMinZ = OCCLUSION_TEST_MIN + (OCCLUSION_TEST_MAX-OCCLUSION_TEST_MIN) * z / nSplit;
+			float fMaxZ = OCCLUSION_TEST_MIN + (OCCLUSION_TEST_MAX-OCCLUSION_TEST_MIN) * (z+1) / nSplit;
+			v3 vMin = v3init(fMinX, 1000, fMinZ);
+			v3 vMax = v3init(fMaxX, -1000, fMaxZ);
+			for(uint32 i = nObjectStart; i < nObjectEnd; ++i)
+			{
+				v3 vPos = g_WorldState.WorldObjects[i].mObjectToWorld.trans.tov3();
+				v3 vSize = g_WorldState.WorldObjects[i].vSize;
+				float fLen = v3length(vSize);
+				float oMinX = vPos.x - fLen;
+				float oMaxX = vPos.x + fLen;
+				float oMinY = vPos.y - fLen;
+				float oMaxY = vPos.y + fLen;
+				float oMinZ = vPos.z - fLen;
+				float oMaxZ = vPos.z + fLen;
+				if(fMinX > oMaxX || fMaxX < oMinX || fMinZ > oMaxZ || fMaxZ < oMinZ)
+				{
+				}
+				else
+				{
+					// lala[i] = 1;
+					//overlap
+					vMin = v3min(vMin, v3init(oMinX, oMinY, oMinZ));
+					vMax = v3max(vMax, v3init(oMaxX, oMaxY, oMaxZ));
+					ZASSERT(Grid.nNumNodes < SWorldGrid::MAX_OBJECTS);
+					Grid.nIndices[Grid.nNumNodes++] = i;
+				}
+			}
+			SWorldSector& S = Grid.Sector[Grid.nNumSectors++];
+			S.nStart = nStart;
+			S.nCount = Grid.nNumNodes - nStart;
+			S.vMin = vMin;
+			S.vMax = vMax;
+			m xform = mid();
+			xform.trans = v4init( 0.5 * (S.vMax + S.vMin), 1.f);
+			memcpy(&S.Desc.ObjectToWorld[0], &xform, sizeof(xform));
+			v3 vSize = 0.5 * (S.vMax - S.vMin);
+			memcpy(S.Desc.Size, &vSize, sizeof(S.Desc.Size));
+
+// struct SOccluderDesc
+// {
+// 	float ObjectToWorld[16];
+// 	float Size[3];
+// };	
+
+
+		}
+	}
+	// for(int i = 0; i < OCCLUSION_NUM_OBJECTS; ++i)
+	// {
+	// 	if(!lala[i])
+	// 	{
+	// 		v3 vPos = g_WorldState.WorldObjects[i].mObjectToWorld.trans.tov3();
+	// 		v3 vSize = g_WorldState.WorldObjects[i].vSize;
+	// 		float fLen = v3length(vSize);
+	// 		uprintf("fail %f %f %f .. %f\n", vPos.x, vPos.y, vPos.z, fLen);
+	// 	}
+	// }
+}
 
 int nSettingsBsp[] = 
 {
@@ -119,18 +190,20 @@ void WorldInitOcclusionTest()
 	randseed(0xed32babe, 0xdeadf39c);
 	g_WorldState.nNumWorldObjects = 0;
 	bool bSkipInitLong = false;
-	bool bSkipInitLarge = false;
 	bool bSkipInitSmall = false;
 	bool bSkipInitGround = false;
 	float fbar = 0.f;
+	bool bSkipInitLarge = true;
 	int idxx_large[] = 
 	{
 		-1,
-		//0, 1, 2, 3, 4, 
-		//5, 6, 7, 
-		//8, 
-		//9, 10, 
-		//76 + 15,
+		//0, 1, 
+		// 2, 
+		//3, 
+		4, 
+		//5, 6, 7, 8, 
+		9, 
+		// 10, 
 	};
 
 	bool bSkipInit = false;
@@ -159,14 +232,19 @@ void WorldInitOcclusionTest()
 		for(int x : idxx_large)
 			if(x == i)
 				bSkip = false;
-		if(bSkip)
-		{
-			fbar += frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
-			fbar += frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
-		}
-		else
+		// if(bSkip)
+		// {
+		// 	fbar += frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
+		// 	fbar += frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
+		// }
+		// else
 		{
 			WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUDER_BOX);
+			if(bSkip)
+			{
+				g_WorldState.nNumWorldObjects--;
+			}
+
 		}
 	}
 	
@@ -212,14 +290,20 @@ void WorldInitOcclusionTest()
 		for(int x : idxx)
 			if(x == i)
 				bSkip = false;
-		if(bSkip)
-		{
-			fbar += frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
-			fbar += frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
-		}
-		else
+		// if(bSkip)
+		// {
+		// 	fbar += frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
+		// 	fbar += frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
+		// }
+		// else
 		{
 			WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUDER_BOX);
+
+			if(bSkip)
+			{
+				g_WorldState.nNumWorldObjects--;
+			}
+
 		}
 	}
 //	uprintf("fbar %f", fbar);
@@ -309,6 +393,9 @@ void WorldInitOcclusionTest()
 	}
 	//uprintf("TOTAL ADD LONG %d\n", nadd);
 	uint32 nNumObjects = g_WorldState.nNumWorldObjects;
+	uint32 nObjectStart = g_WorldState.nNumWorldObjects;
+	//int nFail = 68 - nObjectStart;
+	int nFail = 58;
 	for(int i = 0; i < OCCLUSION_NUM_OBJECTS; ++i)
 	{
 		float fHeight = frandrange(1, 2);
@@ -323,22 +410,39 @@ void WorldInitOcclusionTest()
 		//if(0||(i >= 168 && i < 16))
 		//if(i == 169)
 		//if(i + nNumObjects == 189)
-		if(1)
 		{
 			WorldOcclusionCreate(v3init(fWidth, fHeight, fDepth), SObject::OCCLUSION_TEST, v3fromcolor(randcolor()));
 			if(frand()<0.02f)
 			{
 				g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects-1].mObjectToWorld.trans.y -= 10;
 			}
+			//ruprintf("fail is %d\n", nFail);
+			//if(i >= nFail && i > 55)
+			if(i != nFail)
+			{
+				g_WorldState.nNumWorldObjects--;
+			}
+			else
+			{
+				uprintf("Create object %f %f %f\n", g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects-1].mObjectToWorld.trans.x,
+					g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects-1].mObjectToWorld.trans.y,
+					g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects-1].mObjectToWorld.trans.z);
+			}
+
 
 		}
-		else
-		{
-			fbar += frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
-			fbar += frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
-
-		}
+		// else
+		// {
+		// 	fbar += randcolor();
+		// 	fbar += frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
+		// 	fbar += frandrange(OCCLUSION_TEST_MIN, OCCLUSION_TEST_MAX);
+		// }
 	}
+	uint32 nObjectEnd = g_WorldState.nNumWorldObjects;
+
+	BuildGrid(g_Grid5, 10, nObjectStart, nObjectEnd);
+	g_nBaseObjects = nObjectStart;
+	// ZBREAK();
 }
 
 

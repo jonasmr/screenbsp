@@ -76,7 +76,10 @@ void BspBuild(SOccluderBsp* pBsp,
 			  const SOccluderBspViewDesc& Desc);
 bool BspCullObject(SOccluderBsp* pBsp, SOccluderDesc* pObject, SOccluderBspNodes* pSubBsp = 0);
 void BspGetStats(SOccluderBsp* pBsp, SOccluderBspStats* pStats);
+void BspClearCullStats(SOccluderBsp* pBsp);
 
+
+void BspDebugPlane(SOccluderBsp* pBsp, int nPlane);
 
 
 void BspDebugNextDrawMode(SOccluderBsp* pBsp);
