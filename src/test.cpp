@@ -193,17 +193,12 @@ void WorldInitOcclusionTest()
 	bool bSkipInitSmall = false;
 	bool bSkipInitGround = false;
 	float fbar = 0.f;
-	bool bSkipInitLarge = true;
+	bool bSkipInitLarge = false;
 	int idxx_large[] = 
 	{
 		-1,
-		//0, 1, 
-		// 2, 
-		//3, 
-		4, 
-		//5, 6, 7, 8, 
-		9, 
-		// 10, 
+		// 4, 
+		// 9, 
 	};
 
 	bool bSkipInit = false;
@@ -418,7 +413,7 @@ void WorldInitOcclusionTest()
 			}
 			//ruprintf("fail is %d\n", nFail);
 			//if(i >= nFail && i > 55)
-			if(i != nFail)
+			if(0)
 			{
 				g_WorldState.nNumWorldObjects--;
 			}
