@@ -30,6 +30,7 @@ struct SOccluderBspStats
 	uint32 nNumObjectsTested;
 	uint32 nNumObjectsTestedVisible;
 	uint32 nNumChildBspsCreated;
+	uint32 nNumChildBspsVisible;
 	uint32 nNunSubBspTests;
 };
 

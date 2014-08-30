@@ -3302,6 +3302,7 @@ void BspClearCullStats(SOccluderBsp* pBsp)
 	pBsp->Stats.nNumObjectsTested = 0;
 	pBsp->Stats.nNumObjectsTestedVisible = 0;
 	pBsp->Stats.nNumChildBspsCreated = 0;
+	pBsp->Stats.nNumChildBspsVisible = 0;
 	pBsp->Stats.nNunSubBspTests = 0;
 }
 
@@ -3522,6 +3523,10 @@ bool BspBuildSubBsp(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, SOccluderDes
 	uprintf("test res is %d, size is %d\n", nAdded != OCCLUDER_EMPTY ? 1 : 0, NodeBsp.Nodes.Size());
 	BspDumpNodes(&NodeBsp, 0, 0);
 #endif
+	if(Clipped == 1)
+	{
+		pBsp->Stats.nNumChildBspsVisible++;
+	}
 	return Clipped == 1;
 
 }
