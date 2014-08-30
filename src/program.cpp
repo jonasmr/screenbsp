@@ -382,7 +382,6 @@ void WorldInit()
 	g_WorldState.nNumOccluders = 3;
 	g_WorldState.nNumOccluders = 0;
 
-
 	if(1)
 	{
 		g_WorldState.nNumWorldObjects = 0;
@@ -520,6 +519,7 @@ void WorldInit()
 
 void WorldDrawObjects(bool* bCulled)
 {
+	MICROPROFILE_SCOPEI("lala", "WorldDrawObjects", 0xff00ffff);
 	int nLocSize = ShaderGetLocation("Size");
 	int nLocModelView = ShaderGetLocation("ModelViewMatrix");
 	int nLocColor = ShaderGetLocation("ConstColor");
@@ -557,6 +557,12 @@ void WorldRender()
 	{
 		g_nSimulate = !g_nSimulate;
 	}
+
+	if(g_KeyboardState.keys[SDL_SCANCODE_P] & BUTTON_RELEASED)
+	{
+		g_lShowDebug = !g_lShowDebug;
+	}
+
 	static int incfoo = 1;
 	if(g_nSimulate)
 	{
@@ -776,9 +782,9 @@ void WorldRender()
 		}
 	}
 	uplotfnxt("********************BSP STATS********************");
-	uplotfnxt("** TESTED %5d VISIBLE %5d SUBTEST %d CHILDBSP %d", Stats.nNumObjectsTested, Stats.nNumObjectsTestedVisible, Stats.nNunSubBspTests, Stats.nNumChildBspsCreated);
+	uplotfnxt("** TESTED %5d VISIBLE %5d SUBTEST %d CHILDBSP %d CHILDBSPVIS %d", Stats.nNumObjectsTested, Stats.nNumObjectsTestedVisible, Stats.nNunSubBspTests, Stats.nNumChildBspsCreated, StatsFast.nNumChildBspsVisible);
 	uplotfnxt("********************BSP FAST STATS********************");
-	uplotfnxt("** TESTED %5d VISIBLE %5d SUBTEST %d CHILDBSP %d", StatsFast.nNumObjectsTested, StatsFast.nNumObjectsTestedVisible, StatsFast.nNunSubBspTests, StatsFast.nNumChildBspsCreated);
+	uplotfnxt("** TESTED %5d VISIBLE %5d SUBTEST %d CHILDBSP %d CHILDBSPVIS %d", StatsFast.nNumObjectsTested, StatsFast.nNumObjectsTestedVisible, StatsFast.nNunSubBspTests, StatsFast.nNumChildBspsCreated, StatsFast.nNumChildBspsVisible);
 
 	static v3 LightPos = v3init(0,-2.7,0);
 	static v3 LightColor = v3init(0.9, 0.5, 0.9);
@@ -1052,105 +1058,146 @@ void WorldRender()
 
 		int nLocSize = ShaderGetLocation("Size");
 		int nLocModelView = ShaderGetLocation("ModelViewMatrix");
-		for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
 		{
-			SWorldObject* pObject = g_WorldState.WorldObjects + i;
-			if(pObject->nFlags & SObject::OCCLUDER_BOX)
+			MICROPROFILE_SCOPEI("lala", "Fill Buffer", 0xff00ffff);
+			for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
 			{
-				v3 vSizeScaled = pObject->vSize;
-				vSizeScaled *= BSP_BOX_SCALE;
-				ShaderSetUniform(nLocSize, vSizeScaled);
-				ShaderSetUniform(nLocModelView, &pObject->mObjectToWorld);
-				MeshDraw(GetBaseMesh(MESH_BOX_FLAT));
+				SWorldObject* pObject = g_WorldState.WorldObjects + i;
+				if(pObject->nFlags & SObject::OCCLUDER_BOX)
+				{
+					v3 vSizeScaled = pObject->vSize;
+					vSizeScaled *= BSP_BOX_SCALE;
+					ShaderSetUniform(nLocSize, vSizeScaled);
+					ShaderSetUniform(nLocModelView, &pObject->mObjectToWorld);
+					MeshDraw(GetBaseMesh(MESH_BOX_FLAT));
+				}
 			}
 		}
 		glDepthMask(0);
-		enum{MAX_QUERIES=10<<10,};
+
+
+		enum{
+			MAX_QUERIES=10<<10,
+			QUERY_FRAME_DELAY=5,
+			PIXEL_THRESHOLD=10,
+		};
+		static int nQueryFrame = 0;
+		struct QueryFrameState
+		{
+			int nReady;
+			int nNumObjects;
+			GLuint Queries[MAX_QUERIES];
+			bool bCulled[MAX_QUERIES];
+			v3 vLockedCamPos;
+			v3 vLockedCamDir;
+			v3 vLockedCamRight;
+		};
+		static QueryFrameState QS[QUERY_FRAME_DELAY] = {0};
 		static GLuint Queries[MAX_QUERIES] = {0};
 		ZASSERT(10<<10 > g_WorldState.nNumWorldObjects);
-		if(!Queries[0])
-		{
-			glGenQueries(MAX_QUERIES, &Queries[0]);
-		}
-		for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
-		{
-			SWorldObject* pObject = g_WorldState.WorldObjects + i;
-			if(pObject->nFlags & SObject::OCCLUSION_TEST)
+
+		{{
 			{
-				ShaderSetUniform(nLocSize, pObject->vSize);
-				ShaderSetUniform(nLocModelView, &pObject->mObjectToWorld);
-
-				glBeginQuery(GL_SAMPLES_PASSED, Queries[i]);
-
-				MeshDraw(GetBaseMesh(MESH_BOX_FLAT));
-
-				glEndQuery(GL_SAMPLES_PASSED);
-			}
-		}
-		for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
-		{
-			SWorldObject* pObject = g_WorldState.WorldObjects + i;
-			if(pObject->nFlags & SObject::OCCLUSION_TEST)
-			{
-				int result, result0;
-				glGetQueryObjectiv(Queries[i], GL_QUERY_RESULT, &result0);
-				glGetQueryObjectiv(Queries[i], GL_QUERY_RESULT, &result);
-				ZASSERT(result == result0);
-				bCulledRef[i] = 10 > result;
-				nCulledRef[i] = result;
-
-			}
-		}
-		nNumFail = 0;
-		uint32 nAgree = 0, nFailCull = 0, nFalsePositives = 0;
-		for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
-		{
-
-			SWorldObject* pObject = g_WorldState.WorldObjects + i;
-			if(pObject->nFlags & SObject::OCCLUSION_TEST)
-			{
-				if(bCulled[i] && !bCulledRef[i])
+				QueryFrameState& Cur = QS[nQueryFrame];
+				if(!Cur.Queries[0])
 				{
-					++nFailCull;
-					++g_nTestFail;
-					uprintf("FAIL CULL %d .. count %d\n", i, nCulledRef[i]);
-					if(nNumFail < MAX_FAIL)
-						pFailObjects[nNumFail++] = pObject;
-
+					glGenQueries(MAX_QUERIES, &Cur.Queries[0]);
 				}
-				else if(bCulledRef[i] && !bCulled[i])
 				{
-					++nFalsePositives;
-					g_nTestFalsePositives++;
-					//uprintf("FALSE CULL %d\n", i);
+					MICROPROFILE_SCOPEI("lala", "IssueQueries", 0xff00ffff);
+					for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
+					{
+						SWorldObject* pObject = g_WorldState.WorldObjects + i;
+						if(pObject->nFlags & SObject::OCCLUSION_TEST)
+						{
+							ShaderSetUniform(nLocSize, pObject->vSize);
+							ShaderSetUniform(nLocModelView, &pObject->mObjectToWorld);
+							glBeginQuery(GL_SAMPLES_PASSED, Cur.Queries[i]);
+							MeshDraw(GetBaseMesh(MESH_BOX_FLAT));
+							glEndQuery(GL_SAMPLES_PASSED);
+						}
+					}
+				}
+				Cur.nNumObjects = g_WorldState.nNumWorldObjects;
+				memcpy(&Cur.bCulled[0], &bCulled[0], sizeof(Cur.bCulled[0]) * g_WorldState.nNumWorldObjects);
+				Cur.vLockedCamPos = vLockedCamPos;
+				Cur.vLockedCamDir = vLockedCamDir;
+				Cur.vLockedCamRight = vLockedCamRight;
+
+
+			}
+			nQueryFrame = (nQueryFrame+1) % QUERY_FRAME_DELAY;
+			nNumFail = 0;
+			uint32 nAgree = 0, nFailCull = 0, nFalsePositives = 0;
+	
+			QueryFrameState& Prev = QS[nQueryFrame];
+			if(Prev.nNumObjects)
+			{
+				{
+					MICROPROFILE_SCOPEI("lala", "GetResult", 0xff00ffff);
+					for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
+					{
+						SWorldObject* pObject = g_WorldState.WorldObjects + i;
+						if(pObject->nFlags & SObject::OCCLUSION_TEST)
+						{
+							int result, result0;
+							//glGetQueryObjectiv(Prev.Queries[i], GL_QUERY_RESULT, &result0);
+							glGetQueryObjectiv(Prev.Queries[i], GL_QUERY_RESULT, &result);
+							ZASSERT(result == result0);
+							bCulledRef[i] = PIXEL_THRESHOLD > result;
+							nCulledRef[i] = result;
+						}
+					}
+				}
+				for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
+				{
+					SWorldObject* pObject = g_WorldState.WorldObjects + i;
+					if(pObject->nFlags & SObject::OCCLUSION_TEST)
+					{
+						if(Prev.bCulled[i] && !bCulledRef[i])
+						{
+							++nFailCull;
+							++g_nTestFail;
+							uprintf("FAIL CULL %d .. count %d\n", i, nCulledRef[i]);
+							if(nNumFail < MAX_FAIL)
+								pFailObjects[nNumFail++] = pObject;
+
+						}
+						else if(bCulledRef[i] && !Prev.bCulled[i])
+						{
+							++nFalsePositives;
+							g_nTestFalsePositives++;
+							//uprintf("FALSE CULL %d\n", i);
+						}
+						else
+						{
+							++nAgree;
+						}
+					}
+				}
+			}	
+			uplotfnxt("FAIL %d  FALSE %d AGREE %d", nFailCull, nFalsePositives, nAgree);
+			if(nNumFail)
+			{
+				uprintf("FAIL %d  FALSE %d AGREE %d\n", nFailCull, nFalsePositives, nAgree);
+				if(g_nRunTest)
+				{
+					uprintf("g_WorldState.Camera.vPosition = v3init(%f,%f,%f);\n", Prev.vLockedCamPos.x, Prev.vLockedCamPos.y, Prev.vLockedCamPos.z);
+					uprintf("g_WorldState.Camera.vDir = v3init(%f,%f,%f);\n", Prev.vLockedCamDir.x, Prev.vLockedCamDir.y, Prev.vLockedCamDir.z);
+					uprintf("g_WorldState.Camera.vRight = v3init(%f,%f,%f)\n;", Prev.vLockedCamRight.x, Prev.vLockedCamRight.y, Prev.vLockedCamRight.z);
+					fprintf(g_TestFailOut, "g_WorldState.Camera.vPosition = v3init(%f,%f,%f);\n", Prev.vLockedCamPos.x, Prev.vLockedCamPos.y, Prev.vLockedCamPos.z);
+					fprintf(g_TestFailOut, "g_WorldState.Camera.vDir = v3init(%f,%f,%f);\n", Prev.vLockedCamDir.x, Prev.vLockedCamDir.y, Prev.vLockedCamDir.z);
+					fprintf(g_TestFailOut, "g_WorldState.Camera.vRight = v3init(%f,%f,%f)\n;", Prev.vLockedCamRight.x, Prev.vLockedCamRight.y, Prev.vLockedCamRight.z);
+
 				}
 				else
 				{
-					++nAgree;
+					uprintf("locking camera\n");
+					g_nUseDebugCameraPos = 1;
+
 				}
 			}
-		}	
-		uplotfnxt("FAIL %d  FALSE %d AGREE %d", nFailCull, nFalsePositives, nAgree);
-		if(nNumFail)
-		{
-			uprintf("FAIL %d  FALSE %d AGREE %d\n", nFailCull, nFalsePositives, nAgree);
-			if(g_nRunTest)
-			{
-				uprintf("g_WorldState.Camera.vPosition = v3init(%f,%f,%f);\n", vLockedCamPos.x, vLockedCamPos.y, vLockedCamPos.z);
-				uprintf("g_WorldState.Camera.vDir = v3init(%f,%f,%f);\n", vLockedCamDir.x, vLockedCamDir.y, vLockedCamDir.z);
-				uprintf("g_WorldState.Camera.vRight = v3init(%f,%f,%f)\n;", vLockedCamRight.x, vLockedCamRight.y, vLockedCamRight.z);
-				fprintf(g_TestFailOut, "g_WorldState.Camera.vPosition = v3init(%f,%f,%f);\n", vLockedCamPos.x, vLockedCamPos.y, vLockedCamPos.z);
-				fprintf(g_TestFailOut, "g_WorldState.Camera.vDir = v3init(%f,%f,%f);\n", vLockedCamDir.x, vLockedCamDir.y, vLockedCamDir.z);
-				fprintf(g_TestFailOut, "g_WorldState.Camera.vRight = v3init(%f,%f,%f)\n;", vLockedCamRight.x, vLockedCamRight.y, vLockedCamRight.z);
-
-			}
-			else
-			{
-				uprintf("locking camera\n");
-				g_nUseDebugCameraPos = 1;
-
-			}
-		}
+		}}
 	}
 
 	static float fub = 0;
