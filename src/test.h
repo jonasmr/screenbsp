@@ -8,7 +8,7 @@ extern FILE* g_TestFailOut;
 extern int32 g_nTestFail;
 extern int32 g_nTestFalsePositives;
 
-#define QUICK_PERF 0
+#define QUICK_PERF 1
 
 
 #if 1
@@ -46,7 +46,7 @@ struct SWorldSector
 struct SWorldGrid
 {
 	enum {
-		MAX_SECTORS = 100,
+		MAX_SECTORS = 20*20,
 		MAX_OBJECTS = OCCLUSION_NUM_OBJECTS * 4,
 	};
 	SWorldSector Sector[MAX_SECTORS];
@@ -56,5 +56,13 @@ struct SWorldGrid
 
 };
 
+extern SWorldGrid g_Grid3;
+extern SWorldGrid g_Grid4;
 extern SWorldGrid g_Grid5;
+extern SWorldGrid g_Grid8;
+extern SWorldGrid g_Grid10;
+extern SWorldGrid g_Grid12;
+extern SWorldGrid g_Grid15;
+extern SWorldGrid g_Grid20;
+
 

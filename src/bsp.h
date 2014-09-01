@@ -92,6 +92,6 @@ void BspDebugShowClipLevelPrevious(SOccluderBsp* pBsp);
 void BspDebugToggleInsideOutside(SOccluderBsp* pBsp);
 void BspDebugClipLevelSubNext(SOccluderBsp* pBsp);
 void BspDebugClipLevelSubPrev(SOccluderBsp* pBsp);
-void BspDebugDumpFrame(SOccluderBsp* pBsp);
+int BspDebugDumpFrame(SOccluderBsp* pBsp, int val);
 
 bool BspBuildSubBsp(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, SOccluderDesc *pObject);

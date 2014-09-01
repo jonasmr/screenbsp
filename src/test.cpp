@@ -52,6 +52,9 @@ SWorldGrid g_Grid4;
 SWorldGrid g_Grid5;
 SWorldGrid g_Grid8;
 SWorldGrid g_Grid10;
+SWorldGrid g_Grid12;
+SWorldGrid g_Grid15;
+SWorldGrid g_Grid20;
 
 
 void BuildGrid(SWorldGrid& Grid, int nSplit, uint32 nObjectStart, uint32 nObjectEnd)
@@ -129,20 +132,29 @@ void BuildGrid(SWorldGrid& Grid, int nSplit, uint32 nObjectStart, uint32 nObject
 int nSettingsBsp[] = 
 {
 	#if QUICK_PERF
+	2048,
 	1024,
-	1024,
-	1024,
-	1024,
-	1024,
-	1024,
-	1024,
-	1024,
-	1024,
-	1024,
-	1024,
-	1024,
-	1024,
-	1024,
+	// 1024,
+	// 2048,
+	// 768,
+	512, 
+	// 386, 
+	// 256, 
+	// 128, 
+
+
+	// 1024,
+	// 1024,
+	// 1024,
+	// 1024,
+	// 1024,
+	// 1024,
+	// 1024,
+	// 1024,
+	// 1024,
+	// 1024,
+	// 1024,
+	// 1024,
 
 	#else
 	1024,	
@@ -435,7 +447,15 @@ void WorldInitOcclusionTest()
 	}
 	uint32 nObjectEnd = g_WorldState.nNumWorldObjects;
 
-	BuildGrid(g_Grid5, 10, nObjectStart, nObjectEnd);
+
+	BuildGrid(g_Grid3, 3, nObjectStart, nObjectEnd);
+	BuildGrid(g_Grid4, 4, nObjectStart, nObjectEnd);
+	BuildGrid(g_Grid5, 5, nObjectStart, nObjectEnd);
+	BuildGrid(g_Grid8, 8, nObjectStart, nObjectEnd);
+	BuildGrid(g_Grid10,10, nObjectStart, nObjectEnd);
+	BuildGrid(g_Grid12,12, nObjectStart, nObjectEnd);
+	BuildGrid(g_Grid15,15, nObjectStart, nObjectEnd);
+	BuildGrid(g_Grid20,20, nObjectStart, nObjectEnd);
 	g_nBaseObjects = nObjectStart;
 	// ZBREAK();
 }
@@ -614,7 +634,7 @@ void RunTest(v3& vPos_, v3& vDir_, v3& vRight_)
 			#if QUICK_PERF
 			const int CIRCLE_TOTAL_STEPS = (1<<9);
 			const int CIRCLE_REVOLUTIONS = 2;
-			const int CIRCLE_INNER_RADIUS = 300;
+			const int CIRCLE_INNER_RADIUS = 100;
 			const int CIRCLE_OUTER_RADIUS = 350;
 			#else
 			const int CIRCLE_TOTAL_STEPS = (8<<10);
