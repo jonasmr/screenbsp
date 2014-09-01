@@ -34,7 +34,7 @@ void CullObjectsVerify(uint32 nNumObjects, bool* bCulled);
 uint32 g_nUseOrtho = 0;
 float g_fOrthoScale = 10;
 SOccluderBsp* g_Bsp = 0;
-uint32_t g_nBspNodeCap = 128;
+uint32_t g_nBspNodeCap = 1024;
 uint32 g_nUseDebugCameraPos = 2;
 
 
@@ -310,18 +310,11 @@ void DoBuildBsp(SOccluderBspViewDesc& ViewDesc)
 		pBoxOccluders, nNumBoxOccluders,
 		ViewDesc);
 }
-
-void RunTestOnly()
+void RunPlainTest()
 {
-	#if 0 == QUICK_PERF
-	return;
-	#endif
-	WorldInitOcclusionTest();
-
-
-	StartTest();
 	bool* bCulled = (bool*)alloca(g_WorldState.nNumWorldObjects);
-
+	uprintf("\nbase test\n");
+	StartTest();
 	while(g_nRunTest)
 	{
 		_mm_setcsr( _mm_getcsr() | 0x8040 );
@@ -342,23 +335,60 @@ void RunTestOnly()
 		memset(bCulled, 0, g_WorldState.nNumWorldObjects);
 		{
 			MICROPROFILE_SCOPEI("CullTest", "Cull", 0xff00ff00);
-			for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
-			{
-	// if(0 == (pObject->nFlags & SObject::OCCLUSION_TEST))
-	// 	return false;
-
-				if(0 != (g_WorldState.WorldObjects[i].nFlags & SObject::OCCLUSION_TEST))
-				{
-					bCulled[i] = BspCullObject(g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[i].mObjectToWorld);
-				}
-				else
-				{
-					bCulled[i] = false;
-				}
-			}
+			CullObjects(g_WorldState.nNumWorldObjects, bCulled);
 		}
 		MicroProfileFlip();
 	}
+}
+void RunGridTest(const char* pName, SWorldGrid& Grid)
+{
+	bool* bCulled = (bool*)alloca(g_WorldState.nNumWorldObjects);
+
+	uprintf("\n%s test\n", pName);
+	StartTest();
+	while(g_nRunTest)
+	{
+		_mm_setcsr( _mm_getcsr() | 0x8040 );
+		RunTest(g_WorldState.Camera.vPosition, g_WorldState.Camera.vDir, g_WorldState.Camera.vRight);
+		SOccluderBspViewDesc ViewDesc;
+		ViewDesc.vOrigin = g_WorldState.Camera.vPosition;
+		ViewDesc.vDirection = g_WorldState.Camera.vDir;
+		ViewDesc.vRight = g_WorldState.Camera.vRight;
+		ViewDesc.fFovY = g_WorldState.Camera.fFovY;
+		ViewDesc.fAspect = (float)g_Height / (float)g_Width;
+		ViewDesc.fZNear = g_WorldState.Camera.fNear;
+		ViewDesc.nNodeCap = g_nBspNodeCap;
+		_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+		{
+			DoBuildBsp(ViewDesc);
+		}
+
+		memset(bCulled, 0, g_WorldState.nNumWorldObjects);
+		{
+			MICROPROFILE_SCOPEI("CullTest", "Cull", 0xff00ff00);
+			CullObjectsFast(g_WorldState.nNumWorldObjects, bCulled, Grid);
+		}
+		MicroProfileFlip();
+	}	
+}
+void RunTestOnly()
+{
+	#if 0 == QUICK_PERF
+	return;
+	#endif
+	WorldInitOcclusionTest();
+
+
+
+	RunPlainTest();
+	RunGridTest("Grid3", g_Grid3);
+	RunGridTest("Grid5", g_Grid5);
+	RunGridTest("Grid8", g_Grid8);
+	RunGridTest("Grid10", g_Grid10);
+	RunGridTest("Grid12", g_Grid12);
+	RunGridTest("Grid15", g_Grid15);
+	RunGridTest("Grid20", g_Grid20);
+
 
 
 }
@@ -739,7 +769,7 @@ void WorldRender()
 	}
 	if(nDumpFrame)
 	{
-		BspDebugDumpFrame(g_Bsp);
+		BspDebugDumpFrame(g_Bsp, 2);
 	}
 
 	uint32 nNumObjects = g_WorldState.nNumWorldObjects;
@@ -757,15 +787,13 @@ void WorldRender()
 	SOccluderBspStats Stats, StatsFast;
 
 	{
-#if 0
+#if 1
 		{
 			MICROPROFILE_SCOPEI("CullTest", "CullVerify", 0xff00ff00);
 			CullObjectsVerify(nNumObjects, bCulled);
 			BspGetStats(g_Bsp, &Stats);
 
 		}
-
-
 		{
 			MICROPROFILE_SCOPEI("CullTest", "CullFast", 0xff00ff00);
 			BspClearCullStats(g_Bsp);
@@ -1078,8 +1106,8 @@ void WorldRender()
 
 		enum{
 			MAX_QUERIES=10<<10,
-			QUERY_FRAME_DELAY=5,
-			PIXEL_THRESHOLD=10,
+			QUERY_FRAME_DELAY=1,
+			PIXEL_THRESHOLD=5,//note:to get this to zero, the test should not generate overlapping meshes.
 		};
 		static int nQueryFrame = 0;
 		struct QueryFrameState
@@ -1141,7 +1169,7 @@ void WorldRender()
 						if(pObject->nFlags & SObject::OCCLUSION_TEST)
 						{
 							int result, result0;
-							//glGetQueryObjectiv(Prev.Queries[i], GL_QUERY_RESULT, &result0);
+							glGetQueryObjectiv(Prev.Queries[i], GL_QUERY_RESULT, &result0);
 							glGetQueryObjectiv(Prev.Queries[i], GL_QUERY_RESULT, &result);
 							ZASSERT(result == result0);
 							bCulledRef[i] = PIXEL_THRESHOLD > result;
@@ -1658,6 +1686,15 @@ g_WorldState.Camera.vDir = v3init(0.897161,-0.258819,-0.357930);
 g_WorldState.Camera.vRight = v3init(0.370557,0.000000,0.928810);
 #endif
 
+// g_WorldState.Camera.vPosition = v3init(-300.013580,10.000000,-128.605072);
+// g_WorldState.Camera.vDir = v3init(0.918683,-0.030621,0.393807);
+// g_WorldState.Camera.vRight = v3init(-0.393991,0.000000,0.919114);
+
+g_WorldState.Camera.vPosition = v3init(-627.900757,10.000000,-54.071251);
+g_WorldState.Camera.vDir = v3init(0.996187,-0.015865,0.085786);
+g_WorldState.Camera.vRight = v3init(-0.085797,0.000000,0.996313);
+
+
 	g_WorldState.Camera.fFovY = 45.f;
 	g_WorldState.Camera.fNear = 0.1f;
 	g_Bsp = BspCreate();
@@ -1784,6 +1821,13 @@ void CullObjectsVerify(uint32 nNumObjects, bool* bCulled)
 			if(bRes != bCulled[i])
 			{
 				uprintf("fail for %d\n", i);
+				{
+					int b = BspDebugDumpFrame(g_Bsp, 1);
+					bCulled[i] = BspCullObject(g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[i].mObjectToWorld);
+					//dump visit heri.
+					bool bRes = BspBuildSubBsp(NodeBsp, g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[i].mObjectToWorld);
+					BspDebugDumpFrame(g_Bsp, b);
+				}
 			}
 			//uplotfnxt("EQQQQQ %d, nodes %d", (bRes == bCulled[i]) ? 1 : 0, NodeBsp.Nodes.Size());
 			if(!bRes)
