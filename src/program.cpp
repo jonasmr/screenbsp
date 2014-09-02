@@ -29,6 +29,7 @@ void WorldDrawObjects(bool* bCulled);
 uint32_t CullObjects(uint32 nNumObjects, bool* bCulled);
 uint32_t CullObjectsFast(uint32 nNumObjects, bool* bCulled, SWorldGrid& Grid);
 void CullObjectsVerify(uint32 nNumObjects, bool* bCulled);
+void CullObjectsVerify2(uint32 nNumObjects);
 
 
 uint32 g_nUseOrtho = 0;
@@ -787,13 +788,17 @@ void WorldRender()
 	SOccluderBspStats Stats, StatsFast;
 
 	{
-#if 1
+#if 0
 		{
 			MICROPROFILE_SCOPEI("CullTest", "CullVerify", 0xff00ff00);
 			CullObjectsVerify(nNumObjects, bCulled);
 			BspGetStats(g_Bsp, &Stats);
+			CullObjectsVerify2(nNumObjects);
 
 		}
+
+		#endif
+		#if 1
 		{
 			MICROPROFILE_SCOPEI("CullTest", "CullFast", 0xff00ff00);
 			BspClearCullStats(g_Bsp);
@@ -1690,9 +1695,9 @@ g_WorldState.Camera.vRight = v3init(0.370557,0.000000,0.928810);
 // g_WorldState.Camera.vDir = v3init(0.918683,-0.030621,0.393807);
 // g_WorldState.Camera.vRight = v3init(-0.393991,0.000000,0.919114);
 
-g_WorldState.Camera.vPosition = v3init(-627.900757,10.000000,-54.071251);
-g_WorldState.Camera.vDir = v3init(0.996187,-0.015865,0.085786);
-g_WorldState.Camera.vRight = v3init(-0.085797,0.000000,0.996313);
+// g_WorldState.Camera.vPosition = v3init(-627.900757,10.000000,-54.071251);
+// g_WorldState.Camera.vDir = v3init(0.996187,-0.015865,0.085786);
+// g_WorldState.Camera.vRight = v3init(-0.085797,0.000000,0.996313);
 
 
 	g_WorldState.Camera.fFovY = 45.f;
@@ -1790,6 +1795,7 @@ v3 DirectionFromScreen(v2 vScreen, SCameraState& Camera)
 
 uint32_t CullObjects(uint32 nNumObjects, bool* bCulled)
 {
+	memset(bCulled, 0, nNumObjects);
 	uint32_t nNumCulled = 0;
 	for(uint32 i = 0; i < nNumObjects; ++i)
 	{
@@ -1808,6 +1814,35 @@ uint32_t CullObjects(uint32 nNumObjects, bool* bCulled)
 
 
 ///verify results are identical
+void CullObjectsVerify2(uint32 nNumObjects)
+{
+	bool* bCulled = (bool*)alloca(g_WorldState.nNumWorldObjects);
+	bool* bCulledFast = (bool*)alloca(g_WorldState.nNumWorldObjects);
+	memset(bCulled, 0, g_WorldState.nNumWorldObjects);
+	memset(bCulledFast, 0, g_WorldState.nNumWorldObjects);
+	CullObjectsFast(nNumObjects, bCulledFast, g_Grid10);
+	CullObjects(nNumObjects, bCulled);
+	int nFail = 0, nExtra = 0;
+	for(int i = 0; i < nNumObjects; ++i)
+	{
+		if(bCulled[i] != bCulledFast[i])
+		{
+			if(bCulled[i])
+			{
+				uprintf("fail index %d\n", i);
+				nFail++;
+			}
+			else
+			{
+				nExtra++;
+			}
+		}
+	}
+	uprintf("verify diff is %d, extra %d, total %d\n", nFail, nExtra, nFail + nExtra);
+
+}
+
+
 void CullObjectsVerify(uint32 nNumObjects, bool* bCulled)
 {
 	SOccluderBspNodes NodeBsp;
@@ -1845,7 +1880,12 @@ extern uint32_t g_nBaseObjects;
 
 uint32_t CullObjectsFast(uint32 nNumObjects, bool* bCulled, SWorldGrid& Grid)
 {
-	uint32_t nNumCulled = CullObjects(g_nBaseObjects, bCulled);
+	memset(bCulled, 0, nNumObjects);
+	uint32_t nNumCulled;
+	{
+		MICROPROFILE_SCOPEI("CULLTEST", "BASECULL", 0xff0000);
+		nNumCulled = CullObjects(g_nBaseObjects, bCulled);
+	}
 	SOccluderBspNodes NodeBsp;
 	uint32 nD1=0, nD2=0,nDiff = 0;
 	for(uint32 i = 0; i < Grid.nNumSectors; ++i)
@@ -1856,17 +1896,18 @@ uint32_t CullObjectsFast(uint32 nNumObjects, bool* bCulled, SWorldGrid& Grid)
 		{
 			for(int j = 0; j < S.nCount; ++j)
 			{
+			// MICROPROFILE_SCOPEI("CULLTEST", "SUBCULL", 0x3300ff);
 				uint32_t nIndex = Grid.nIndices[j + S.nStart];
 				bool bTest1 = BspCullObject(g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[nIndex].mObjectToWorld, &NodeBsp);
-				bool bTest2 = BspCullObject(g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[nIndex].mObjectToWorld);
-				if(bTest1 != bTest2)
-				{
-					if(bTest1)
-						nD1++;
-					else
-						nD2++;
-					nDiff++;
-				}
+				// bool bTest2 = BspCullObject(g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[nIndex].mObjectToWorld);
+				// if(bTest1 != bTest2)
+				// {
+				// 	if(bTest1)
+				// 		nD1++;
+				// 	else
+				// 		nD2++;
+				// 	nDiff++;
+				// }
 				if(bTest1)
 				{
 					if(!bCulled[nIndex])
@@ -1877,6 +1918,18 @@ uint32_t CullObjectsFast(uint32 nNumObjects, bool* bCulled, SWorldGrid& Grid)
 				}
 			}
 		}
+		else
+		{
+			for(int j = 0; j < S.nCount; ++j)
+			{
+				uint32_t nIndex = Grid.nIndices[j + S.nStart];
+				bCulled[nIndex] = true;
+			}
+
+
+		}
+
+
 	}
 	uplotfnxt("DIFF %d %d %d\n", nDiff, nD1, nD2);
 	return nNumCulled;

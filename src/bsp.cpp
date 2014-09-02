@@ -3537,6 +3537,7 @@ uint16_t BspBuildSubBspR(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, uint32_
 
 bool BspBuildSubBsp(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, SOccluderDesc *pObject)
 {
+	MICROPROFILE_SCOPEI("CULLTest", "BuildSub", 0x4488ee);
 	BSP_DUMP_PRINTF(pBsp, "******* BUILD SUB BSP %p, object %p\n", pBsp, pObject);
 	pBsp->Stats.nNumChildBspsCreated++;
 	NodeBsp.Nodes.Clear();
