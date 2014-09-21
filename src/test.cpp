@@ -46,7 +46,7 @@ extern uint32 g_nBspNodeCap;
 
 
 
-
+SWorldGrid g_Grid2;
 SWorldGrid g_Grid3;
 SWorldGrid g_Grid4;
 SWorldGrid g_Grid5;
@@ -447,7 +447,7 @@ void WorldInitOcclusionTest()
 	}
 	uint32 nObjectEnd = g_WorldState.nNumWorldObjects;
 
-
+	BuildGrid(g_Grid2, 2, nObjectStart, nObjectEnd);
 	BuildGrid(g_Grid3, 3, nObjectStart, nObjectEnd);
 	BuildGrid(g_Grid4, 4, nObjectStart, nObjectEnd);
 	BuildGrid(g_Grid5, 5, nObjectStart, nObjectEnd);
@@ -637,7 +637,7 @@ void RunTest(v3& vPos_, v3& vDir_, v3& vRight_)
 			const int CIRCLE_INNER_RADIUS = 100;
 			const int CIRCLE_OUTER_RADIUS = 350;
 			#else
-			const int CIRCLE_TOTAL_STEPS = (8<<10);
+			const int CIRCLE_TOTAL_STEPS = (2<<10);
 			const int CIRCLE_REVOLUTIONS = 8;
 			const int CIRCLE_INNER_RADIUS = 50;
 			const int CIRCLE_OUTER_RADIUS = 650;

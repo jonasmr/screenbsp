@@ -16,7 +16,7 @@ extern int32 g_nTestFalsePositives;
 #define OCCLUSION_NUM_SMALL 100
 #define OCCLUSION_NUM_LONG 20
 #define OCCLUSION_NUM_OBJECTS 2000
-#define OCCLUSION_USE_GROUND 1
+#define OCCLUSION_USE_GROUND 0
 #else
 
 #define OCCLUSION_NUM_LARGE 10
@@ -39,6 +39,7 @@ struct SWorldSector
 	v3 vMax;
 	uint32_t nStart;
 	uint32_t nCount;
+	uint32_t nDebugStatus;
 
 	SOccluderDesc Desc;
 };
@@ -55,7 +56,7 @@ struct SWorldGrid
 	uint32_t nNumNodes;
 
 };
-
+extern SWorldGrid g_Grid2;
 extern SWorldGrid g_Grid3;
 extern SWorldGrid g_Grid4;
 extern SWorldGrid g_Grid5;
