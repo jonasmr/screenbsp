@@ -58,6 +58,7 @@ struct SOccluderBspNodes
 {
 	TFixedArray<SOccluderBspNode, OCCLUDER_BSP_MAX_NODES> Nodes;
 	TFixedArray<SOccluderBspNodeExtra, OCCLUDER_BSP_MAX_NODES> NodesExtra;
+	v3 vCorners[4];
 	SOccluderBspNode& operator[](const int i)
 	{
 		return Nodes[i];
@@ -94,4 +95,4 @@ void BspDebugClipLevelSubNext(SOccluderBsp* pBsp);
 void BspDebugClipLevelSubPrev(SOccluderBsp* pBsp);
 int BspDebugDumpFrame(SOccluderBsp* pBsp, int val);
 
-bool BspBuildSubBsp(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, SOccluderDesc *pObject);
+SOccluderBspNodes* BspBuildSubBsp(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, SOccluderDesc *pObject);

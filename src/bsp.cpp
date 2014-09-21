@@ -7,6 +7,7 @@
 #include "bsp.h"
 #include "microprofileinc.h"
 #include "mathsse.h"
+#include "debug.h"
 
 // todo:
 //  prioritize after clipping vs frustum
@@ -20,6 +21,10 @@
 // try and merge planetests into loop [0 gain]
  
 
+
+//conservative bounds test
+//  verify
+//  make sth better
 
 ///make stats reliable.stats
 ///make it robust.
@@ -771,7 +776,7 @@ void BspDebugPlane(SOccluderBsp* pBsp, int nPlane)
 
 void BspDebugNextDrawMode(SOccluderBsp* pBsp)
 {
-	pBsp->Debug.OccluderDrawOccluders = (pBsp->Debug.OccluderDrawOccluders + 1) % 2;
+	pBsp->Debug.OccluderDrawOccluders = (pBsp->Debug.OccluderDrawOccluders + 1) % 4;
 
 }
 void BspDebugNextDrawClipResult(SOccluderBsp* pBsp)
@@ -840,7 +845,7 @@ void BspBuild(SOccluderBsp* pBsp,
 	if((int)pBsp->Debug.DebugPlane >= 0)
 		uplotfnxt("BSP DEBUG PLANE %d", pBsp->Debug.DebugPlane);
 
-	uplotfnxt("INSIDEOUTSIDE %x", pBsp->Debug.nInsideOutSide);
+	// uplotfnxt("INSIDEOUTSIDE %x", pBsp->Debug.nInsideOutSide);
 	
 
 
@@ -1033,7 +1038,7 @@ void BspAddOccluderInternal(SOccluderBsp *pBsp, v4 *pPlanes, v3* pCorners, uint3
 	}
 	if(fMinTest < 0.0001f)
 	{
-		uplotfnxt("REJECT %f", fMinTest);
+		// uplotfnxt("REJECT %f", fMinTest);
 		return;
 	}
 
@@ -1041,7 +1046,7 @@ void BspAddOccluderInternal(SOccluderBsp *pBsp, v4 *pPlanes, v3* pCorners, uint3
 	//reject if too close to origin.
 	if(fabs(vNormalPlane.w) < 0.1f)
 	{
-		uplotfnxt("REJECT %f", vNormalPlane.w);
+		// uplotfnxt("REJECT %f", vNormalPlane.w);
 		return;
 	}
 	uint32 nPlaneIndex = pBsp->Planes.Size();
@@ -1303,7 +1308,7 @@ int BspAddInternal(SOccluderBsp *pBsp, uint16 nParent, bool bOutsideParent, uint
 		else
 			pBsp->Nodes.Nodes[nParent].nInside = nNewIndex;
 	}
-	if(pBsp->Debug.OccluderDrawOccluders)
+	if(pBsp->Debug.OccluderDrawOccluders&1)
 		BspDrawPoly(pBsp, pIndices, nNumPlanes, randcolor(), randcolor(), 1);
 	return nNewIndex;
 }
@@ -3187,9 +3192,13 @@ bool BspCullObjectSafe(SOccluderBsp *pBsp, SOccluderDesc *pObject, SOccluderBspN
 // 	return bResult;
 // }
 
+enum EBPResult
+{
+	EBUILD_PLANES_OK,
+	EBUILD_PLANES_INVALID,//object cannot be culled
+};
 
-
-void BspBuildPlanes(v4* pPlanes, uint16_t Poly[5], SOccluderBsp* pBsp, SOccluderDesc* pObject, uint16_t nOffset)
+EBPResult BspBuildPlanes(v4* pPlanes, uint16_t Poly[5], SOccluderBsp* pBsp, SOccluderDesc* pObject, uint16_t nOffset, v3* vBackCorners = 0)
 {
 	mat mObjectToWorld = mload44(&pObject->ObjectToWorld);
 	mat mToBsp = mload44(&pBsp->mtobsp);
@@ -3220,8 +3229,63 @@ void BspBuildPlanes(v4* pPlanes, uint16_t Poly[5], SOccluderBsp* pBsp, SOccluder
 	vec AABBy = vsplaty(AABB);
 	vec AABBz = vsplatz(AABB);
 	vec vCenterQuad = vsub(vCenterWorld, vmul(vToCenter, vmul(AABBz, vrep(1.1f))));
+	// if(vCenterQuad.z < 0)
+	// {
+	// 	//
+	// }
 	vec vRightx = vmul(vRight, AABBx);
 	vec vUpy = vmul(vUp, AABBy);
+	if(vBackCorners)
+	{
+		mat mBspToObject = maffineinverse(mObjectToBsp);
+
+		vec inside = vset(0,0,0,1.f);
+		inside = mtransformaffine(mBspToObject, inside);
+		float hslen = vgetx(vlength3(vHalfSize));
+
+		float fDistance = vgetx(vlength3(inside));
+		if(fDistance < hslen)
+		{
+			return EBUILD_PLANES_INVALID;
+		}
+		// uplotfnxt("fDistance %f .. thresh %f :: %d", fDistance, hslen, fDistance < hslen?1:0);
+
+		// m __m = mload((float*)&mObjectToWorld);
+		// v3 __v = v3load((float*)&mObjectToWorld.w);
+		// v3 __vhalf = v3load((float*)&vHalfSize);
+
+		// ZDEBUG_DRAWBOX(__m, __v, __vhalf, -1, false);
+		// ZDEBUG_DRAWSPHERE(__v, hslen, 0);
+
+
+		vec vCenterBackQuad = vsub(vCenterWorld, vmul(vToCenter, vmul(vneg(AABBz), vrep(1.1f))));
+		vec vx = vadd(vCenterBackQuad, vRightx);
+		vec vnx = vadd(vCenterBackQuad, vneg(vRightx));
+		vec vny = vneg(vUpy);
+		vec c0 = vadd(vx, vUpy);
+		vec c1 = vadd(vx, vny);
+		vec c2 = vadd(vnx, vUpy);
+		vec c3 = vadd(vnx, vny);
+		vstore3(&vBackCorners[0], c0);
+		vstore3(&vBackCorners[1], c1);
+		vstore3(&vBackCorners[2], c2);
+		vstore3(&vBackCorners[3], c3);
+		mat mfrombsp = mload44(&pBsp->mfrombsp);
+		__m128 v0 = mtransformaffine(mfrombsp, c0);
+		__m128 v1 = mtransformaffine(mfrombsp, c1);
+		__m128 v2 = mtransformaffine(mfrombsp, c2);
+		__m128 v3_ = mtransformaffine(mfrombsp, c3);
+		v3 x0, x1, x2, x3;
+		vstore3(&x0, v0);
+		vstore3(&x1, v1);
+		vstore3(&x2, v2);
+		vstore3(&x3, v3_);
+		// ZDEBUG_DRAWBOX(mid(), x0, v3rep(3.03f), 0xff00ff, 0);
+		// ZDEBUG_DRAWBOX(mid(), x1, v3rep(3.03f), 0xff00ff, 0);
+		// ZDEBUG_DRAWBOX(mid(), x2, v3rep(3.03f), 0xff00ff, 0);
+		// ZDEBUG_DRAWBOX(mid(), x3, v3rep(3.03f), 0xff00ff, 0);
+	}
+
 	vec v0 = vadd(vadd(vCenterQuad, vRightx), vUpy);
 	vec v1 = vadd(vsub(vCenterQuad, vRightx), vUpy);
 	vec v2 = vsub(vsub(vCenterQuad, vRightx), vUpy);
@@ -3250,6 +3314,8 @@ void BspBuildPlanes(v4* pPlanes, uint16_t Poly[5], SOccluderBsp* pBsp, SOccluder
 		Poly[2] = nOffset + 1;
 		Poly[3] = nOffset + 0;
 	}
+
+	return EBUILD_PLANES_OK;
 }
 
 
@@ -3535,15 +3601,16 @@ uint16_t BspBuildSubBspR(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, uint32_
 	return nAdded;
 }
 
-bool BspBuildSubBsp(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, SOccluderDesc *pObject)
+SOccluderBspNodes* BspBuildSubBsp(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, SOccluderDesc *pObject)
 {
 	MICROPROFILE_SCOPEI("CULLTest", "BuildSub", 0x4488ee);
+	// uplotfnxt("************* build sub bsp");
 	BSP_DUMP_PRINTF(pBsp, "******* BUILD SUB BSP %p, object %p\n", pBsp, pObject);
 	pBsp->Stats.nNumChildBspsCreated++;
 	NodeBsp.Nodes.Clear();
 	NodeBsp.NodesExtra.Clear();
 	if(!pBsp->Nodes.Size())
-		return false;
+		return &pBsp->Nodes;
 	pBsp->Debug.BspDebugPlaneCounter = 0;
 	long seed = rand();
 	srand((int)(uintptr)pObject);
@@ -3553,10 +3620,15 @@ bool BspBuildSubBsp(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, SOccluderDes
 	uint32 nSize = pBsp->Planes.Size();
 	pBsp->Planes.Resize(nSize + 5); // TODO use thread specific blocks
 	v4 *pPlanes = pBsp->Planes.Ptr() + nSize;
-	BspBuildPlanes(pPlanes, Poly, pBsp, pObject, nSize);
-
-
-	//uint16_t BspBuildSubBspR(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, uint32_t nIndex, uint16_t* pPoly, uint32_t nNumEdges)
+	EBPResult BPResult = BspBuildPlanes(pPlanes, Poly, pBsp, pObject, nSize, &NodeBsp.vCorners[0]);
+	if(EBUILD_PLANES_INVALID == BPResult)
+	{
+		return &pBsp->Nodes; // if proper plane can't be built a full test of all objects is needed
+	}
+	if(pBsp->Debug.OccluderDrawOccluders&2)
+	{
+		BspDrawPoly(pBsp, Poly, 5, randcolor(), randcolor(), 1);
+	}
 	int Clipped = 2;
 	uint16_t nAdded = BspBuildSubBspR(NodeBsp, pBsp, 0, Poly, 5, Clipped, 0);
 	ZASSERT(Clipped < 2);
@@ -3572,9 +3644,16 @@ bool BspBuildSubBsp(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, SOccluderDes
 	{
 		pBsp->Stats.nNumChildBspsVisible++;
 	}
-		BSP_DUMP_PRINTF(pBsp, "/////// BUILD SUB BSP %p, object %p\n", pBsp, pObject);
+	BSP_DUMP_PRINTF(pBsp, "/////// BUILD SUB BSP %p, object %p\n", pBsp, pObject);
+	if(Clipped)
+	{
+		return 0;
+	}
+	else
+	{
+		return &NodeBsp;
+	}
 
-	return Clipped == 1;
 
 }
 

@@ -222,6 +222,11 @@ inline vec vneg(vec v)
 {
 	return _mm_xor_ps(v, vec_cast(_mm_set1_epi32(0x80000000)));
 }
+inline vec vabs(vec v)
+{
+	return _mm_and_ps(v, vec_cast(_mm_set1_epi32(~0x80000000)));
+
+}
 inline vec vrsqrt(vec x)
 {
 	vec v = _mm_rsqrt_ps(x);
@@ -239,7 +244,15 @@ inline vec vnormalize3(vec v)
 	vec r2 = _mm_hadd_ps(r1, r1);
 	vec result = _mm_mul_ps(vrsqrt(r2), v);
 	return result;
-
+}
+inline vec vlength3(vec v)
+{
+	v = vsetwzero(v);
+	vec r0 = _mm_mul_ps(v, v);
+	vec r1 = _mm_hadd_ps(r0, r0);
+	vec r2 = _mm_hadd_ps(r1, r1);
+	vec result = _mm_sqrt_ps(r2);
+	return result;
 
 }
 inline vec vcross3(vec l, vec r)
