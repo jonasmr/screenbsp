@@ -28,8 +28,11 @@ extern uint32_t g_Height;
 void WorldDrawObjects(bool* bCulled);
 uint32_t CullObjects(uint32 nNumObjects, bool* bCulled);
 uint32_t CullObjectsFast(uint32 nNumObjects, bool* bCulled, SWorldGrid& Grid);
-void CullObjectsVerify(uint32 nNumObjects, bool* bCulled);
-void CullObjectsVerify2(uint32 nNumObjects);
+
+void CompareCullResult(uint32_t nNumObjects, bool* bCulled, bool* bCulledFast);
+
+// void CullObjectsVerify(uint32 nNumObjects, bool* bCulled);
+// void CullObjectsVerify2(uint32 nNumObjects);
 
 
 uint32 g_nUseOrtho = 0;
@@ -560,7 +563,7 @@ void WorldDrawObjects(bool* bCulled)
 		{
 			if(bCulled[i])
 			{
-				ZDEBUG_DRAWBOX(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].mObjectToWorld.trans.tov3(), g_WorldState.WorldObjects[i].vSize, 0xffff0000, 0);
+				//ZDEBUG_DRAWBOX(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].mObjectToWorld.trans.tov3(), g_WorldState.WorldObjects[i].vSize, 0xffff0000, 0);
 			}
 			else
 			{
@@ -674,8 +677,8 @@ void WorldRender()
 		
 	
 	ZDEBUG_DRAWBOX(mid(), vPos, v3rep(0.02f), -1,1);
-	ZDEBUG_DRAWBOX(mid(), vPos, v3rep(0.04f), -1,1);
-	ZDEBUG_DRAWBOX(mid(), vPos, v3rep(0.06f), -1,1);
+	// ZDEBUG_DRAWBOX(mid(), vPos, v3rep(0.04f), -1,1);
+	// ZDEBUG_DRAWBOX(mid(), vPos, v3rep(0.06f), -1,1);
 	SOccluderBspViewDesc ViewDesc;
 	ViewDesc.vOrigin = vPos;
 	ViewDesc.vDirection = vDir;
@@ -787,18 +790,8 @@ void WorldRender()
 
 	SOccluderBspStats Stats, StatsFast;
 
+	int nNoRef = 0;
 	{
-#if 0
-		{
-			MICROPROFILE_SCOPEI("CullTest", "CullVerify", 0xff00ff00);
-			CullObjectsVerify(nNumObjects, bCulled);
-			BspGetStats(g_Bsp, &Stats);
-			CullObjectsVerify2(nNumObjects);
-
-		}
-
-		#endif
-		#if 1
 		{
 			MICROPROFILE_SCOPEI("CullTest", "CullFast", 0xff00ff00);
 			BspClearCullStats(g_Bsp);
@@ -806,13 +799,13 @@ void WorldRender()
 			BspGetStats(g_Bsp, &StatsFast);
 
 		}
-#endif
 		{
 			MICROPROFILE_SCOPEI("CullTest", "Cull", 0xff00ff00);
 			BspClearCullStats(g_Bsp);
 			nCulled = CullObjects(nNumObjects, bCulled);
 			BspGetStats(g_Bsp, &Stats);
 		}
+		CompareCullResult(nNumObjects, bCulled, bCulledFast);
 	}
 	uplotfnxt("********************BSP STATS********************");
 	uplotfnxt("** TESTED %5d VISIBLE %5d SUBTEST %d CHILDBSP %d CHILDBSPVIS %d", Stats.nNumObjectsTested, Stats.nNumObjectsTestedVisible, Stats.nNunSubBspTests, Stats.nNumChildBspsCreated, StatsFast.nNumChildBspsVisible);
@@ -1164,7 +1157,7 @@ void WorldRender()
 			uint32 nAgree = 0, nFailCull = 0, nFalsePositives = 0;
 	
 			QueryFrameState& Prev = QS[nQueryFrame];
-			if(Prev.nNumObjects)
+			if(Prev.nNumObjects && 0 == nNoRef)
 			{
 				{
 					MICROPROFILE_SCOPEI("lala", "GetResult", 0xff00ffff);
@@ -1813,23 +1806,20 @@ uint32_t CullObjects(uint32 nNumObjects, bool* bCulled)
 }
 
 
-///verify results are identical
-void CullObjectsVerify2(uint32 nNumObjects)
+
+void CompareCullResult(uint32_t nNumObjects, bool* bCulled, bool* bCulledFast)
 {
-	bool* bCulled = (bool*)alloca(g_WorldState.nNumWorldObjects);
-	bool* bCulledFast = (bool*)alloca(g_WorldState.nNumWorldObjects);
-	memset(bCulled, 0, g_WorldState.nNumWorldObjects);
-	memset(bCulledFast, 0, g_WorldState.nNumWorldObjects);
-	CullObjectsFast(nNumObjects, bCulledFast, g_Grid10);
-	CullObjects(nNumObjects, bCulled);
 	int nFail = 0, nExtra = 0;
 	for(int i = 0; i < nNumObjects; ++i)
 	{
 		if(bCulled[i] != bCulledFast[i])
 		{
+			ZDEBUG_DRAWBOX(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].mObjectToWorld.trans.tov3(), g_WorldState.WorldObjects[i].vSize*1.02, 0xff5555ff, 0);
+
+			// ZDEBUG_DRAW
 			if(bCulled[i])
 			{
-				uprintf("fail index %d\n", i);
+				// uprintf("fail index %d\n", i);
 				nFail++;
 			}
 			else
@@ -1839,42 +1829,8 @@ void CullObjectsVerify2(uint32 nNumObjects)
 		}
 	}
 	uprintf("verify diff is %d, extra %d, total %d\n", nFail, nExtra, nFail + nExtra);
-
 }
 
-
-void CullObjectsVerify(uint32 nNumObjects, bool* bCulled)
-{
-	SOccluderBspNodes NodeBsp;
-	for(uint32 i = 0; i < nNumObjects; ++i)
-	{
-		SWorldObject* pObject = &g_WorldState.WorldObjects[i];
-		if(0 != (pObject->nFlags & SObject::OCCLUSION_TEST))
-		{
-			bCulled[i] = BspCullObject(g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[i].mObjectToWorld);
-			bool bRes = BspBuildSubBsp(NodeBsp, g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[i].mObjectToWorld);
-			if(bRes != bCulled[i])
-			{
-				uprintf("fail for %d\n", i);
-				{
-					int b = BspDebugDumpFrame(g_Bsp, 1);
-					bCulled[i] = BspCullObject(g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[i].mObjectToWorld);
-					//dump visit heri.
-					bool bRes = BspBuildSubBsp(NodeBsp, g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[i].mObjectToWorld);
-					BspDebugDumpFrame(g_Bsp, b);
-				}
-			}
-			//uplotfnxt("EQQQQQ %d, nodes %d", (bRes == bCulled[i]) ? 1 : 0, NodeBsp.Nodes.Size());
-			if(!bRes)
-			{
-				bool bCull1 = BspCullObject(g_Bsp,  (SOccluderDesc*)&g_WorldState.WorldObjects[i].mObjectToWorld, &NodeBsp);
-				ZASSERT(bCull1 == bCulled[i]);
-				//uplotfnxt("E22222 %d", (bCull1 == bCulled[i]) ? 1 : 0);
-				//uplotfnxt("culled for %d is %d, %d", i, bRes, bCulled[i]);
-			}
-		}
-	}
-}
 
 extern uint32_t g_nBaseObjects;
 
@@ -1887,51 +1843,62 @@ uint32_t CullObjectsFast(uint32 nNumObjects, bool* bCulled, SWorldGrid& Grid)
 		nNumCulled = CullObjects(g_nBaseObjects, bCulled);
 	}
 	SOccluderBspNodes NodeBsp;
-	uint32 nD1=0, nD2=0,nDiff = 0;
+	uint32 nD1=0, nD2 = 0 , nDiff = 0;
 	for(uint32 i = 0; i < Grid.nNumSectors; ++i)
 	{
-		SWorldSector& S = Grid.Sector[i];
-		bool bRes = BspBuildSubBsp(NodeBsp, g_Bsp, &S.Desc);
-		if(!bRes)
+		// if(i == Grid.nNumSectors / 2)
 		{
-			for(int j = 0; j < S.nCount; ++j)
+			SWorldSector& S = Grid.Sector[i];
+			SOccluderBspNodes* pNodes = BspBuildSubBsp(NodeBsp, g_Bsp, &S.Desc);
+			bool bRes = pNodes == 0;
+			if(!bRes)
 			{
-			// MICROPROFILE_SCOPEI("CULLTEST", "SUBCULL", 0x3300ff);
-				uint32_t nIndex = Grid.nIndices[j + S.nStart];
-				bool bTest1 = BspCullObject(g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[nIndex].mObjectToWorld, &NodeBsp);
-				// bool bTest2 = BspCullObject(g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[nIndex].mObjectToWorld);
-				// if(bTest1 != bTest2)
-				// {
-				// 	if(bTest1)
-				// 		nD1++;
-				// 	else
-				// 		nD2++;
-				// 	nDiff++;
-				// }
-				if(bTest1)
+				for(int j = 0; j < S.nCount; ++j)
 				{
-					if(!bCulled[nIndex])
+				// MICROPROFILE_SCOPEI("CULLTEST", "SUBCULL", 0x3300ff);
+					uint32_t nIndex = Grid.nIndices[j + S.nStart];
+					bool bTest1 = BspCullObject(g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[nIndex].mObjectToWorld, pNodes);
+					// bool bTest2 = BspCullObject(g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[nIndex].mObjectToWorld);
+					// if(bTest1 != bTest2)
+					// {
+					// 	if(bTest1)
+					// 		nD1++;
+					// 	else
+					// 		nD2++;
+					// 	nDiff++;
+					// }
+					if(bTest1)
 					{
-						bCulled[nIndex] = true;
-						nNumCulled++;
+						if(!bCulled[nIndex])
+						{
+							bCulled[nIndex] = true;
+							nNumCulled++;
+						}
 					}
 				}
 			}
-		}
-		else
-		{
-			for(int j = 0; j < S.nCount; ++j)
+			else
 			{
-				uint32_t nIndex = Grid.nIndices[j + S.nStart];
-				bCulled[nIndex] = true;
+				for(int j = 0; j < S.nCount; ++j)
+				{
+					uint32_t nIndex = Grid.nIndices[j + S.nStart];
+					bCulled[nIndex] = true;
+				}
 			}
-
-
 		}
+		// else
+		// {
+		// 	// 			SWorldSector& S = Grid.Sector[i];
 
+		// 	// for(int j = 0; j < S.nCount; ++j)
+		// 	// {
+		// 	// 	uint32_t nIndex = Grid.nIndices[j + S.nStart];
+		// 	// 	bCulled[nIndex] = true;
+		// 	// }
+		// }
 
 	}
-	uplotfnxt("DIFF %d %d %d\n", nDiff, nD1, nD2);
+//	uplotfnxt("DIFF %d %d %d\n", nDiff, nD1, nD2);
 	return nNumCulled;
 }
 

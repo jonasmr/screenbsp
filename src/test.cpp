@@ -429,12 +429,12 @@ void WorldInitOcclusionTest()
 			{
 				g_WorldState.nNumWorldObjects--;
 			}
-			else
-			{
-				uprintf("Create object %f %f %f\n", g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects-1].mObjectToWorld.trans.x,
-					g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects-1].mObjectToWorld.trans.y,
-					g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects-1].mObjectToWorld.trans.z);
-			}
+			// else
+			// {
+			// 	uprintf("Create object %f %f %f\n", g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects-1].mObjectToWorld.trans.x,
+			// 		g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects-1].mObjectToWorld.trans.y,
+			// 		g_WorldState.WorldObjects[g_WorldState.nNumWorldObjects-1].mObjectToWorld.trans.z);
+			// }
 
 
 		}
