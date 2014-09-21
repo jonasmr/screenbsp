@@ -44,7 +44,7 @@ uint32 g_nUseDebugCameraPos = 2;
 
 
 
-
+uint32 g_nDrawGrid = 1;
 
 
 
@@ -550,6 +550,24 @@ void WorldInit()
 }
 
 
+void WorldDrawCulledObjects(bool* bCulled)
+{
+	MICROPROFILE_SCOPEI("lala", "WorldDrawCulledObjects", 0xff00ffff);
+	ZASSERT(bCulled);
+	int nLocSize = ShaderGetLocation("Size");
+	int nLocModelView = ShaderGetLocation("ModelViewMatrix");
+	int nLocColor = ShaderGetLocation("ConstColor");
+	for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
+	{
+		if(bCulled)
+		{
+			if(bCulled[i])
+			{
+				ZDEBUG_DRAWBOX(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].mObjectToWorld.trans.tov3(), g_WorldState.WorldObjects[i].vSize, 0xffff0000, 0);
+			}
+		}
+	}
+}
 
 void WorldDrawObjects(bool* bCulled)
 {
@@ -563,7 +581,7 @@ void WorldDrawObjects(bool* bCulled)
 		{
 			if(bCulled[i])
 			{
-				//ZDEBUG_DRAWBOX(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].mObjectToWorld.trans.tov3(), g_WorldState.WorldObjects[i].vSize, 0xffff0000, 0);
+				// ZDEBUG_DRAWBOX(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].mObjectToWorld.trans.tov3(), g_WorldState.WorldObjects[i].vSize, 0xffff0000, 0);
 			}
 			else
 			{
@@ -795,7 +813,7 @@ void WorldRender()
 		{
 			MICROPROFILE_SCOPEI("CullTest", "CullFast", 0xff00ff00);
 			BspClearCullStats(g_Bsp);
-			nCulledFast = CullObjectsFast(nNumObjects, bCulledFast, g_Grid5);
+			nCulledFast = CullObjectsFast(nNumObjects, bCulledFast, g_Grid10);
 			BspGetStats(g_Bsp, &StatsFast);
 
 		}
@@ -808,7 +826,7 @@ void WorldRender()
 		CompareCullResult(nNumObjects, bCulled, bCulledFast);
 	}
 	uplotfnxt("********************BSP STATS********************");
-	uplotfnxt("** TESTED %5d VISIBLE %5d SUBTEST %d CHILDBSP %d CHILDBSPVIS %d", Stats.nNumObjectsTested, Stats.nNumObjectsTestedVisible, Stats.nNunSubBspTests, Stats.nNumChildBspsCreated, StatsFast.nNumChildBspsVisible);
+	uplotfnxt("** TESTED %5d VISIBLE %5d SUBTEST %d CHILDBSP %d CHILDBSPVIS %d", Stats.nNumObjectsTested, Stats.nNumObjectsTestedVisible, Stats.nNunSubBspTests, Stats.nNumChildBspsCreated, Stats.nNumChildBspsVisible);
 	uplotfnxt("********************BSP FAST STATS********************");
 	uplotfnxt("** TESTED %5d VISIBLE %5d SUBTEST %d CHILDBSP %d CHILDBSPVIS %d", StatsFast.nNumObjectsTested, StatsFast.nNumObjectsTestedVisible, StatsFast.nNunSubBspTests, StatsFast.nNumChildBspsCreated, StatsFast.nNumChildBspsVisible);
 
@@ -1815,7 +1833,7 @@ void CompareCullResult(uint32_t nNumObjects, bool* bCulled, bool* bCulledFast)
 		if(bCulled[i] != bCulledFast[i])
 		{
 			ZDEBUG_DRAWBOX(g_WorldState.WorldObjects[i].mObjectToWorld, g_WorldState.WorldObjects[i].mObjectToWorld.trans.tov3(), g_WorldState.WorldObjects[i].vSize*1.02, 0xff5555ff, 0);
-
+			ZBREAK();
 			// ZDEBUG_DRAW
 			if(bCulled[i])
 			{
@@ -1828,7 +1846,10 @@ void CompareCullResult(uint32_t nNumObjects, bool* bCulled, bool* bCulledFast)
 			}
 		}
 	}
-	uprintf("verify diff is %d, extra %d, total %d\n", nFail, nExtra, nFail + nExtra);
+	if(nFail || nExtra)
+	{
+		uprintf("verify diff is %d, extra %d, total %d\n", nFail, nExtra, nFail + nExtra);
+	}
 }
 
 
@@ -1849,7 +1870,23 @@ uint32_t CullObjectsFast(uint32 nNumObjects, bool* bCulled, SWorldGrid& Grid)
 		// if(i == Grid.nNumSectors / 2)
 		{
 			SWorldSector& S = Grid.Sector[i];
+			// ZDEBUG_D
+			v3 trans = v3load(&S.Desc.ObjectToWorld[12]);
+			v3 vSize = v3load(S.Desc.Size);
+			m matmat= mload(S.Desc.ObjectToWorld);
+
 			SOccluderBspNodes* pNodes = BspBuildSubBsp(NodeBsp, g_Bsp, &S.Desc);
+			S.nDebugStatus = pNodes ? 1 : 0;
+			if(g_nDrawGrid)
+			{
+				uint32_t color;
+				if(S.nDebugStatus)
+					color = 0xff00ff00;
+				else
+					color = 0xffff0000;
+				
+				ZDEBUG_DRAWBOX(matmat, trans, vSize*1.02f, color, 0);
+			}
 			bool bRes = pNodes == 0;
 			if(!bRes)
 			{

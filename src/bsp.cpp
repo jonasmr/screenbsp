@@ -3403,6 +3403,7 @@ void BspGetStats(SOccluderBsp* pBsp, SOccluderBspStats* pStats)
 
 void BspClearCullStats(SOccluderBsp* pBsp)
 {
+	memset(&pBsp->Stats, 0, sizeof(SOccluderBspStats));
 	pBsp->Stats.nNumObjectsTested = 0;
 	pBsp->Stats.nNumObjectsTestedVisible = 0;
 	pBsp->Stats.nNumChildBspsCreated = 0;
@@ -3464,6 +3465,8 @@ uint16_t BspBuildSubBspR(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, uint32_
 	uint32 nIn = 0;
 	uint32 nOut = 0;
 
+	bool bIsLeaf = Node.nInside == OCCLUDER_LEAF;
+	ZASSERT(Node.nOutside != OCCLUDER_LEAF);
 	if(vPlane.w != 0.f)
 	{
 		CR = BspClipLeaf(pBsp, vPlane, Poly, nNumEdges);
@@ -3532,6 +3535,8 @@ uint16_t BspBuildSubBspR(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, uint32_
 		CR = BspClipPolyCull(pBsp, Node.nPlaneIndex, Poly, nNumEdges, ClippedPolyIn,
 							ClippedPolyOut, nIn, nOut);
 	}
+
+	///evaluer hvad der sker hvis aller er leaves!!!
 	switch(CR)
 	{
 	case ECPR_CLIPPED:
@@ -3541,6 +3546,8 @@ uint16_t BspBuildSubBspR(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, uint32_
 		if(Node.nInside == OCCLUDER_LEAF)
 		{
 			//add self. set outside to empty, since it will never be reached its doesnt matter
+
+			//since this subpart is fully clipped, it should be possible to omit this part.
 			nAdded = NodeBsp.Nodes.Size();
 			{
 				SOccluderBspNode* pNode = NodeBsp.Nodes.PushBack();
@@ -3559,7 +3566,24 @@ uint16_t BspBuildSubBspR(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, uint32_
 		break;
 	case ECPR_OUTSIDE:
 		ZASSERT(Node.nOutside != OCCLUDER_LEAF);
-		nAdded = BspBuildSubBspR(NodeBsp, pBsp, Node.nOutside, ClippedPolyOut, nOut, Clipped, nClipLevel + 1);
+		if(Node.nInside == OCCLUDER_LEAF)
+		{
+			//must add self, leaf might occlude subnodes
+			nAdded = NodeBsp.Nodes.Size();
+			{
+				SOccluderBspNode* pNode = NodeBsp.Nodes.PushBack();
+				SOccluderBspNodeExtra* pNodeExtra = NodeBsp.NodesExtra.PushBack();
+				*pNode = pBsp->Nodes[nIndex];
+				*pNodeExtra = pBsp->Nodes.NodesExtra[nIndex];
+			}
+			NodeBsp.Nodes[nAdded].nInside = OCCLUDER_LEAF;
+			NodeBsp.Nodes[nAdded].nOutside = BspBuildSubBspR(NodeBsp, pBsp, Node.nOutside, ClippedPolyOut, nOut, Clipped, nClipLevel + 1);
+			Clipped = 0;
+		}
+		else
+		{
+			nAdded = BspBuildSubBspR(NodeBsp, pBsp, Node.nOutside, ClippedPolyOut, nOut, Clipped, nClipLevel + 1);
+		}
 		break;
 	case ECPR_BOTH:
 		//both sides, add node. continue with subpolys.
@@ -3623,6 +3647,7 @@ SOccluderBspNodes* BspBuildSubBsp(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp
 	EBPResult BPResult = BspBuildPlanes(pPlanes, Poly, pBsp, pObject, nSize, &NodeBsp.vCorners[0]);
 	if(EBUILD_PLANES_INVALID == BPResult)
 	{
+		pBsp->Stats.nNumChildBspsVisible++;
 		return &pBsp->Nodes; // if proper plane can't be built a full test of all objects is needed
 	}
 	if(pBsp->Debug.OccluderDrawOccluders&2)
@@ -3640,10 +3665,6 @@ SOccluderBspNodes* BspBuildSubBsp(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp
 	uprintf("test res is %d, size is %d\n", nAdded != OCCLUDER_EMPTY ? 1 : 0, NodeBsp.Nodes.Size());
 	BspDumpNodes(&NodeBsp, 0, 0);
 #endif
-	if(Clipped == 1)
-	{
-		pBsp->Stats.nNumChildBspsVisible++;
-	}
 	BSP_DUMP_PRINTF(pBsp, "/////// BUILD SUB BSP %p, object %p\n", pBsp, pObject);
 	if(Clipped)
 	{
@@ -3651,6 +3672,7 @@ SOccluderBspNodes* BspBuildSubBsp(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp
 	}
 	else
 	{
+		pBsp->Stats.nNumChildBspsVisible++;
 		return &NodeBsp;
 	}
 
