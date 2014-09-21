@@ -637,7 +637,7 @@ void RunTest(v3& vPos_, v3& vDir_, v3& vRight_)
 			const int CIRCLE_INNER_RADIUS = 100;
 			const int CIRCLE_OUTER_RADIUS = 350;
 			#else
-			const int CIRCLE_TOTAL_STEPS = (2<<10);
+			const int CIRCLE_TOTAL_STEPS = (8<<10);
 			const int CIRCLE_REVOLUTIONS = 8;
 			const int CIRCLE_INNER_RADIUS = 50;
 			const int CIRCLE_OUTER_RADIUS = 650;
