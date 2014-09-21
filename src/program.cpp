@@ -40,7 +40,7 @@ float g_fOrthoScale = 10;
 SOccluderBsp* g_Bsp = 0;
 uint32_t g_nBspNodeCap = 1024;
 uint32 g_nUseDebugCameraPos = 2;
-
+uint32 g_nDebugCullDraw = 0;
 
 
 
@@ -747,6 +747,10 @@ void WorldRender()
 		uplotfnxt("debug plane %d", debugplane);
 		BspDebugPlane(g_Bsp, debugplane);
 	// void BspDebugPlane(SOccluderBsp* pBsp, int nPlane)
+		if(g_KeyboardState.keys[SDL_SCANCODE_F5] & BUTTON_RELEASED)
+		{
+			g_nDebugCullDraw = (g_nDebugCullDraw+1) % 4;
+		}
 
 
 
@@ -1287,6 +1291,10 @@ void WorldRender()
 			WorldDrawObjects(&bCulled[0]);
 		}
 	}	
+	if(g_nDebugCullDraw & 1)
+	{
+		WorldDrawCulledObjects(&bCulled[0]);
+	}
 	ShaderDisable();
 	glDisable(GL_CULL_FACE);
 	glActiveTexture(GL_TEXTURE1);
@@ -1854,6 +1862,7 @@ void CompareCullResult(uint32_t nNumObjects, bool* bCulled, bool* bCulledFast)
 
 
 extern uint32_t g_nBaseObjects;
+uint32_t g_nDebugGridCounter = 0;
 
 uint32_t CullObjectsFast(uint32 nNumObjects, bool* bCulled, SWorldGrid& Grid)
 {
@@ -1877,13 +1886,17 @@ uint32_t CullObjectsFast(uint32 nNumObjects, bool* bCulled, SWorldGrid& Grid)
 
 			SOccluderBspNodes* pNodes = BspBuildSubBsp(NodeBsp, g_Bsp, &S.Desc);
 			S.nDebugStatus = pNodes ? 1 : 0;
-			if(g_nDrawGrid)
+			if(g_nDebugCullDraw & 2)
 			{
 				uint32_t color;
 				if(S.nDebugStatus)
 					color = 0xff00ff00;
 				else
 					color = 0xffff0000;
+				if(i == g_nDebugGridCounter)
+				{
+					color = 0xff448800;
+				}
 				
 				ZDEBUG_DRAWBOX(matmat, trans, vSize*1.02f, color, 0);
 			}

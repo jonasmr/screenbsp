@@ -3578,7 +3578,7 @@ uint16_t BspBuildSubBspR(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, uint32_
 			}
 			NodeBsp.Nodes[nAdded].nInside = OCCLUDER_LEAF;
 			NodeBsp.Nodes[nAdded].nOutside = BspBuildSubBspR(NodeBsp, pBsp, Node.nOutside, ClippedPolyOut, nOut, Clipped, nClipLevel + 1);
-			Clipped = 0;
+			// Clipped = 0;
 		}
 		else
 		{
