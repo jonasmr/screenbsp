@@ -10,7 +10,7 @@
 //  rename cull to isvisible
 
 // clean math shit
-// 
+// proper debug code.
 
 #include <algorithm>
 #define OCCLUDER_EMPTY (0xc000)
@@ -113,12 +113,7 @@ struct SOccluderBsp
 	v4 vFrustumPlanes[4];
 	TFixedArray<v4, OCCLUDER_BSP_MAX_PLANES> Planes;
 	TFixedArray<v3, OCCLUDER_BSP_MAX_PLANES> Corners;
-	
-
 	SOccluderBspNodes Nodes;
-	// TFixedArray<SOccluderBspNode, OCCLUDER_BSP_MAX_NODES> Nodes;
-	// TFixedArray<SOccluderBspNodeExtra, OCCLUDER_BSP_MAX_NODES> NodesExtra;
-	//SOccluderBspNodes Node;
 	SOccluderBspStats Stats;
 
 	//debugging helpers
@@ -809,10 +804,65 @@ int BspDebugDumpFrame(SOccluderBsp* pBsp, int val)
 
 }
 
+uint32_t BspNumPotentialPolys(uint32_t nNumPlaneOccluders, uint32_t nNumBoxOccluders)
+{
+	return 4 + nNumPlaneOccluders + nNumBoxOccluders * 4;
+}
+
+uint32_t BspBuildDebugSearch(SOccluderBsp* pBsp, SOccluderDesc** pPlaneOccluders, uint32 nNumPlaneOccluders,
+			  SOccluderDesc** pBoxOccluders, uint32 nNumBoxOccluders,
+			  const SOccluderBspViewDesc& Desc,
+			  SOccluderDesc* pObject,
+			  bool* pDebugMask,
+			  uint32_t nDebugMaskSize)
+{
+	uint32_t nNumObjects = 0;
+	uint32_t nNumAdded = 1;
+
+	BspBuild(pBsp, pPlaneOccluders, nNumPlaneOccluders, pBoxOccluders, nNumBoxOccluders, Desc);
+	bool bCulled = BspCullObject(pBsp, pObject);
+	ZASSERT(bCulled);
+	const uint32_t nNumPotential = BspNumPotentialPolys(nNumPlaneOccluders, nNumBoxOccluders);
+	ZASSERT(nDebugMaskSize == nNumPotential);
+	memset(pDebugMask, 1, nNumPotential);
+	int xx = 0;
+	while(nNumAdded)
+	{
+		uprintf("itr %5d, added %5d", xx++, nNumAdded);
+		nNumAdded = 0;
+		for(int i = 0; i < nNumPotential; ++i)
+		{
+			if(pDebugMask[i])
+			{
+				//try and remove..
+				pDebugMask[i] = false;
+				BspBuild(pBsp, pPlaneOccluders, nNumPlaneOccluders, pBoxOccluders, nNumBoxOccluders, Desc, pDebugMask);
+				bool bCulled = BspCullObject(pBsp, pObject);
+				if(bCulled)
+				{
+					//keep removed
+					nNumAdded++;
+					uprintf("%5d,");
+				}
+				else
+				{
+					pDebugMask[i] = true;
+				}
+
+			}
+		}
+		nNumObjects += nNumAdded;
+		uprintf("\n");
+	}
+	return nNumObjects;
+}
+
+
 void BspBuild(SOccluderBsp* pBsp, 
 			  SOccluderDesc** pPlaneOccluders, uint32 nNumPlaneOccluders,
 			  SOccluderDesc** pBoxOccluders, uint32 nNumBoxOccluders,
-			  const SOccluderBspViewDesc& Desc)
+			  const SOccluderBspViewDesc& Desc,
+			  const bool* pDebugMask)
 {
 	g_pBsp = pBsp;
 	MICROPROFILE_SCOPEIC("BSP", "Build");
@@ -902,23 +952,32 @@ void BspBuild(SOccluderBsp* pBsp,
 		MICROPROFILE_SCOPEIC("BSP", "Build_Add");
 		v4* vPlanes = P.Planes.Ptr();
 		v3* vCorners = P.Corners.Ptr();
-		for(uint32 i = 0; i < P.PotentialPolys.Size(); ++i)
+		if(pDebugMask)
 		{
-			if(SkipIndex(i))
+			for(uint32 i = 0; i < P.PotentialPolys.Size(); ++i)
 			{
-				continue;
+				if(pDebugMask[i])
+				{
+					uint16 nIndex = P.PotentialPolys[i].nIndex;
+					uint16 nCount = P.PotentialPolys[i].nCount;
+					if(BspCanAddNodes(pBsp, &pBsp->Nodes, nCount))
+					{
+						BspAddOccluderInternal(pBsp, nIndex + vPlanes, nIndex + vCorners, nCount);
+					}
+				}
 			}
-			if(pBsp->Debug.nDumpAdd == i)
+		}
+		else
+		{
+			for(uint32 i = 0; i < P.PotentialPolys.Size(); ++i)
 			{
-				BspDump(pBsp, 0, 0);
-			}
-			uint16 nIndex = P.PotentialPolys[i].nIndex;
-			uint16 nCount = P.PotentialPolys[i].nCount;
-			if(BspCanAddNodes(pBsp, &pBsp->Nodes, nCount))
-			{
-				BspAddOccluderInternal(pBsp, nIndex + vPlanes, nIndex + vCorners, nCount);
-			}
-
+				uint16 nIndex = P.PotentialPolys[i].nIndex;
+				uint16 nCount = P.PotentialPolys[i].nCount;
+				if(BspCanAddNodes(pBsp, &pBsp->Nodes, nCount))
+				{
+					BspAddOccluderInternal(pBsp, nIndex + vPlanes, nIndex + vCorners, nCount);
+				}
+			}		
 		}
 	}
 	pBsp->Stats.nNumNodes = pBsp->Nodes.Nodes.Size();
@@ -3414,8 +3473,25 @@ SOccluderBspNodes* BspBuildSubBsp(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp
 		pBsp->Stats.nNumChildBspsVisible++;
 		return &NodeBsp;
 	}
-
-
 }
+
+void BspSave(SOccluderBsp* pBsp, const char* pFile)
+{
+	FILE* F = fopen(pFile, "wb");
+	ZASSERT(F);
+	int w = fwrite(pBsp, sizeof(*pBsp), 1, F);
+	ZASSERT(w == 1);
+	fclose(F);
+}
+void BspLoad(SOccluderBsp* pBsp, const char* pFile)
+{
+
+	FILE* F = fopen(pFile, "r");
+	ZASSERT(F);
+	int w = fread(pBsp, sizeof(*pBsp), 1, F);
+	ZASSERT(w == 1);
+	fclose(F);
+}
+
 
 
