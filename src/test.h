@@ -16,7 +16,7 @@ extern int32 g_nTestFalsePositives;
 #define OCCLUSION_NUM_SMALL 100
 #define OCCLUSION_NUM_LONG 20
 #define OCCLUSION_NUM_OBJECTS 2000
-#define OCCLUSION_USE_GROUND 0
+#define OCCLUSION_USE_GROUND 1
 #else
 
 #define OCCLUSION_NUM_LARGE 10

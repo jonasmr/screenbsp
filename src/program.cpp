@@ -38,10 +38,10 @@ void CompareCullResult(uint32_t nNumObjects, bool* bCulled, bool* bCulledFast);
 uint32 g_nUseOrtho = 0;
 float g_fOrthoScale = 10;
 SOccluderBsp* g_Bsp = 0;
-uint32_t g_nBspNodeCap = 1024;
+uint32_t g_nBspNodeCap = 2048;
 uint32 g_nUseDebugCameraPos = 2;
 uint32 g_nDebugCullDraw = 0;
-
+int g_nDebugDumpIndex = -1;
 
 
 uint32 g_nDrawGrid = 1;
@@ -211,18 +211,18 @@ void RenderShadowMap(ShadowMap& SM, v3 vEye, v3 vDir, v3* vCorners)
 		{
 			AABBLocal[i] = mtransform(mviewinverse, AABBLocal[i]);
 		}
-		ZDEBUG_DRAWLINE(AABBLocal[0], AABBLocal[1], -1, 0);
-		ZDEBUG_DRAWLINE(AABBLocal[1], AABBLocal[2], -1, 0);
-		ZDEBUG_DRAWLINE(AABBLocal[2], AABBLocal[3], -1, 0);
-		ZDEBUG_DRAWLINE(AABBLocal[3], AABBLocal[0], -1, 0);
-		ZDEBUG_DRAWLINE(AABBLocal[4], AABBLocal[5], -1, 0);
-		ZDEBUG_DRAWLINE(AABBLocal[5], AABBLocal[6], -1, 0);
-		ZDEBUG_DRAWLINE(AABBLocal[6], AABBLocal[7], -1, 0);
-		ZDEBUG_DRAWLINE(AABBLocal[7], AABBLocal[4], -1, 0);
-		ZDEBUG_DRAWLINE(AABBLocal[0], AABBLocal[4], -1, 0);
-		ZDEBUG_DRAWLINE(AABBLocal[1], AABBLocal[5], -1, 0);
-		ZDEBUG_DRAWLINE(AABBLocal[2], AABBLocal[6], -1, 0);
-		ZDEBUG_DRAWLINE(AABBLocal[3], AABBLocal[7], -1, 0);
+		// ZDEBUG_DRAWLINE(AABBLocal[0], AABBLocal[1], -1, 0);
+		// ZDEBUG_DRAWLINE(AABBLocal[1], AABBLocal[2], -1, 0);
+		// ZDEBUG_DRAWLINE(AABBLocal[2], AABBLocal[3], -1, 0);
+		// ZDEBUG_DRAWLINE(AABBLocal[3], AABBLocal[0], -1, 0);
+		// ZDEBUG_DRAWLINE(AABBLocal[4], AABBLocal[5], -1, 0);
+		// ZDEBUG_DRAWLINE(AABBLocal[5], AABBLocal[6], -1, 0);
+		// ZDEBUG_DRAWLINE(AABBLocal[6], AABBLocal[7], -1, 0);
+		// ZDEBUG_DRAWLINE(AABBLocal[7], AABBLocal[4], -1, 0);
+		// ZDEBUG_DRAWLINE(AABBLocal[0], AABBLocal[4], -1, 0);
+		// ZDEBUG_DRAWLINE(AABBLocal[1], AABBLocal[5], -1, 0);
+		// ZDEBUG_DRAWLINE(AABBLocal[2], AABBLocal[6], -1, 0);
+		// ZDEBUG_DRAWLINE(AABBLocal[3], AABBLocal[7], -1, 0);
 
 	}
 	const int size = 120;
@@ -792,6 +792,9 @@ void WorldRender()
 	{
 		MICROPROFILE_SCOPEI("CullTest", "Build", 0xff00ff00);
 		DoBuildBsp(ViewDesc);
+
+		BspSave(g_Bsp, "foo.bsp");
+		BspLoad(g_Bsp, "foo.bsp");
 	}
 	if(nDumpFrame)
 	{
@@ -1126,7 +1129,7 @@ void WorldRender()
 
 		enum{
 			MAX_QUERIES=10<<10,
-			QUERY_FRAME_DELAY=1,
+			QUERY_FRAME_DELAY=2,
 			PIXEL_THRESHOLD=5,//note:to get this to zero, the test should not generate overlapping meshes.
 		};
 		static int nQueryFrame = 0;
@@ -1141,12 +1144,13 @@ void WorldRender()
 			v3 vLockedCamRight;
 		};
 		static QueryFrameState QS[QUERY_FRAME_DELAY] = {0};
-		static GLuint Queries[MAX_QUERIES] = {0};
+		// static GLuint Queries[MAX_QUERIES] = {0};
 		ZASSERT(10<<10 > g_WorldState.nNumWorldObjects);
 
 		{{
 			{
 				QueryFrameState& Cur = QS[nQueryFrame];
+				// uprintf("issue queries %d\n", nQueryFrame);
 				if(!Cur.Queries[0])
 				{
 					glGenQueries(MAX_QUERIES, &Cur.Queries[0]);
@@ -1181,6 +1185,7 @@ void WorldRender()
 			QueryFrameState& Prev = QS[nQueryFrame];
 			if(Prev.nNumObjects && 0 == nNoRef)
 			{
+				// uprintf("fetch queries %d\n", nQueryFrame);
 				{
 					MICROPROFILE_SCOPEI("lala", "GetResult", 0xff00ffff);
 					for(uint32 i = 0; i < g_WorldState.nNumWorldObjects; ++i)
@@ -1223,7 +1228,17 @@ void WorldRender()
 						}
 					}
 				}
-			}	
+			}
+			if(g_nDebugDumpIndex>=0)
+			{
+				bool b1 = Prev.bCulled[g_nDebugDumpIndex];
+				bool b2 = bCulledRef[g_nDebugDumpIndex];
+				fprintf(g_TestFailOut, "DEBUG %s : %d %d  ", b1 == b2 ? "---" : "***", b1, b2);
+				fprintf(g_TestFailOut, "g_WorldState.Camera.vPosition = v3init(%f,%f,%f);", Prev.vLockedCamPos.x, Prev.vLockedCamPos.y, Prev.vLockedCamPos.z);
+				fprintf(g_TestFailOut, "g_WorldState.Camera.vDir = v3init(%f,%f,%f);", Prev.vLockedCamDir.x, Prev.vLockedCamDir.y, Prev.vLockedCamDir.z);
+				fprintf(g_TestFailOut, "g_WorldState.Camera.vRight = v3init(%f,%f,%f);\n", Prev.vLockedCamRight.x, Prev.vLockedCamRight.y, Prev.vLockedCamRight.z);
+				fflush(g_TestFailOut);
+			}
 			uplotfnxt("FAIL %d  FALSE %d AGREE %d", nFailCull, nFalsePositives, nAgree);
 			if(nNumFail)
 			{
@@ -1236,7 +1251,8 @@ void WorldRender()
 					fprintf(g_TestFailOut, "g_WorldState.Camera.vPosition = v3init(%f,%f,%f);\n", Prev.vLockedCamPos.x, Prev.vLockedCamPos.y, Prev.vLockedCamPos.z);
 					fprintf(g_TestFailOut, "g_WorldState.Camera.vDir = v3init(%f,%f,%f);\n", Prev.vLockedCamDir.x, Prev.vLockedCamDir.y, Prev.vLockedCamDir.z);
 					fprintf(g_TestFailOut, "g_WorldState.Camera.vRight = v3init(%f,%f,%f)\n;", Prev.vLockedCamRight.x, Prev.vLockedCamRight.y, Prev.vLockedCamRight.z);
-
+// g_nUseDebugCameraPos = 1;
+g_nRunTest = 0;
 				}
 				else
 				{
@@ -1253,6 +1269,9 @@ void WorldRender()
 	float fMult = 2.2f + cos(fub) * 5.3f;
 	if(nNumFail)
 		uplotfnxt("DRAWING FAIL %d", nNumFail);
+	// pFailObjects[0] = g_WorldState.WorldObjects + 194;
+	// nNumFail = 1;
+	//uprintf("bculled %d\n", bCulled[194]);
 	for(int i = 0; i < nNumFail; ++i)
 	{
 		SWorldObject* pObject = pFailObjects[i];
@@ -1651,73 +1670,16 @@ void ProgramInit()
 	g_WorldState.Camera.vDir = v3normalize(v3init(0.7,0,-0.7));
 	g_WorldState.Camera.vRight = v3normalize(v3init(0.7,0,0.7));
 	g_WorldState.Camera.vPosition = g_WorldState.Camera.vDir * -5.f;
-	// g_WorldState.Camera.vPosition.y = 25.f;
-//
-//#if 0
-//	g_WorldState.Camera.vDir = mtransform(mroty, v3init(0,0,-1));
-//	g_WorldState.Camera.vRight = mtransform(mroty, v3init(1,0,0));
-//	g_WorldState.Camera.vPosition = g_WorldState.Camera.vDir * -5.f;
-//#else
-//	g_WorldState.Camera.vPosition = v3init(133.101120,116.293892,111.730286);
-//	g_WorldState.Camera.vDir = v3init(-0.690784,-0.394744,-0.605801);
-//	g_WorldState.Camera.vRight = v3init(0.659345,0.000000,-0.751839);
-//	g_WorldState.Camera.vPosition = v3init(133.308350,116.412315,111.912018);
-//	g_WorldState.Camera.vDir = v3init(-0.690784,-0.394744,-0.605801);
-//	g_WorldState.Camera.vRight = v3init(0.659345,0.000000,-0.751839);
-//
-//	g_WorldState.Camera.vPosition = v3init(159.291046,139.451385,93.022232);
-//	g_WorldState.Camera.vDir = v3init(-0.639705,-0.636078,0.431487);
-//	g_WorldState.Camera.vRight = v3init(-0.559192,0.000000,-0.829037);
-//
-//	g_WorldState.Camera.vPosition = v3init(-0.681794,2.844925,2.245514);
-//	g_WorldState.Camera.vDir = v3init(0.558653,-0.573573,-0.599083);
-//	g_WorldState.Camera.vRight = v3init(0.731347,0.000000,0.681993);
-//
-//	g_WorldState.Camera.vPosition = v3init(-138.117203,110.280533,88.949966);
-//	g_WorldState.Camera.vDir = v3init(0.734251,-0.678798,-0.009613);
-//	g_WorldState.Camera.vRight = v3init(0.013089,0.000000,0.999906);
-//
-//#ifndef _WIN32
-//	g_WorldState.Camera.vPosition = v3init(-20.517357,74.954018,237.506470);
-//	g_WorldState.Camera.vDir = v3init(0.686040,-0.300704,-0.662503);
-//	g_WorldState.Camera.vRight = v3init(0.694652,0.000000,0.719334);
-//#endif
-//
-//#if __APPLE__
-//g_WorldState.Camera.vPosition = v3init(43.465141,0.424568,-110.558350);
-//g_WorldState.Camera.vDir = v3init(0.722574,0.263033,-0.639282);
-//g_WorldState.Camera.vRight = v3init(0.662614,0.000000,0.748949);
-//#endif
-//
-//
-//g_WorldState.Camera.vPosition = v3init(92.796921,10.000000,-196.202789);
-//g_WorldState.Camera.vDir = v3init(-0.427102,-0.046025,0.903031);
-//g_WorldState.Camera.vRight = v3init(-0.903989,0.000000,-0.427555);
-//
-//g_WorldState.Camera.vPosition = v3init(246.143951,10.000000,225.857758);
-//g_WorldState.Camera.vDir = v3init(-0.736488,-0.029921,-0.675789);
-//g_WorldState.Camera.vRight = v3init(0.676092,0.000000,-0.736817);
-//
-//#endif
-//g_WorldState.Camera.vPosition = v3init(218.461838,10.000000,-28.306690);
-//g_WorldState.Camera.vDir = v3init(-0.990690,-0.045348,0.128366);
-//g_WorldState.Camera.vRight = v3init(-0.128499,0.000000,-0.991710);
 
 
-#if 0
-g_WorldState.Camera.vPosition = v3init(42.626808,20.487385,38.569298);
-g_WorldState.Camera.vDir = v3init(0.897161,-0.258819,-0.357930);
-g_WorldState.Camera.vRight = v3init(0.370557,0.000000,0.928810);
-#endif
-
+// 	g_WorldState.Camera.vPosition = v3init(-300.013580,10.000000,-128.605072);
+// 	g_WorldState.Camera.vDir = v3init(0.918683,-0.030621,0.393807);
+// 	g_WorldState.Camera.vRight = v3init(-0.393991,0.000000,0.919114);
 // g_WorldState.Camera.vPosition = v3init(-300.013580,10.000000,-128.605072);
 // g_WorldState.Camera.vDir = v3init(0.918683,-0.030621,0.393807);
 // g_WorldState.Camera.vRight = v3init(-0.393991,0.000000,0.919114);
 
-// g_WorldState.Camera.vPosition = v3init(-627.900757,10.000000,-54.071251);
-// g_WorldState.Camera.vDir = v3init(0.996187,-0.015865,0.085786);
-// g_WorldState.Camera.vRight = v3init(-0.085797,0.000000,0.996313);
-
+g_WorldState.Camera.vPosition = v3init(-300.013580,10.000000,-128.605072);g_WorldState.Camera.vDir = v3init(0.918683,-0.030621,0.393807);g_WorldState.Camera.vRight = v3init(-0.393991,0.000000,0.919114);
 
 	g_WorldState.Camera.fFovY = 45.f;
 	g_WorldState.Camera.fNear = 0.1f;

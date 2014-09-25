@@ -1,6 +1,4 @@
 #pragma once
-//#include "base.h"
-//#include "program.h"
 #include "fixedarray.h"
 
 #define BSP_BOX_SCALE 1.02f
@@ -75,11 +73,19 @@ void BspDestroy(SOccluderBsp* pBsp);
 void BspBuild(SOccluderBsp* pBsp, 
 			  SOccluderDesc** pPlaneOccluders, uint32 nNumPlaneOccluders,
 			  SOccluderDesc** pBoxOccluders, uint32 nNumBoxOccluders,
-			  const SOccluderBspViewDesc& Desc);
+			  const SOccluderBspViewDesc& Desc,
+			  const bool* pDebugMask = 0);
+
 bool BspCullObject(SOccluderBsp* pBsp, SOccluderDesc* pObject, SOccluderBspNodes* pSubBsp = 0);
 void BspGetStats(SOccluderBsp* pBsp, SOccluderBspStats* pStats);
 void BspClearCullStats(SOccluderBsp* pBsp);
 
+//mark occluders that take part in culling pObject
+void BspBuildDebugSearch(SOccluderBsp* pBsp, SOccluderDesc** pPlaneOccluders, uint32 nNumPlaneOccluders,
+			  SOccluderDesc** pBoxOccluders, uint32 nNumBoxOccluders,
+			  const SOccluderBspViewDesc& Desc,
+			  SOccluderDesc* pObject,
+			  bool pDebugMask);
 
 void BspDebugPlane(SOccluderBsp* pBsp, int nPlane);
 
@@ -94,5 +100,8 @@ void BspDebugToggleInsideOutside(SOccluderBsp* pBsp);
 void BspDebugClipLevelSubNext(SOccluderBsp* pBsp);
 void BspDebugClipLevelSubPrev(SOccluderBsp* pBsp);
 int BspDebugDumpFrame(SOccluderBsp* pBsp, int val);
+
+void BspSave(SOccluderBsp* pBsp, const char* pFile);
+void BspLoad(SOccluderBsp* pBsp, const char* pFile);
 
 SOccluderBspNodes* BspBuildSubBsp(SOccluderBspNodes& NodeBsp, SOccluderBsp *pBsp, SOccluderDesc *pObject);
