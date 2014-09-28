@@ -478,12 +478,12 @@ void TestClear()
 	g_nTestInnerIndex = 0;
 	g_nTestInnerIndexEnd = -1;
 }
-extern uint32 g_nUseDebugCameraPos;
+// extern uint32 g_nUseDebugCameraPos;
 void StartTest()
 {
 	g_TestOut = fopen("test.txt", "w");
 	g_TestFailOut = fopen("test.fail.txt", "w");
-	g_nUseDebugCameraPos = 0;
+	// g_nUseDebugCameraPos = 0;
 
 	g_nTestIndex = -1; //0:bsp, 1:software occl
 	g_nSubTestIndex = 0; //number of sub tests [paths through scene]
