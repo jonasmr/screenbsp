@@ -34,7 +34,7 @@ float g_fPrepareTime;
 float g_fBuildTime;
 float g_fCullTime;
 float g_fTestMaxFrameTime;
-extern uint32 g_nBspNodeCap;
+extern int32 g_nBspNodeCap;
 
 
 #define OCCLUSION_TEST_HALF_SIZE 300
@@ -632,12 +632,12 @@ void RunTest(v3& vPos_, v3& vDir_, v3& vRight_)
 		[] (int index, v3& vPos, v3& vDir, v3& vUp) -> int{
 			vUp = v3init(0, 1, 0);
 			#if QUICK_PERF
-			const int CIRCLE_TOTAL_STEPS = (1<<9);
+			const int CIRCLE_TOTAL_STEPS = TEST_TOTAL_STEPS;
 			const int CIRCLE_REVOLUTIONS = 2;
 			const int CIRCLE_INNER_RADIUS = 100;
 			const int CIRCLE_OUTER_RADIUS = 350;
 			#else
-			const int CIRCLE_TOTAL_STEPS = (8<<10);
+			const int CIRCLE_TOTAL_STEPS = TEST_TOTAL_STEPS;
 			const int CIRCLE_REVOLUTIONS = 8;
 			const int CIRCLE_INNER_RADIUS = 50;
 			const int CIRCLE_OUTER_RADIUS = 650;

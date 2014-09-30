@@ -16,6 +16,7 @@
 #include "physics.h"
 #include "microprofile.h"
 #include "test.h"
+#include "imgui/imgui.h"
 #include <functional>
 #include <xmmintrin.h>
 //#include <fenv.h>
@@ -38,9 +39,32 @@ void CompareCullResult(uint32_t nNumObjects, bool* bCulled, bool* bCulledFast);
 uint32 g_nUseOrtho = 0;
 float g_fOrthoScale = 10;
 SOccluderBsp* g_Bsp = 0;
-uint32_t g_nBspNodeCap = 2048;
 uint32 g_nDebugCullDraw = 0;
 int g_nDebugDumpIndex = -1;
+
+
+
+// UI
+enum ECameraSource
+{
+	ESOURCE_FREECAM,
+	ESOURCE_LOCKED,
+	ESOURCE_TEST,
+};
+const char* g_CameraSourceStrings[] = 
+{
+	"FreeCam",
+	"Locked",
+	"Test",
+};
+int g_CameraSource = ESOURCE_FREECAM;
+int g_CameraSourceBsp = ESOURCE_FREECAM;
+int g_nTestFrame = 0;
+bool g_nTestAdvance = false;
+int32 g_nBspNodeCap = 2048;
+extern int g_UIEnabled;
+// UI
+
 
 
 uint32 g_nDrawGrid = 1;
@@ -1714,16 +1738,104 @@ g_WorldState.Camera.vPosition = v3init(-300.013580,10.000000,-128.605072);g_Worl
 	g_SM = AllocateShadowMap();
 
 }
+
+
+void DisplayUI()
+{
+	if(g_KeyboardState.keys[SDL_SCANCODE_U] & BUTTON_RELEASED)
+	{
+		g_UIEnabled = !g_UIEnabled;
+	}
+	if(!g_UIEnabled)
+		return;
+	static bool Controls = true;
+	static bool Test = false;
+	ImGui::Begin("Controls", &Controls, ImVec2(200,100));
+	// uprintf("controls %d test %d\n", Controls, Test);
+	Test ^= ImGui::Button("Test");
+	ImGui::Combo("Camera Source", &g_CameraSource, &g_CameraSourceStrings[0], sizeof(g_CameraSourceStrings) / sizeof(g_CameraSourceStrings[0]), 10);
+	ImGui::Combo("Bsp Source", &g_CameraSourceBsp, &g_CameraSourceStrings[0], sizeof(g_CameraSourceStrings) / sizeof(g_CameraSourceStrings[0]));
+
+
+	// g_CameraSourceStrings
+
+
+
+
+	ImGui::End();
+
+	if(Test)
+	{
+		ImGui::Begin("Test", &Test, ImVec2(500,100));
+		ImGui::InputInt("FrameInput", &g_nTestFrame);
+		ImGui::SliderInt("Frame", &g_nTestFrame, 0, TEST_TOTAL_STEPS);
+		ImGui::Checkbox("Running", &g_nTestAdvance);
+		ImGui::SliderInt("NodeCap", &g_nBspNodeCap, 10, 2048);
+		if(ImGui::Button("Test Run"))
+		{
+			//uprintf("start test\n");
+		}
+		ImGui::End();
+	}
+
+
+		// static bool show_test_window = true;
+		// static bool show_another_window = false;
+		// static float f;
+		// ImGui::Text("Hello, world!");
+		// ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+		// show_another_window ^= ImGui::Button("Another Window");
+
+  //       // Show another simple window
+  //       if (show_another_window)
+  //       {
+  //           ImGui::Begin("Another Window", &show_another_window, ImVec2(200,100));
+  //           ImGui::Text("Hello");
+  //           static bool foo = true;
+  //           ImGui::Separator();
+  //           ImGui::BulletText("lala %f %d", 1344.344f, 10);
+  //           ImGui::BulletText("he %f %d", 1344.344f, 10);
+  //           ImGui::BulletText("foo %f %d", 1344.344f, 10);
+  //           ImGui::BulletText("lala %f %d", 1344.344f, 10);
+  //           ImGui::Separator();
+  //           const char* names[]=
+  //           {
+  //           	"ged",
+  //           	"faar",
+  //           	"fisk",
+
+  //           };
+  //           static int cval = 1;
+  //           ImGui::Combo("combo", &cval, names, 3);
+  //   bool        Combo(const char* label, int* current_item, const char** items, int items_count, int popup_height_items = 7);
+
+
+  //           ImGui::Checkbox("hest hest", &foo);
+  //               // bool        Checkbox(const char* label, bool* v);
+
+  //           ImGui::End();
+  //       }
+
+        
+
+  //       ImGui::Text("Hello, world!");
+  //       // static float f= 1;
+  //       ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+}
+
 int ProgramMain()
 {
 	static int once = 0;
 	if(!once)
 	{
 		once = 1;
-//		uprintf("Running test\n");
 		RunTestOnly();
-//		uprintf("Running test done\n");
 	}
+
+
+	DisplayUI();
+
+
 
 
 	//fesetenv(FE_DFL_DISABLE_SSE_DENORMS_ENV);

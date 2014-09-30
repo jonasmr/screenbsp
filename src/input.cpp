@@ -5,6 +5,8 @@ SPadState g_PadState[MAX_PADS];
 SDL_Joystick* g_pJoyStick[MAX_PADS];
 SMouseState g_MouseState;
 SKeyboardState g_KeyboardState;
+SMouseState g_MouseStateUI;
+
 uint32_t g_nNumJoysticks = 0;
 
 
@@ -42,4 +44,9 @@ void InputClear()
 		g_MouseState.button[i] &= ~BUTTON_FRAME;
 	for(uint32_t i = 0; i < KEYBOARD_MAX_KEYS; ++i)
 		g_KeyboardState.keys[i] &= ~BUTTON_FRAME;
+
+	for(uint32_t i = 0; i < MOUSE_BUTTON_MAX; ++i)
+		g_MouseStateUI.button[i] &= ~BUTTON_FRAME;
+
+
 }

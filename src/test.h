@@ -10,6 +10,11 @@ extern int32 g_nTestFalsePositives;
 
 #define QUICK_PERF 0
 
+#if QUICK_PERF
+#define TEST_TOTAL_STEPS (1<<9)
+#else
+#define TEST_TOTAL_STEPS (8<<10)
+#endif
 
 #if 1
 #define OCCLUSION_NUM_LARGE 10

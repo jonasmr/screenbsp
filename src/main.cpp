@@ -19,6 +19,9 @@
 #include "shader.h"
 #include "microprofile.h"
 #include "physics.h"
+#include "stb_image.h"
+
+#include "imgui/imgui.h"
 
 #ifdef _WIN32
 #undef near
@@ -51,6 +54,7 @@ void usleep(__int64 usec)
 }
 #endif
 
+int g_UIEnabled = 1;
 //SDL_Surface* g_Surface;
 #ifdef _WIN32
 #define START_WIDTH 1280
@@ -123,103 +127,6 @@ inline int64_t GetTick()
 #endif
 
 
-
-//fake work
-void WorkerThread(int threadId)
-{
-	uprintf("ENTERING WORKER\n");
-	char name[100];
-	snprintf(name, 99, "Worker%d", threadId);
-	MicroProfileOnThreadCreate(&name[0]);
-	uint32_t c0 = randcolor();
-	uint32_t c1 = randcolor();
-	uint32_t c2 = randcolor();
-	uint32_t c3 = randcolor();
-	uint32_t c4 = randcolor();
-
-	while(!g_nQuit)
-	{
-		switch(threadId)
-		{
-		case 0:
-		{
-			usleep(100);
-			{MICROPROFILE_SCOPEI("Thread0", "Work Thread0", c4); usleep(200);
-			{MICROPROFILE_SCOPEI("Thread0", "Work Thread1", c3); usleep(200);
-			{MICROPROFILE_SCOPEI("Thread0", "Work Thread2", c2); usleep(200);
-			{MICROPROFILE_SCOPEI("Thread0", "Work Thread3", c1); usleep(200);
-			}}}}
-		}
-		break;
-		
-		case 1:
-			{
-				usleep(100);
-				MICROPROFILE_SCOPEI("Thread1", "Work Thread 1", c1);
-				usleep(2000);
-			}
-			break;
-
-		case 2:
-			{
-				usleep(1000);
-				{MICROPROFILE_SCOPEI("Thread2", "Worker2", c0); usleep(200);
-				{MICROPROFILE_SCOPEI("Thread2", "InnerWork0", c1); usleep(100);
-				{MICROPROFILE_SCOPEI("Thread2", "InnerWork1", c2); usleep(100);
-				{MICROPROFILE_SCOPEI("Thread2", "InnerWork2", c3); usleep(100);
-				{MICROPROFILE_SCOPEI("Thread2", "InnerWork3", c4); usleep(100);
-				}}}}}
-			}
-			break;
-		case 3:
-			{
-				MICROPROFILE_SCOPEI("ThreadWork 3", "MAIN", c0);
-				usleep(1000);;
-				for(uint32_t i = 0; i < 10; ++i)
-				{
-					MICROPROFILE_SCOPEI("ThreadWork", "Inner0", c1);
-					usleep(100);
-					for(uint32_t j = 0; j < 4; ++j)
-					{
-						MICROPROFILE_SCOPEI("ThreadWork", "Inner1", c4);
-						usleep(50);
-						MICROPROFILE_SCOPEI("ThreadWork", "Inner2", c2);
-						usleep(50);
-						MICROPROFILE_SCOPEI("ThreadWork", "Inner3", c3);
-						usleep(50);
-						MICROPROFILE_SCOPEI("ThreadWork", "Inner4", c3);
-						usleep(50);
-					}
-				}
-
-
-			}
-			break;
-		default:
-			
-			MICROPROFILE_SCOPE(ThreadSafeMain);
-			usleep(1000);;
-			for(uint32_t i = 0; i < 5; ++i)
-			{
-				MICROPROFILE_SCOPE(ThreadSafeInner0);
-				usleep(1000);
-				for(uint32_t j = 0; j < 4; ++j)
-				{
-					MICROPROFILE_SCOPE(ThreadSafeInner1);
-					usleep(500);
-					MICROPROFILE_SCOPE(ThreadSafeInner2);
-					usleep(150);
-					MICROPROFILE_SCOPE(ThreadSafeInner3);
-					usleep(150);
-					MICROPROFILE_SCOPE(ThreadSafeInner4);
-					usleep(150);
-				}
-			}
-			break;
-		}
-	}
-}
-
 void CheckGLError()
 {
 	GLenum errCode;
@@ -239,23 +146,25 @@ int g_MicroProfileMouseDelta = 0;
 
 void HandleEvent(SDL_Event* pEvt)
 {
+	SMouseState& MouseState = g_UIEnabled ? g_MouseStateUI : g_MouseState;
+	SKeyboardState& KeyboardState = g_KeyboardState;
 	switch(pEvt->type)
 	{
 	case SDL_QUIT:
 		g_nQuit = true;
 		break;
 	case SDL_KEYDOWN:
-		g_KeyboardState.keys[(int)pEvt->key.keysym.scancode] = BUTTON_DOWN|BUTTON_PUSHED;
+		KeyboardState.keys[(int)pEvt->key.keysym.scancode] = BUTTON_DOWN|BUTTON_PUSHED;
 		break;
 	case SDL_KEYUP:
-		g_KeyboardState.keys[(int)pEvt->key.keysym.scancode] = BUTTON_UP|BUTTON_RELEASED;
+		KeyboardState.keys[(int)pEvt->key.keysym.scancode] = BUTTON_UP|BUTTON_RELEASED;
 		break;
 	case SDL_MOUSEMOTION:
-		g_MouseState.position[0] = pEvt->motion.x;
-		g_MouseState.position[1] = g_Height-pEvt->motion.y; // flip to match opengl
-		g_MicroProfileMouseX = g_MouseState.position[0];
+		g_MouseStateUI.position[0] = g_MouseState.position[0] = pEvt->motion.x;
+		g_MouseStateUI.position[1] = g_MouseState.position[1] = g_Height-pEvt->motion.y; // flip to match opengl
+		g_MicroProfileMouseX = MouseState.position[0];
 		g_MicroProfileMouseY = pEvt->motion.y;
-		//MicroProfileMouseMove(g_MouseState.position[0], pEvt->motion.y);
+		//MicroProfileMouseMove(MouseState.position[0], pEvt->motion.y);
 		//{
 		//	static int nPosX = -1;
 		//	static int nPosY = -1;
@@ -290,11 +199,11 @@ void HandleEvent(SDL_Event* pEvt)
 			int type = pEvt->type;
 			if(SDL_MOUSEBUTTONUP == type)
 			{
-				g_MouseState.button[pEvt->button.button] = BUTTON_UP|BUTTON_RELEASED;
+				MouseState.button[pEvt->button.button] = BUTTON_UP|BUTTON_RELEASED;
 			}
 			else
 			{
-				g_MouseState.button[pEvt->button.button] = BUTTON_DOWN|BUTTON_PUSHED;
+				MouseState.button[pEvt->button.button] = BUTTON_DOWN|BUTTON_PUSHED;
 			}
 		}
 		#if 0 
@@ -369,6 +278,19 @@ void MicroProfileDrawInit();
 void MicroProfileBeginDraw(uint32_t nWidth, uint32_t nHeight, float* prj);
 void MicroProfileEndDraw();
 
+GLuint g_ImgFontTex = 0;
+GLuint g_ImguiProgram = 0;
+GLuint g_ImguiVertexBuffer;
+GLuint g_ImguiVAO;
+GLuint g_ImguiProgramLocVertex = 1;
+GLuint g_ImguiProgramLocColor = 2;
+GLuint g_ImguiProgramLocTC0 = 3;
+GLuint g_ImguiProgramLocMatrix = 0;
+GLuint g_ImguiProgramLocTex = 0;
+
+void ImguiInit();
+void ImguiRender(float fDeltaTime);
+void ImguiRenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count);
 
 int main(int argc, char* argv[])
 {
@@ -386,11 +308,9 @@ int main(int argc, char* argv[])
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE,  	    8);	
 	SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE,		    32);	
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,	    1);	
-//#ifdef __APPLE__
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);	
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-//#endif
 	SDL_GL_SetSwapInterval(1);
 
 	SDL_Window * pWindow = SDL_CreateWindow("ScreenBsp", 10, 10, g_BaseWidth, g_BaseHeight, SDL_WINDOW_OPENGL);
@@ -412,38 +332,18 @@ int main(int argc, char* argv[])
 	}
 	CheckGLError();
 
-
+	ImguiInit();
 
 	uprintf("GL VERSION '%s'\n", glGetString(GL_VERSION));
 
 #if MICROPROFILE_ENABLED
-	CheckGLError();
 	MicroProfileQueryInitGL();
-	CheckGLError();
 	MicroProfileDrawInit();
-	CheckGLError();
 #endif
 
-
-	//Microprofile test
-	//std::thread t0(WorkerThread, 0);
-	//std::thread t1(WorkerThread, 1);
-	//std::thread t2(WorkerThread, 2);
-	//std::thread t3(WorkerThread, 3);
-
-
-	//std::thread t42(WorkerThread, 42);
-	//std::thread t43(WorkerThread, 43);
-	//std::thread t44(WorkerThread, 44);
-	//std::thread t45(WorkerThread, 45);
-
-	CheckGLError();
 	InputInit();
-	CheckGLError();
 	TextInit();
-	CheckGLError();
 	MeshInit();
-	CheckGLError();
 	ShaderInit();
 
 	PhysicsInit();
@@ -455,6 +355,7 @@ int main(int argc, char* argv[])
 	
 	while(!g_nQuit)
 	{
+		ImGui::NewFrame();
 		int64_t nStart = TICK();
 		MICROPROFILE_SCOPE(MAIN);
 		CheckGLError();
@@ -473,79 +374,19 @@ int main(int argc, char* argv[])
 			}
 
 		}
-		CheckGLError();
-		{
-			srand(0);
-			MICROPROFILE_SCOPEI("MAIN", "DebugRender", 0x00eeee);
-			{
-				MICROPROFILE_SCOPEGPUI("GPU", "Render Debug", 0x88dd44);
-//				DebugDrawFlush();
-				CheckGLError();
-			}
+		TextFlush();
 
 
-			{
-				MICROPROFILE_SCOPEGPUI("GPU", "Render Text", 0x88dd44);
-				TextFlush();
-				CheckGLError();
-			}
-			if(0)
-			{
-				MICROPROFILE_SCOPEI("MAIN", "DUMMY", randcolor());
-
-				for(int i = 0; i < 5; ++i)
-				{
-					MICROPROFILE_SCOPEI("MAIN", "DUM0", randcolor());
-					usleep(100);				
-					{MICROPROFILE_SCOPEI("MAIN", "DUM1", randcolor());
-					usleep(100);
-					{MICROPROFILE_SCOPEI("MAIN", "DUM2", randcolor());
-					usleep(100);
-					{MICROPROFILE_SCOPEI("MAIN", "DUM3", randcolor());
-					usleep(200);
-					{MICROPROFILE_SCOPEI("MAIN", "DUM4", randcolor());
-					usleep(200);
-					{MICROPROFILE_SCOPEI("MAIN", "DUM5", randcolor());
-					usleep(200);
-					}}}}}
-		
-				}
-			}
-		}
 
 
-		//MicroProfileMouseClick();pEvt->button.button == 1, pEvt->button.button == 3);
+
 		MicroProfileMouseButton(g_MouseState.button[1] & BUTTON_DOWN ? 1 : 0, g_MouseState.button[3] & BUTTON_DOWN ? 1 : 0);
 		MicroProfileMousePosition(g_MicroProfileMouseX, g_MicroProfileMouseY, g_MicroProfileMouseDelta);
 		g_MicroProfileMouseDelta = 0;
 		CheckGLError();
-		// MicroProfileFlip();
-		// {
-		// 	MICROPROFILE_SCOPEGPUI("GPU", "MicroProfileDraw", 0x88dd44);
 
-		// 	// CheckGLError();
-		// 	// glMatrixMode(GL_PROJECTION);
-		// 	// glLoadIdentity();
-		// 	// CheckGLError();
-		// 	// glOrtho(0.0, g_Width, g_Height, 0, -1.0, 1.0);
-		// 	// CheckGLError();
-		// 	// glMatrixMode(GL_MODELVIEW);
-		// 	// glLoadIdentity();
-		// 	m prj = morthogl(0.0, g_Width, g_Height, 0, -1.0, 1.0);
-		// 	glDisable(GL_DEPTH_TEST);
-		// 	glDisable(GL_CULL_FACE);
-		// 	CheckGLError();
-		// 	glColorMask(1,1,1,1);
-
-		// 	CheckGLError();
-		// 	MicroProfileBeginDraw(g_Width, g_Height, (float*)&prj);
-		// 	MicroProfileDraw(g_Width, g_Height);
-		// 	CheckGLError();
-		// 	MicroProfileEndDraw();
-		// 	CheckGLError();
-		// }
-		
-		MicroProfileFlip();
+		ImguiRender(1/60.f);
+		MicroProfileFlip();		
 		{
 			MICROPROFILE_SCOPEGPUI("GPU", "MicroProfileDraw", 0x88dd44);
 			float projection[16];
@@ -584,42 +425,12 @@ int main(int argc, char* argv[])
 			MicroProfileTogglePause();
 		}
 
-
-
-		int64_t nEnd= TICK();
-		static int64_t nTotal = 0;
-		static int64_t nCount = 0;
-		nTotal += nEnd-nStart;
-		nCount++;
-
-		int64_t nUsec = 1000000 * (nEnd-nStart) / TicksPerSecond();
-		int64_t nUsecAvg = 1000000 * (nTotal/nCount) / TicksPerSecond();
-		//if(0 == nCount %128)
-		{
-			uplotfnxt("ms %7.4fms ... AVG %7.4f :: %d\n", nUsec / 1000.f, nUsecAvg / 1000.f, nCount);
-		}
-
-
 		MICROPROFILE_SCOPEI("MAIN", "Flip", 0xffee00);
-		//SDL_GL_SwapBuffers();
-
 
 		SDL_GL_SwapWindow(pWindow); 
 
 
 	}
-
-
-	//t0.join();
-	//t1.join();
-	//t2.join();
-	//t3.join();
-	//t42.join();
-	////t43.join();
-	//t44.join();
-	//t45.join();
-
-
 
   	SDL_GL_DeleteContext(glcontext);  
  	SDL_DestroyWindow(pWindow);
@@ -627,6 +438,295 @@ int main(int argc, char* argv[])
 
 	return 0;
 }
+
+
+
+void ImguiInit()
+{
+
+    ImGuiIO& io = ImGui::GetIO();
+    io.DisplaySize = ImVec2(g_Width, g_Height);
+    io.DeltaTime = 1.0f/60.0f;
+    io.PixelCenterOffset = 0.0f;
+    io.KeyMap[ImGuiKey_Tab] = SDL_SCANCODE_TAB;
+    // io.KeyMap[ImGuiKey_LeftArrow] = GLFW_KEY_LEFT;
+    // io.KeyMap[ImGuiKey_RightArrow] = GLFW_KEY_RIGHT;
+    // io.KeyMap[ImGuiKey_UpArrow] = GLFW_KEY_UP;
+    // io.KeyMap[ImGuiKey_DownArrow] = GLFW_KEY_DOWN;
+    // io.KeyMap[ImGuiKey_Home] = GLFW_KEY_HOME;
+    // io.KeyMap[ImGuiKey_End] = GLFW_KEY_END;
+    // io.KeyMap[ImGuiKey_Delete] = GLFW_KEY_DELETE;
+    // io.KeyMap[ImGuiKey_Backspace] = GLFW_KEY_BACKSPACE;
+    // io.KeyMap[ImGuiKey_Enter] = GLFW_KEY_ENTER;
+    // io.KeyMap[ImGuiKey_Escape] = GLFW_KEY_ESCAPE;
+    // io.KeyMap[ImGuiKey_A] = GLFW_KEY_A;
+    // io.KeyMap[ImGuiKey_C] = GLFW_KEY_C;
+    // io.KeyMap[ImGuiKey_V] = GLFW_KEY_V;
+    // io.KeyMap[ImGuiKey_X] = GLFW_KEY_X;
+    // io.KeyMap[ImGuiKey_Y] = GLFW_KEY_Y;
+    // io.KeyMap[ImGuiKey_Z] = GLFW_KEY_Z;
+
+    io.RenderDrawListsFn = ImguiRenderDrawLists;
+    io.SetClipboardTextFn = 0;
+    io.GetClipboardTextFn = 0;
+// #ifdef _MSC_VER
+// 	io.ImeSetInputScreenPosFn = ImImpl_ImeSetInputScreenPosFn;
+// #endif
+    // Load font texture
+    glGenTextures(1, &g_ImgFontTex);
+    glBindTexture(GL_TEXTURE_2D, g_ImgFontTex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	// Default font (embedded in code)
+    const void* png_data;
+    unsigned int png_size;
+    ImGui::GetDefaultFontData(NULL, NULL, &png_data, &png_size);
+    int tex_x, tex_y, tex_comp;
+    void* tex_data = stbi_load_from_memory((const unsigned char*)png_data, (int)png_size, &tex_x, &tex_y, &tex_comp, 0);
+	IM_ASSERT(tex_data != NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex_x, tex_y, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex_data);
+	stbi_image_free(tex_data);
+
+
+	
+
+	const char* g_PixelShaderCode = "\
+#version 150 \n \
+uniform sampler2D tex; \
+in vec2 TC0; \
+in vec4 Color; \
+out vec4 Out0; \
+ \
+void main(void)   \
+{   \
+	Out0 = texture(tex, TC0.xy) * Color; \
+} \
+";
+
+	const char* g_VertexShaderCode = " \
+#version 150 \n \
+uniform mat4 Matrix; \
+in vec3 VertexIn; \
+in vec4 ColorIn; \
+in vec2 TC0In; \
+out vec2 TC0; \
+out vec4 Color; \
+ \
+void main(void)   \
+{ \
+	Color = ColorIn; \
+	TC0 = TC0In; \
+	gl_Position = Matrix * vec4(VertexIn, 1.0); \
+} \
+";
+
+	GLuint hFragment = glCreateShaderObjectARB(GL_FRAGMENT_SHADER_ARB);
+	GLuint hVertex = glCreateShaderObjectARB(GL_VERTEX_SHADER_ARB);
+	glShaderSource(hFragment, 1, (const char**)&g_PixelShaderCode, 0);
+	glCompileShader(hFragment);
+	CheckGLError();
+	glShaderSource(hVertex, 1, (const char**)&g_VertexShaderCode, 0);
+	glCompileShader(hVertex);
+	CheckGLError();
+	g_ImguiProgram = glCreateProgramObjectARB();
+	glAttachObjectARB(g_ImguiProgram, hFragment);
+	glAttachObjectARB(g_ImguiProgram, hVertex);
+
+	g_ImguiProgramLocVertex = 1;
+	g_ImguiProgramLocColor = 2;
+	g_ImguiProgramLocTC0 = 3;
+	glBindAttribLocation(g_ImguiProgram, g_ImguiProgramLocVertex, "VertexIn");
+	glBindAttribLocation(g_ImguiProgram, g_ImguiProgramLocColor, "ColorIn");
+	glBindAttribLocation(g_ImguiProgram, g_ImguiProgramLocTC0, "TC0In");
+
+	glLinkProgramARB(g_ImguiProgram);
+	CheckGLError();
+	g_ImguiProgramLocMatrix = glGetUniformLocation(g_ImguiProgram, "Matrix");
+	g_ImguiProgramLocTex = glGetUniformLocation(g_ImguiProgram, "tex");
+
+	glGenBuffers(1, &g_ImguiVertexBuffer);
+	glGenVertexArrays(1, &g_ImguiVAO);
+
+
+}
+
+
+void ImguiRenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
+{
+	if (cmd_lists_count == 0)
+        return;
+    CheckGLError();
+
+#if 1
+    glBindVertexArray(g_ImguiVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, g_ImguiVertexBuffer);
+
+    glUseProgramObjectARB(g_ImguiProgram);
+
+    CheckGLError();
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_DEPTH_TEST);
+    CheckGLError();
+    glEnable(GL_SCISSOR_TEST);
+    CheckGLError();
+
+   	glEnableVertexAttribArray(g_ImguiProgramLocVertex);
+	glEnableVertexAttribArray(g_ImguiProgramLocColor);
+	glEnableVertexAttribArray(g_ImguiProgramLocTC0);
+ 
+	CheckGLError();
+	glUniform1i(g_ImguiProgramLocTex, 0);
+	glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, g_ImgFontTex);
+    // glEnable(GL_TEXTURE_2D);
+
+    // Setup orthographic projection matrix
+    const float width = ImGui::GetIO().DisplaySize.x;
+    const float height = ImGui::GetIO().DisplaySize.y;
+    {
+		float projection[16];
+		float left = 0.f;
+		float right = g_Width;
+		float bottom = g_Height;
+		float top = 0.f;
+		float near = -1.f;
+		float far = 1.f;
+		memset(&projection[0], 0, sizeof(projection));
+
+		projection[0] = 2.0f / (right - left);
+		projection[5] = 2.0f / (top - bottom);
+		projection[10] = -2.0f / (far - near);
+		projection[12] = - (right + left) / (right - left);
+		projection[13] = - (top + bottom) / (top - bottom);
+		projection[14] = - (far + near) / (far - near);
+		projection[15] = 1.f; 
+		CheckGLError();
+		glUniformMatrix4fv(g_ImguiProgramLocMatrix, 1, 0, projection);
+ 	}
+CheckGLError();
+	glBindVertexArray(g_ImguiVAO);
+
+    // Render command lists
+    for (int n = 0; n < cmd_lists_count; n++)
+    {CheckGLError();
+        const ImDrawList* cmd_list = cmd_lists[n];
+        const unsigned char* vtx_buffer = (const unsigned char*)cmd_list->vtx_buffer.begin();
+        const unsigned char* vtx_buffer_end = (const unsigned char*)cmd_list->vtx_buffer.end();
+		glBindBuffer(GL_ARRAY_BUFFER, g_ImguiVertexBuffer);
+		glBufferData(GL_ARRAY_BUFFER, vtx_buffer_end - vtx_buffer, vtx_buffer, GL_STREAM_DRAW);
+		int nStride = sizeof(ImDrawVert);
+
+		glVertexAttribPointer(g_ImguiProgramLocVertex, 2, GL_FLOAT, 0, nStride, 0);
+		glVertexAttribPointer(g_ImguiProgramLocColor, 4, GL_UNSIGNED_BYTE, GL_TRUE, nStride, (void*)16);
+		glVertexAttribPointer(g_ImguiProgramLocTC0, 2, GL_FLOAT, 0, nStride, (void*)8);
+		// glEnableVertexAttribArray(g_ImguiProgramLocVertex);
+		// glEnableVertexAttribArray(g_ImguiProgramLocColor);
+		// glEnableVertexAttribArray(g_ImguiProgramLocTC0);
+CheckGLError();
+
+        // glVertexPointer(2, GL_FLOAT, sizeof(ImDrawVert), (void*)(vtx_buffer));
+        // glTexCoordPointer(2, GL_FLOAT, sizeof(ImDrawVert), (void*)(vtx_buffer+8));
+        // glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(ImDrawVert), (void*)(vtx_buffer+16));
+
+        int vtx_offset = 0;
+        const ImDrawCmd* pcmd_end = cmd_list->commands.end();
+        for (const ImDrawCmd* pcmd = cmd_list->commands.begin(); pcmd != pcmd_end; pcmd++)
+        {
+            glScissor((int)pcmd->clip_rect.x, (int)(height - pcmd->clip_rect.w), (int)(pcmd->clip_rect.z - pcmd->clip_rect.x), (int)(pcmd->clip_rect.w - pcmd->clip_rect.y));
+            glDrawArrays(GL_TRIANGLES, vtx_offset, pcmd->vtx_count);
+            vtx_offset += pcmd->vtx_count;
+        }
+
+CheckGLError();
+
+    }
+	glDisableVertexAttribArray(g_ImguiProgramLocVertex);
+	glDisableVertexAttribArray(g_ImguiProgramLocColor);
+	glDisableVertexAttribArray(g_ImguiProgramLocTC0);
+
+    glDisable(GL_SCISSOR_TEST);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glUseProgramObjectARB(0);
+	glBindVertexArray(0);
+
+    CheckGLError();
+
+
+#else
+    // We are using the OpenGL fixed pipeline to make the example code simpler to read!
+    // A probable faster way to render would be to collate all vertices from all cmd_lists into a single vertex buffer.
+    // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, vertex/texcoord/color pointers.
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_SCISSOR_TEST);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    glEnableClientState(GL_COLOR_ARRAY);
+
+    // Setup texture
+    glBindTexture(GL_TEXTURE_2D, g_ImgFontTex);
+    glEnable(GL_TEXTURE_2D);
+
+    // Setup orthographic projection matrix
+    const float width = ImGui::GetIO().DisplaySize.x;
+    const float height = ImGui::GetIO().DisplaySize.y;
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(0.0f, width, height, 0.0f, -1.0f, +1.0f);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    // Render command lists
+    for (int n = 0; n < cmd_lists_count; n++)
+    {
+        const ImDrawList* cmd_list = cmd_lists[n];
+        const unsigned char* vtx_buffer = (const unsigned char*)cmd_list->vtx_buffer.begin();
+        glVertexPointer(2, GL_FLOAT, sizeof(ImDrawVert), (void*)(vtx_buffer));
+        glTexCoordPointer(2, GL_FLOAT, sizeof(ImDrawVert), (void*)(vtx_buffer+8));
+        glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(ImDrawVert), (void*)(vtx_buffer+16));
+
+        int vtx_offset = 0;
+        const ImDrawCmd* pcmd_end = cmd_list->commands.end();
+        for (const ImDrawCmd* pcmd = cmd_list->commands.begin(); pcmd != pcmd_end; pcmd++)
+        {
+            glScissor((int)pcmd->clip_rect.x, (int)(height - pcmd->clip_rect.w), (int)(pcmd->clip_rect.z - pcmd->clip_rect.x), (int)(pcmd->clip_rect.w - pcmd->clip_rect.y));
+            glDrawArrays(GL_TRIANGLES, vtx_offset, pcmd->vtx_count);
+            vtx_offset += pcmd->vtx_count;
+        }
+    }
+    glDisable(GL_SCISSOR_TEST);
+    glDisableClientState(GL_COLOR_ARRAY);
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    glDisableClientState(GL_VERTEX_ARRAY);
+    CheckGLError();
+#endif
+}
+
+void ImguiRender(float fDeltaTime)
+{
+	ImGui::Render();
+    ImGuiIO& io = ImGui::GetIO();
+
+    io.DeltaTime = fDeltaTime;
+
+    // Setup inputs
+    // (we already got mouse wheel, keyboard keys & characters from glfw callbacks polled in glfwPollEvents())
+    float mouse_x = g_MouseState.position[0], mouse_y = g_Height - g_MouseState.position[1];
+    io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);
+    io.MouseDown[0] = g_MouseStateUI.button[1] & BUTTON_DOWN ? 1 : 0;
+    io.MouseDown[1] = g_MouseStateUI.button[3] & BUTTON_DOWN ? 1 : 0;
+    // uprintf("imgui mouse %d %d pos  %f %f\n", io.MouseDown[0],io.MouseDown[1], mouse_x, mouse_y);
+
+    // Start the frame
+    //ImGui::NewFrame();
+
+
+}
+
 
 #ifdef _WIN32
 void uprintf(const char* fmt, ...)
