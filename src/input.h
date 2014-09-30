@@ -73,6 +73,7 @@ struct SKeyboardState
 extern uint32_t g_nNumJoysticks;
 extern SPadState g_PadState[MAX_PADS];
 extern SMouseState g_MouseState;
+extern SMouseState g_MouseStateUI;
 extern SKeyboardState g_KeyboardState;
 
 
