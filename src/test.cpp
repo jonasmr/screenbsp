@@ -9,7 +9,7 @@
 
 
 
-uint32 g_nRunTest = 0;
+int32 g_nRunTest = 0;
 FILE* g_TestOut = 0;
 FILE* g_TestFailOut = 0;
 
@@ -19,7 +19,8 @@ uint32_t g_nBaseObjects = 0;
 int32 g_nTestIndex = 0; //0:bsp, 1:software occl
 int32 g_nSubTestIndex = 0; //number of sub tests [paths through scene]
 int32 g_nTestSettingIndex = 0; //tweakable param of test (depth for bsp, resolution for software occl)
-int32 g_nTestInnerIndex = 0;
+extern int g_nTestFrame;
+// int32 g_nTestInnerIndex = 0;
 int32 g_nTestInnerIndexEnd = 0;
 int32 g_nTestFail = 0;
 int32 g_nTestTotalFail = 0;
@@ -475,7 +476,7 @@ void TestClear()
  	g_fBuildTime = 0;
  	g_fCullTime = 0;
  	g_fTestMaxFrameTime = 0;
-	g_nTestInnerIndex = 0;
+	g_nTestFrame = 0;
 	g_nTestInnerIndexEnd = -1;
 }
 // extern uint32 g_nUseDebugCameraPos;
@@ -488,7 +489,7 @@ void StartTest()
 	g_nTestIndex = -1; //0:bsp, 1:software occl
 	g_nSubTestIndex = 0; //number of sub tests [paths through scene]
 	g_nTestSettingIndex = 0; //tweakable param of test (depth for bsp, resolution for software occl)
-	g_nTestInnerIndex = -1;
+	g_nTestFrame = -1;
 	g_nTestInnerIndexEnd = -1;
 	g_nTestTotalFail = 0;
 	g_nTestMaxFail = 0;
@@ -624,11 +625,10 @@ void TestWrite()
 		);
 }
 
-void RunTest(v3& vPos_, v3& vDir_, v3& vRight_)
+void EvalTest(int nIndex, v3& vPos_, v3& vDir_, v3& vRight_)
 {
-#define NUM_TESTS 1
-	std::function<int (int, v3&, v3&, v3&)> TestFuncs[] = 
-	{
+	ZASSERT(nIndex < TEST_TOTAL_STEPS);
+	auto func =
 		[] (int index, v3& vPos, v3& vDir, v3& vUp) -> int{
 			vUp = v3init(0, 1, 0);
 			#if QUICK_PERF
@@ -651,47 +651,20 @@ void RunTest(v3& vPos_, v3& vDir_, v3& vRight_)
 			uplotfnxt("test run %d... pos %f %f %f", index, vPos.x, vPos.y, vPos.z);
 
 			return CIRCLE_TOTAL_STEPS;
-		},
-		[] (int index, v3& vPos, v3& vDir, v3& vUp) -> int{
-			vUp = v3init(0, 1, 0);
-			const int CIRCLE_TOTAL_STEPS = (1<<5);
-			const int CIRCLE_REVOLUTIONS = 3;
-			const int CIRCLE_INNER_RADIUS = 50;
-			const int CIRCLE_OUTER_RADIUS = 800;
-			float fAngle = TWOPI * float(index) / (CIRCLE_TOTAL_STEPS/CIRCLE_REVOLUTIONS);
-			float fDist = CIRCLE_INNER_RADIUS + (CIRCLE_OUTER_RADIUS-CIRCLE_INNER_RADIUS) * float(index) / CIRCLE_TOTAL_STEPS;
-			float fX = sinf(fAngle) * fDist;
-			float fZ = cosf(fAngle) * fDist;
-			vPos = v3init(fX, 10, fZ);
-			vDir = -v3normalize(vPos);
-			uplotfnxt("test run %d... pos %f %f %f", index, vPos.x, vPos.y, vPos.z);
-
-			return CIRCLE_TOTAL_STEPS;
-		}
 	};
+	v3 vPos, vDir, vUp;
 
-	if(g_nTestInnerIndex>=0)
-	{
-		g_nTestTotalFail += g_nTestFail;
-		g_nTestMaxFail = Max(g_nTestFail, g_nTestMaxFail);
-		if(g_nTestFail)
-			g_nTestTotalFailFrames++;
-		g_nTestTotalFalsePositives += g_nTestFalsePositives;
-		g_nTestMaxFalsePositives = Max(g_nTestFalsePositives, g_nTestMaxFalsePositives);
+	func(nIndex, vPos, vDir, vUp);
+	vPos_ = vPos;
+	vDir_ = vDir;
+	vRight_ = v3normalize(v3cross(vDir, vUp));
 
-		float fTimeCull = MicroProfileGetTime("CullTest", "Cull");
-		float fTimeBuild = MicroProfileGetTime("CullTest", "Build");
-		float fTimeBuildPrepare = MicroProfileGetTime("Bsp", "CullPrepare");
-		float fTotalTime = fTimeCull + fTimeBuild;		
-		g_fTestTime += fTotalTime;
-		g_fPrepareTime += fTimeBuildPrepare;
-		g_fBuildTime += fTimeBuild;
-		g_fCullTime += fTimeCull;
-		g_fTestMaxFrameTime = Max(g_fTestMaxFrameTime, fTotalTime);
 
-	}
+}
 
-	if(g_nTestInnerIndex == g_nTestInnerIndexEnd)
+int RunTest(v3& vPos_, v3& vDir_, v3& vRight_)
+{
+	if(g_nTestFrame == g_nTestInnerIndexEnd)
 	{
 		if(g_nTestIndex == -1)
 		{
@@ -715,7 +688,7 @@ void RunTest(v3& vPos_, v3& vDir_, v3& vRight_)
 					g_nTestIndex = 1;
 					g_nTestSettingIndex = 0;
 					StopTest();
-					return;
+					return g_nTestSettingIndex;
 				}
 				else
 				{
@@ -734,7 +707,7 @@ void RunTest(v3& vPos_, v3& vDir_, v3& vRight_)
 					g_nTestIndex = 1;
 					g_nTestSettingIndex = 0;
 					StopTest();
-					return;
+					return g_nTestSettingIndex;
 				}
 			}
 		}
@@ -748,11 +721,14 @@ void RunTest(v3& vPos_, v3& vDir_, v3& vRight_)
 	ZASSERT(g_nTestIndex>=0 && g_nTestIndex<2);
 
 	v3 vPos, vDir, vUp;
-	g_nTestInnerIndexEnd = TestFuncs[g_nTestIndex](g_nTestInnerIndex, vPos, vDir, vUp);
-	g_nTestInnerIndex++;
-	vPos_ = vPos;
-	vDir_ = vDir;
-	vRight_ = v3normalize(v3cross(vDir, vUp));
+	g_nTestInnerIndexEnd = TEST_TOTAL_STEPS;
+	EvalTest(g_nTestFrame, vPos_, vDir_, vRight_);
+	return	g_nTestFrame++;
+
+	// vPos_ = vPos;
+	// vDir_ = vDir;
+	// vRight_ = v3normalize(v3cross(vDir, vUp));
+
 }
 
 

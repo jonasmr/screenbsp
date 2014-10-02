@@ -580,7 +580,6 @@ void ImguiRenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
 	glUniform1i(g_ImguiProgramLocTex, 0);
 	glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, g_ImgFontTex);
-    // glEnable(GL_TEXTURE_2D);
 
     // Setup orthographic projection matrix
     const float width = ImGui::GetIO().DisplaySize.x;

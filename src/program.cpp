@@ -29,8 +29,9 @@ extern uint32_t g_Height;
 void WorldDrawObjects(bool* bCulled);
 uint32_t CullObjects(uint32 nNumObjects, bool* bCulled);
 uint32_t CullObjectsFast(uint32 nNumObjects, bool* bCulled, SWorldGrid& Grid);
-
 void CompareCullResult(uint32_t nNumObjects, bool* bCulled, bool* bCulledFast);
+void SetupCameraState(SCameraState& Camera, v3 vPosition, v3 vDir, v3 vRight);
+
 
 // void CullObjectsVerify(uint32 nNumObjects, bool* bCulled);
 // void CullObjectsVerify2(uint32 nNumObjects);
@@ -59,10 +60,32 @@ const char* g_CameraSourceStrings[] =
 };
 int g_CameraSource = ESOURCE_FREECAM;
 int g_CameraSourceBsp = ESOURCE_FREECAM;
+bool g_bCameraVerify = true;
 int g_nTestFrame = 0;
 bool g_nTestAdvance = false;
+
 int32 g_nBspNodeCap = 2048;
 extern int g_UIEnabled;
+
+SCameraState g_LockedCamera;
+SCameraState g_FreeCamera;
+SCameraState g_TestCamera;
+SCameraState& GetCamera(int iSource)
+{
+	switch(iSource)
+	{
+		case ESOURCE_LOCKED:
+			return g_LockedCamera;
+		case ESOURCE_FREECAM:
+			return g_FreeCamera;
+		case ESOURCE_TEST:
+			return g_TestCamera;
+		default:
+			return g_FreeCamera;
+	};
+}
+
+
 // UI
 
 
@@ -70,21 +93,14 @@ extern int g_UIEnabled;
 uint32 g_nDrawGrid = 1;
 
 
-enum {
-	LOCK_CAM_OFF=0,
-	LOCK_CAM_BSP=1,
-	LOCK_CAM_BOTH=2,
-};
+// enum {
+// 	LOCK_CAM_OFF=0,
+// 	LOCK_CAM_BSP=1,
+// 	LOCK_CAM_BOTH=2,
+// };
 
-int g_LockCamera = LOCK_CAM_OFF;
+// int g_LockCamera = LOCK_CAM_OFF;
 
-SCameraState g_LockedCamera;
-
-
-
-// v3 vLockedCamPos = v3init(0,0,0);
-// v3 vLockedCamRight = v3init(0,-1,0);
-// v3 vLockedCamDir = v3init(1,0,0);
 
 
 #define TILE_SIZE 8
@@ -356,14 +372,17 @@ void RunPlainTest()
 	while(g_nRunTest)
 	{
 		_mm_setcsr( _mm_getcsr() | 0x8040 );
-		RunTest(g_WorldState.Camera.vPosition, g_WorldState.Camera.vDir, g_WorldState.Camera.vRight);
+		v3 vPosition, vDir, vRight;
+		RunTest(vPosition, vDir, vRight);
+		SCameraState Camera;
+		SetupCameraState(Camera, vPosition, vDir, vRight);
 		SOccluderBspViewDesc ViewDesc;
-		ViewDesc.vOrigin = g_WorldState.Camera.vPosition;
-		ViewDesc.vDirection = g_WorldState.Camera.vDir;
-		ViewDesc.vRight = g_WorldState.Camera.vRight;
-		ViewDesc.fFovY = g_WorldState.Camera.fFovY;
+		ViewDesc.vOrigin = Camera.vPosition;
+		ViewDesc.vDirection = Camera.vDir;
+		ViewDesc.vRight = Camera.vRight;
+		ViewDesc.fFovY = Camera.fFovY;
 		ViewDesc.fAspect = (float)g_Height / (float)g_Width;
-		ViewDesc.fZNear = g_WorldState.Camera.fNear;
+		ViewDesc.fZNear = Camera.fNear;
 		ViewDesc.nNodeCap = g_nBspNodeCap;
 		_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 		{
@@ -387,14 +406,17 @@ void RunGridTest(const char* pName, SWorldGrid& Grid)
 	while(g_nRunTest)
 	{
 		_mm_setcsr( _mm_getcsr() | 0x8040 );
-		RunTest(g_WorldState.Camera.vPosition, g_WorldState.Camera.vDir, g_WorldState.Camera.vRight);
+		v3 vPosition, vDir, vRight;
+		RunTest(vPosition, vDir, vRight);
+		SCameraState Camera;
+		SetupCameraState(Camera, vPosition, vDir, vRight);
 		SOccluderBspViewDesc ViewDesc;
-		ViewDesc.vOrigin = g_WorldState.Camera.vPosition;
-		ViewDesc.vDirection = g_WorldState.Camera.vDir;
-		ViewDesc.vRight = g_WorldState.Camera.vRight;
-		ViewDesc.fFovY = g_WorldState.Camera.fFovY;
+		ViewDesc.vOrigin = Camera.vPosition;
+		ViewDesc.vDirection = Camera.vDir;
+		ViewDesc.vRight = Camera.vRight;
+		ViewDesc.fFovY = Camera.fFovY;
 		ViewDesc.fAspect = (float)g_Height / (float)g_Width;
-		ViewDesc.fZNear = g_WorldState.Camera.fNear;
+		ViewDesc.fZNear = Camera.fNear;
 		ViewDesc.nNodeCap = g_nBspNodeCap;
 		_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 		{
@@ -669,9 +691,9 @@ void WorldRender()
 		incfoo = !incfoo;
 	}
 
-	const SCameraState& CameraBsp = g_LockedCamera;// : g_WorldState.Camera;
-	const SCameraState& Camera = g_WorldState.Camera;
-	uplotfnxt("LOCK CAMERA %d", g_LockCamera);
+	const int nCanVerify = g_CameraSourceBsp == g_CameraSource && g_nTestFail == 0;
+	const SCameraState& CameraBsp = GetCamera(g_CameraSourceBsp);
+	const SCameraState& Camera = GetCamera(g_CameraSource);
 
 	bool bShift = 0 != ((g_KeyboardState.keys[SDL_SCANCODE_RSHIFT]|g_KeyboardState.keys[SDL_SCANCODE_LSHIFT]) & BUTTON_DOWN);
 	if(g_KeyboardState.keys[SDL_SCANCODE_L] & BUTTON_RELEASED)
@@ -886,15 +908,15 @@ void WorldRender()
 		nNumPoints = 0;
 	}
 
-	m mprj = (g_WorldState.Camera.mprj);
-	m mprjinv = minverse(g_WorldState.Camera.mprj);
+	m mprj = (Camera.mprj);
+	m mprjinv = minverse(Camera.mprj);
 
 
 
 	int nLightIndex = 0;
 
-	m mcliptoworld = mmult(g_WorldState.Camera.mviewinv, g_WorldState.Camera.mprjinv);
-	v3 veye = g_WorldState.Camera.vPosition;
+	m mcliptoworld = mmult(Camera.mviewinv, Camera.mprjinv);
+	v3 veye = Camera.vPosition;
 	int nMaxTileLights = 0;
 	if(0)
 	for(int i = 0; i < g_LightTileWidth; ++i)
@@ -1115,15 +1137,15 @@ void WorldRender()
 	v3 vTileSize = v3init(g_LightTileWidth, g_LightTileHeight, TILE_SIZE);
 	SHADER_SET("TileSize", vTileSize);
 	SHADER_SET("MaxLightTileIndex", nLightIndex);
-	SHADER_SET("vWorldEye", g_WorldState.Camera.vPosition);
-	m mprjview = mmult(g_WorldState.Camera.mprj, g_WorldState.Camera.mview);
+	SHADER_SET("vWorldEye", Camera.vPosition);
+	m mprjview = mmult(Camera.mprj, Camera.mview);
 	SHADER_SET("ProjectionMatrix", &mprjview);
 	SHADER_SET("ShadowMatrix", &g_SM.mprjviewtex);
 	SHADER_SET("mode", g_Mode);
 	#define MAX_FAIL 32
 	static SWorldObject* pFailObjects[MAX_FAIL];
 	static int nNumFail = 0;
-	if(g_LockCamera != LOCK_CAM_BSP)
+	if(nCanVerify)
 	{
 		MICROPROFILE_SCOPEI("MAIN", "Stencil Reference Test", 0xff44dddd);
 		glEnable(GL_CULL_FACE);
@@ -1153,7 +1175,7 @@ void WorldRender()
 
 		enum{
 			MAX_QUERIES=10<<10,
-			QUERY_FRAME_DELAY=2,
+			QUERY_FRAME_DELAY=1,
 			PIXEL_THRESHOLD=5,//note:to get this to zero, the test should not generate overlapping meshes.
 		};
 		static int nQueryFrame = 0;
@@ -1194,8 +1216,8 @@ void WorldRender()
 				}
 				Cur.nNumObjects = g_WorldState.nNumWorldObjects;
 				memcpy(&Cur.bCulled[0], &bCulled[0], sizeof(Cur.bCulled[0]) * g_WorldState.nNumWorldObjects);
-				Cur.CameraState = g_LockedCamera;
-				Cur.CameraState = g_LockedCamera;
+				Cur.CameraState = Camera;
+				// Cur.CameraState = g_LockedCamera;
 				
 
 			}
@@ -1272,17 +1294,15 @@ void WorldRender()
 					fprintf(g_TestFailOut, "g_WorldState.Camera.vPosition = v3init(%f,%f,%f);\n", Prev.CameraState.vPosition.x, Prev.CameraState.vPosition.y, Prev.CameraState.vPosition.z);
 					fprintf(g_TestFailOut, "g_WorldState.Camera.vDir = v3init(%f,%f,%f);\n", Prev.CameraState.vDir.x, Prev.CameraState.vDir.y, Prev.CameraState.vDir.z);
 					fprintf(g_TestFailOut, "g_WorldState.Camera.vRight = v3init(%f,%f,%f)\n;", Prev.CameraState.vRight.x, Prev.CameraState.vRight.y, Prev.CameraState.vRight.z);
-// g_nUseDebugCameraPos = 1;
-// g_nRunTest = 0;
 					uprintf("locking camera\n");
 					g_nRunTest = 0;
-					g_LockCamera = LOCK_CAM_BSP;
+					g_LockedCamera = Camera;
 				}
 				else
 				{
 					uprintf("locking camera\n");
 					// g_nUseDebugCameraPos = 1;
-					g_LockCamera = LOCK_CAM_BSP;
+					g_LockedCamera = Camera;
 
 				}
 			}
@@ -1411,13 +1431,13 @@ void UpdateEditorState()
 		}
 	}
 
-	{
-		v2 vPos = v2init(g_MouseState.position[0], g_MouseState.position[1]);
-		v3 vDir = DirectionFromScreen(vPos, g_WorldState.Camera);
-		v3 t1 = g_WorldState.Camera.vPosition + vDir * 5.f;//vMouseWorld + v3normalize(vMouseWorld -g_WorldState.Camera.vPosition) *5.f;
-	//	ZDEBUG_DRAWBOX(mid(), t1, v3init(0.2, 0.2, 0.2), -1);
+	// {
+	// 	v2 vPos = v2init(g_MouseState.position[0], g_MouseState.position[1]);
+	// 	v3 vDir = DirectionFromScreen(vPos, *g_WorldState.pCamera);
+	// 	v3 t1 = g_WorldState.Camera.vPosition + vDir * 5.f;//vMouseWorld + v3normalize(vMouseWorld -g_WorldState.Camera.vPosition) *5.f;
+	// //	ZDEBUG_DRAWBOX(mid(), t1, v3init(0.2, 0.2, 0.2), -1);
 
-	}
+	// }
 
 	if(g_MouseState.button[1]&BUTTON_PUSHED)
 	{
@@ -1515,13 +1535,12 @@ void UpdateEditorState()
 }
 void UpdatePicking()
 {
-
 	v3 vMouse = v3init( g_MouseState.position[0], g_MouseState.position[1], 0);
-	v3 vMouseClip = mtransform(g_WorldState.Camera.mviewportinv, vMouse);
+	v3 vMouseClip = mtransform(g_WorldState.pActiveCamera->mviewportinv, vMouse);
 	vMouseClip.z = -0.9f;
-	v4 vMouseView_ = mtransform(g_WorldState.Camera.mprjinv, v4init(vMouseClip, 1.f));
+	v4 vMouseView_ = mtransform(g_WorldState.pActiveCamera->mprjinv, v4init(vMouseClip, 1.f));
 	v3 vMouseView = vMouseView_.tov3() / vMouseView_.w;
-	v3 vMouseWorld = mtransform(g_WorldState.Camera.mviewinv, vMouseView);
+	v3 vMouseWorld = mtransform(g_WorldState.pActiveCamera->mviewinv, vMouseView);
 	// uplotfnxt("vMouse %f %f %f", vMouse.x, vMouse.y, vMouse.z);
 	// uplotfnxt("vMouseClip %f %f %f", vMouseClip.x, vMouseClip.y, vMouseClip.z);
 	// uplotfnxt("vMouseView %f %f %f", vMouseView.x, vMouseView.y, vMouseView.z);
@@ -1529,13 +1548,13 @@ void UpdatePicking()
 	// v3 test = g_WorldState.Camera.vPosition + g_WorldState.Camera.vDir * 3.f;
 	// ZDEBUG_DRAWBOX(mid(), test, v3init(0.3, 0.3, 0.3), -1);
 	v3 t0 = vMouseWorld;
-	v3 t1 = vMouseWorld + v3normalize(vMouseWorld -g_WorldState.Camera.vPosition) *5.f;
+	v3 t1 = vMouseWorld + v3normalize(vMouseWorld -g_WorldState.pActiveCamera->vPosition) *5.f;
 	//	ZDEBUG_DRAWBOX(mid(), t1, v3init(0.1, 0.1, 0.1), -1);
 	// ZDEBUG_DRAWLINE(test, t0, -1, 0);
 
 	if(g_MouseState.button[1] & BUTTON_RELEASED && !g_EditorState.bLockSelection)
 	{
-		v3 vPos = g_WorldState.Camera.vPosition;
+		v3 vPos = g_WorldState.pActiveCamera->vPosition;
 		v3 vDir = vMouseWorld - vPos;
 		vDir = v3normalize(vDir);
 		float fNearest = 1e30;
@@ -1544,7 +1563,7 @@ void UpdatePicking()
 		auto Intersect = [&] (SObject* pObject) 
 		{ 
 			float fColi = rayboxintersect(vPos, vDir, pObject->mObjectToWorld, pObject->vSize);
-			if(fColi > g_WorldState.Camera.fNear && fColi < fNearest)
+			if(fColi > g_WorldState.pActiveCamera->fNear && fColi < fNearest)
 			{
 				pNearest = pObject;
 				fNearest = fColi;
@@ -1561,52 +1580,42 @@ void UpdatePicking()
 
 }
 
+void SetupCameraState(SCameraState& Camera, v3 vPosition, v3 vDir, v3 vRight)
+{
+	memset(&Camera, 0xef, sizeof(Camera));
+	Camera.vPosition = vPosition;
+	Camera.vRight = vRight;
+	Camera.vDir = vDir;
+	Camera.fFovY = 45.f;
+	Camera.fNear = 0.1f;
+	Camera.mview = mcreate(Camera.vDir, Camera.vRight, Camera.vPosition);
+
+	float fAspect = (float)g_Width / (float)g_Height;
+	
+	if(g_nUseOrtho)
+	{
+		Camera.mprj = mortho(g_fOrthoScale, g_fOrthoScale / fAspect, 1000);
+	}
+	else
+	{
+		Camera.mprj = mperspective(Camera.fFovY, ((float)g_Height / (float)g_Width), Camera.fNear, 2000.f);
+	}
+	
+	Camera.mviewport = mviewport(0,0,g_Width, g_Height);
+	Camera.mviewportinv = minverse(Camera.mviewport);
+	Camera.mprjinv = minverse(Camera.mprj);
+	Camera.mviewinv = maffineinverse(Camera.mview);	
+}
+
 void UpdateCamera()
 {
-	if(g_KeyboardState.keys[SDL_SCANCODE_F10] & BUTTON_RELEASED)
-	{
-		g_LockCamera = 1;
-	}
-
-
-	v3 vDir = v3init(0,0,0);
-
-	// if(g_MouseState.button[SDL_BUTTON_WHEELUP] & BUTTON_RELEASED)
-	// 	g_fOrthoScale *= 0.96;
-	// if(g_MouseState.button[SDL_BUTTON_WHEELDOWN] & BUTTON_RELEASED)
-	// 	g_fOrthoScale /= 0.96;
-
-
-
-	if(g_KeyboardState.keys[SDL_SCANCODE_A] & BUTTON_DOWN)
-	{
-		vDir.x = -1.f;
-	}
-	else if(g_KeyboardState.keys[SDL_SCANCODE_D] & BUTTON_DOWN)
-	{
-		vDir.x = 1.f;
-	}
-
-	if(g_KeyboardState.keys[SDL_SCANCODE_W] & BUTTON_DOWN)
-	{
-		vDir.z = 1.f;
-	}
-	else if(g_KeyboardState.keys[SDL_SCANCODE_S] & BUTTON_DOWN)
-	{
-		vDir.z = -1.f;
-	}
-	float fSpeed = 0.1f;
-	if((g_KeyboardState.keys[SDL_SCANCODE_RSHIFT]|g_KeyboardState.keys[SDL_SCANCODE_LSHIFT]) & BUTTON_DOWN)
-		fSpeed *= 0.2f;
-	if((g_KeyboardState.keys[SDL_SCANCODE_RCTRL]|g_KeyboardState.keys[SDL_SCANCODE_LCTRL]) & BUTTON_DOWN)
-		fSpeed *= 12.0f;
-
 	if(g_KeyboardState.keys[SDL_SCANCODE_BACKSPACE] & BUTTON_RELEASED)
 	{
-		
 		if(!g_nRunTest)
 		{
-			g_LockCamera = LOCK_CAM_OFF;
+			g_CameraSource = ESOURCE_TEST;
+			g_CameraSourceBsp = ESOURCE_TEST;
+			g_nTestAdvance = 1;
 			StartTest();
 		}
 		else
@@ -1615,92 +1624,168 @@ void UpdateCamera()
 		}
 	}
 
-
-	{
-
-		if(g_nRunTest)
-		{
-			
-			RunTest(g_WorldState.Camera.vPosition, g_WorldState.Camera.vDir, g_WorldState.Camera.vRight);
-
-		}
-		else
-		{
-			g_WorldState.Camera.vPosition += g_WorldState.Camera.vDir * vDir.z * fSpeed;
-			g_WorldState.Camera.vPosition += g_WorldState.Camera.vRight * vDir.x * fSpeed;
-
-
-			// static int mousex, mousey;
-			// if(g_MouseState.button[1] & BUTTON_PUSHED)
-			// {
-			// 	mousex = g_MouseState.position[0];
-			// 	mousey = g_MouseState.position[1];
-			// }
-
-			//if(g_MouseState.button[1] & BUTTON_DOWN)
-			{
-				int dx = g_WorldState.vCameraRotate.x;//g_MouseState.position[0] - mousex;
-				int dy = g_WorldState.vCameraRotate.y;//g_MouseState.position[1] - mousey;
-				// mousex = g_MouseState.position[0];
-				// mousey = g_MouseState.position[1];
-
-				float fRotX = dy * 0.25f;
-				float fRotY = dx * -0.25f;
-				m mrotx = mrotatex(fRotX*TORAD);
-				m mroty = mrotatey(fRotY*TORAD);
-				g_WorldState.Camera.vDir = mtransform(mroty, g_WorldState.Camera.vDir);
-				g_WorldState.Camera.vRight = mtransform(mroty, g_WorldState.Camera.vRight);
-
-				m mview = mcreate(g_WorldState.Camera.vDir, g_WorldState.Camera.vRight, v3init(0,0,0));
-				m mviewinv = minverserotation(mview);
-				v3 vNewDir = mtransform(mrotx, v3init(0,0,-1));
-				g_WorldState.Camera.vDir = mtransform(mviewinv, vNewDir);
-
-			}
-			ZASSERTNORMALIZED3(g_WorldState.Camera.vDir);
-			ZASSERTNORMALIZED3(g_WorldState.Camera.vRight);
-		}
-	}
-
-
-
-	g_WorldState.Camera.mview = mcreate(g_WorldState.Camera.vDir, g_WorldState.Camera.vRight, g_WorldState.Camera.vPosition);
 	if(g_KeyboardState.keys[SDL_SCANCODE_F2] & BUTTON_RELEASED)
 		g_nUseOrtho = !g_nUseOrtho;
 
-	float fAspect = (float)g_Width / (float)g_Height;
+
+	//free cam
+	if(g_CameraSource == ESOURCE_FREECAM)
+	{{
+		//free cam
+		v3 vDir = v3init(0,0,0);
+		if(g_KeyboardState.keys[SDL_SCANCODE_A] & BUTTON_DOWN)
+		{
+			vDir.x = -1.f;
+		}
+		else if(g_KeyboardState.keys[SDL_SCANCODE_D] & BUTTON_DOWN)
+		{
+			vDir.x = 1.f;
+		}
+
+		if(g_KeyboardState.keys[SDL_SCANCODE_W] & BUTTON_DOWN)
+		{
+			vDir.z = 1.f;
+		}
+		else if(g_KeyboardState.keys[SDL_SCANCODE_S] & BUTTON_DOWN)
+		{
+			vDir.z = -1.f;
+		}
+		float fSpeed = 0.1f;
+		if((g_KeyboardState.keys[SDL_SCANCODE_RSHIFT]|g_KeyboardState.keys[SDL_SCANCODE_LSHIFT]) & BUTTON_DOWN)
+			fSpeed *= 0.2f;
+		if((g_KeyboardState.keys[SDL_SCANCODE_RCTRL]|g_KeyboardState.keys[SDL_SCANCODE_LCTRL]) & BUTTON_DOWN)
+			fSpeed *= 12.0f;
+
+		g_FreeCamera.vPosition += g_FreeCamera.vDir * vDir.z * fSpeed;
+		g_FreeCamera.vPosition += g_FreeCamera.vRight * vDir.x * fSpeed;
+
+
+		// static int mousex, mousey;
+		// if(g_MouseState.button[1] & BUTTON_PUSHED)
+		// {
+		// 	mousex = g_MouseState.position[0];
+		// 	mousey = g_MouseState.position[1];
+		// }
+
+		//if(g_MouseState.button[1] & BUTTON_DOWN)
+		{
+			int dx = g_WorldState.vCameraRotate.x;//g_MouseState.position[0] - mousex;
+			int dy = g_WorldState.vCameraRotate.y;//g_MouseState.position[1] - mousey;
+			// mousex = g_MouseState.position[0];
+			// mousey = g_MouseState.position[1];
+
+			float fRotX = dy * 0.25f;
+			float fRotY = dx * -0.25f;
+			m mrotx = mrotatex(fRotX*TORAD);
+			m mroty = mrotatey(fRotY*TORAD);
+			g_FreeCamera.vDir = mtransform(mroty, g_FreeCamera.vDir);
+			g_FreeCamera.vRight = mtransform(mroty, g_FreeCamera.vRight);
+
+			m mview = mcreate(g_FreeCamera.vDir, g_FreeCamera.vRight, v3init(0,0,0));
+			m mviewinv = minverserotation(mview);
+			v3 vNewDir = mtransform(mrotx, v3init(0,0,-1));
+			g_FreeCamera.vDir = mtransform(mviewinv, vNewDir);
+
+		}
+		SetupCameraState(g_FreeCamera, g_FreeCamera.vPosition, g_FreeCamera.vDir, g_FreeCamera.vRight);
+		ZASSERTNORMALIZED3(g_FreeCamera.vDir);
+		ZASSERTNORMALIZED3(g_FreeCamera.vRight);
+
+	}}
+	//test cam
+	{{
+		v3 vPosition, vDir, vRight;
+		if(g_nRunTest && g_nTestAdvance)
+		{	
+			RunTest(vPosition, vDir, vRight);
+		}
+		else
+		{
+			EvalTest(g_nTestFrame, vPosition, vDir, vRight);
+		}
+		SetupCameraState(g_TestCamera, vPosition, vDir, vRight);
+
+
+
+	}}
+// her til.. opdater resten.
+
+
+	// {
+
+	// 	if(g_nRunTest)
+	// 	{	
+	// 		RunTest(g_WorldState.Camera.vPosition, g_WorldState.Camera.vDir, g_WorldState.Camera.vRight);
+	// 	}
+	// 	else
+	// 	{
+	// 		g_WorldState.Camera.vPosition += g_WorldState.Camera.vDir * vDir.z * fSpeed;
+	// 		g_WorldState.Camera.vPosition += g_WorldState.Camera.vRight * vDir.x * fSpeed;
+
+
+	// 		// static int mousex, mousey;
+	// 		// if(g_MouseState.button[1] & BUTTON_PUSHED)
+	// 		// {
+	// 		// 	mousex = g_MouseState.position[0];
+	// 		// 	mousey = g_MouseState.position[1];
+	// 		// }
+
+	// 		//if(g_MouseState.button[1] & BUTTON_DOWN)
+	// 		{
+	// 			int dx = g_WorldState.vCameraRotate.x;//g_MouseState.position[0] - mousex;
+	// 			int dy = g_WorldState.vCameraRotate.y;//g_MouseState.position[1] - mousey;
+	// 			// mousex = g_MouseState.position[0];
+	// 			// mousey = g_MouseState.position[1];
+
+	// 			float fRotX = dy * 0.25f;
+	// 			float fRotY = dx * -0.25f;
+	// 			m mrotx = mrotatex(fRotX*TORAD);
+	// 			m mroty = mrotatey(fRotY*TORAD);
+	// 			g_WorldState.Camera.vDir = mtransform(mroty, g_WorldState.Camera.vDir);
+	// 			g_WorldState.Camera.vRight = mtransform(mroty, g_WorldState.Camera.vRight);
+
+	// 			m mview = mcreate(g_WorldState.Camera.vDir, g_WorldState.Camera.vRight, v3init(0,0,0));
+	// 			m mviewinv = minverserotation(mview);
+	// 			v3 vNewDir = mtransform(mrotx, v3init(0,0,-1));
+	// 			g_WorldState.Camera.vDir = mtransform(mviewinv, vNewDir);
+
+	// 		}
+	// 		ZASSERTNORMALIZED3(g_WorldState.Camera.vDir);
+	// 		ZASSERTNORMALIZED3(g_WorldState.Camera.vRight);
+	// 		SetupCameraState(g_FreeCamera, 
+	// 	}
+	// }
+
+
+
+	// g_WorldState.Camera.mview = mcreate(g_WorldState.Camera.vDir, g_WorldState.Camera.vRight, g_WorldState.Camera.vPosition);
+	// if(g_KeyboardState.keys[SDL_SCANCODE_F2] & BUTTON_RELEASED)
+	// 	g_nUseOrtho = !g_nUseOrtho;
+
+	// float fAspect = (float)g_Width / (float)g_Height;
 	
-	if(g_nUseOrtho)
-	{
-		g_WorldState.Camera.mprj = mortho(g_fOrthoScale, g_fOrthoScale / fAspect, 1000);
-	}
-	else
-	{
-		g_WorldState.Camera.mprj = mperspective(g_WorldState.Camera.fFovY, ((float)g_Height / (float)g_Width), g_WorldState.Camera.fNear, 2000.f);
-	}
+	// if(g_nUseOrtho)
+	// {
+	// 	g_WorldState.Camera.mprj = mortho(g_fOrthoScale, g_fOrthoScale / fAspect, 1000);
+	// }
+	// else
+	// {
+	// 	g_WorldState.Camera.mprj = mperspective(g_WorldState.Camera.fFovY, ((float)g_Height / (float)g_Width), g_WorldState.Camera.fNear, 2000.f);
+	// }
 	
-	g_WorldState.Camera.mviewport = mviewport(0,0,g_Width, g_Height);
-	g_WorldState.Camera.mviewportinv = minverse(g_WorldState.Camera.mviewport);
-	g_WorldState.Camera.mprjinv = minverse(g_WorldState.Camera.mprj);
-	g_WorldState.Camera.mviewinv = maffineinverse(g_WorldState.Camera.mview);
-
-	uplotfnxt("FPS %4.2f Dir[%5.2f,%5.2f,%5.2f] Pos[%3.2f,%3.2f,%3.2f]" , 1.f, 
-		g_WorldState.Camera.vDir.x,
-		g_WorldState.Camera.vDir.y,
-		g_WorldState.Camera.vDir.z,
-		g_WorldState.Camera.vPosition.x,
-		g_WorldState.Camera.vPosition.y,
-		g_WorldState.Camera.vPosition.z);
-
-
-	if(g_LockCamera == LOCK_CAM_BOTH)
-	{
-		g_WorldState.Camera = g_LockedCamera;
-	}
-	if(g_LockCamera == LOCK_CAM_OFF)
-	{
-		g_LockedCamera = g_WorldState.Camera;
-	}
+	// g_WorldState.Camera.mviewport = mviewport(0,0,g_Width, g_Height);
+	// g_WorldState.Camera.mviewportinv = minverse(g_WorldState.Camera.mviewport);
+	// g_WorldState.Camera.mprjinv = minverse(g_WorldState.Camera.mprj);
+	// g_WorldState.Camera.mviewinv = maffineinverse(g_WorldState.Camera.mview);
+	SCameraState& Cam = GetCamera(g_CameraSource);
+	g_WorldState.pActiveCamera = &Cam;
+	uplotfnxt("Dir[%5.2f,%5.2f,%5.2f] Pos[%3.2f,%3.2f,%3.2f]",
+		Cam.vDir.x,
+		Cam.vDir.y,
+		Cam.vDir.z,
+		Cam.vPosition.x,
+		Cam.vPosition.y,
+		Cam.vPosition.z);
 }
 void foo()
 {
@@ -1709,33 +1794,70 @@ void foo()
 }
 
 
+void InitLocked()
+{
+	uint32_t nData[] = {
+		0xefefefef, 0xefefefef, 0xefefefef, 0xefefefef,
+		0xefefefef, 0xefefefef, 0xefefefef, 0xefefefef,
+		0xefefefef, 0xefefefef, 0xefefefef, 0xefefefef,
+		0xefefefef, 0xefefefef, 0xefefefef, 0xefefefef,
+		0xefefefef, 0xefefefef, 0xefefefef, 0xefefefef,
+		0xefefefef, 0xefefefef, 0xefefefef, 0xefefefef,
+		0x3f6d96ed, 0xbeb7861a, 0x3dce96af, 0xbddd4aae,
+		0x00000000, 0x3f7e803e, 0xc3947989, 0x414cfdae,
+		0xc2f04a0d, 0xbddd4aae, 0x3eb67311, 0xbf6d96ed,
+		0x00000000, 0x00000000, 0x3f6efd2f, 0x3eb7861a,
+		0x00000000, 0x3f7e803e, 0x3d1ea45f, 0xbdce96af,
+		0x00000000, 0x42aeb5ba, 0x42c504f6, 0xc3922727,
+		0x3f800000, 0xbddd4aae, 0x00000000, 0x3f7e803e,
+		0x00000000, 0x3eb67311, 0x3f6efd2f, 0x3d1ea45f,
+		0x00000000, 0xbf6d96ed, 0x3eb7861a, 0xbdce96af,
+		0x00000000, 0xc394797d, 0x414cfd08, 0xc2f04a11,
+		0x3f800000, 0x3fe7c3b6, 0x00000000, 0x00000000,
+		0x00000000, 0x00000000, 0x401a8279, 0x00000000,
+		0x00000000, 0x00000000, 0x00000000, 0xbf800347,
+		0xbf800000, 0x00000000, 0x00000000, 0xbe4ccf6c,
+		0x00000000, 0x3f0d6289, 0x00000000, 0x00000000,
+		0x00000000, 0x00000000, 0x3ed413ce, 0x00000000,
+		0x00000000, 0x80000000, 0x80000000, 0x00000000,
+		0xc09ffdf3, 0x00000000, 0x00000000, 0xbf800000,
+		0x40a0020c, 0x43c80000, 0x00000000, 0x00000000,
+		0x00000000, 0x00000000, 0x43960000, 0x00000000,
+		0x00000000, 0x00000000, 0x00000000, 0x3f800000,
+		0x00000000, 0x43c80000, 0x43960000, 0x00000000,
+		0x3f800000, 0x3b23d70a, 0x00000000, 0x00000000,
+		0x00000000, 0x00000000, 0x3b5a740e, 0x00000000,
+		0x00000000, 0x00000000, 0x00000000, 0x3f800000,
+		0x00000000, 0xbf800000, 0xbf800000, 0x00000000,
+		0x3f800000, 0x3dcccccd, 0xefefefef, 0x42340000,
+	};
+	ZASSERT(sizeof(nData) == sizeof(g_LockedCamera));
+	memcpy(&g_LockedCamera, &nData[0], sizeof(g_LockedCamera));
+
+
+}
+
+
+
+
 void ProgramInit()
 {
-	m mroty = 
-		mid()
-		;//mrotatey(45.f * TORAD);
-	g_WorldState.Camera.vDir = v3normalize(v3init(0.7,0,-0.7));
-	g_WorldState.Camera.vRight = v3normalize(v3init(0.7,0,0.7));
-	g_WorldState.Camera.vPosition = g_WorldState.Camera.vDir * -5.f;
-
-
-// 	g_WorldState.Camera.vPosition = v3init(-300.013580,10.000000,-128.605072);
-// 	g_WorldState.Camera.vDir = v3init(0.918683,-0.030621,0.393807);
-// 	g_WorldState.Camera.vRight = v3init(-0.393991,0.000000,0.919114);
-// g_WorldState.Camera.vPosition = v3init(-300.013580,10.000000,-128.605072);
-// g_WorldState.Camera.vDir = v3init(0.918683,-0.030621,0.393807);
-// g_WorldState.Camera.vRight = v3init(-0.393991,0.000000,0.919114);
-
-g_WorldState.Camera.vPosition = v3init(-300.013580,10.000000,-128.605072);g_WorldState.Camera.vDir = v3init(0.918683,-0.030621,0.393807);g_WorldState.Camera.vRight = v3init(-0.393991,0.000000,0.919114);
-
-	g_WorldState.Camera.fFovY = 45.f;
-	g_WorldState.Camera.fNear = 0.1f;
+	m mroty = mid();//mrotatey(45.f * TORAD);
+	v3 vPos = v3init(-300.013580,10.000000,-128.605072);
+	v3 vDir = v3init(0.918683,-0.030621,0.393807);
+	v3 vRight = v3init(-0.393991,0.000000,0.919114);
+	SetupCameraState(g_FreeCamera, vPos, vDir, vRight);
+	SetupCameraState(g_LockedCamera, vPos, vDir, vRight);
+	SetupCameraState(g_TestCamera, vPos, vDir, vRight);
+	InitLocked();
+	g_WorldState.pActiveCamera = &g_FreeCamera;
 	g_Bsp = BspCreate();
 	WorldInit();
 	EditorStateInit();
 
 
 	g_SM = AllocateShadowMap();
+
 
 }
 
@@ -1749,32 +1871,43 @@ void DisplayUI()
 	if(!g_UIEnabled)
 		return;
 	static bool Controls = true;
-	static bool Test = false;
+	static bool Test = true;
 	ImGui::Begin("Controls", &Controls, ImVec2(200,100));
-	// uprintf("controls %d test %d\n", Controls, Test);
 	Test ^= ImGui::Button("Test");
 	ImGui::Combo("Camera Source", &g_CameraSource, &g_CameraSourceStrings[0], sizeof(g_CameraSourceStrings) / sizeof(g_CameraSourceStrings[0]), 10);
 	ImGui::Combo("Bsp Source", &g_CameraSourceBsp, &g_CameraSourceStrings[0], sizeof(g_CameraSourceStrings) / sizeof(g_CameraSourceStrings[0]));
-
-
-	// g_CameraSourceStrings
-
-
-
-
 	ImGui::End();
 
 	if(Test)
 	{
 		ImGui::Begin("Test", &Test, ImVec2(500,100));
 		ImGui::InputInt("FrameInput", &g_nTestFrame);
-		ImGui::SliderInt("Frame", &g_nTestFrame, 0, TEST_TOTAL_STEPS);
-		ImGui::Checkbox("Running", &g_nTestAdvance);
-		ImGui::SliderInt("NodeCap", &g_nBspNodeCap, 10, 2048);
-		if(ImGui::Button("Test Run"))
+		ImGui::SliderInt("Frame", &g_nTestFrame, 0, TEST_TOTAL_STEPS-1);
+		bool nTestStarted = g_nRunTest != 0;
+		ImGui::Checkbox("Start", &nTestStarted);
+		if(nTestStarted != (0 != g_nRunTest))
 		{
-			//uprintf("start test\n");
+			if(nTestStarted)
+			{
+				g_CameraSource = ESOURCE_TEST;
+				g_CameraSourceBsp = ESOURCE_TEST;
+				g_nTestAdvance = 1;
+				StartTest();
+			}
+			else
+			{
+				StopTest();
+			}
 		}
+		ImGui::Checkbox("Advance", &g_nTestAdvance);
+		ImGui::SliderInt("NodeCap", &g_nBspNodeCap, 10, 2048);
+		const int nCanVerify = g_CameraSourceBsp == g_CameraSource && 0 == g_nTestFail;
+		ImGui::Text("Verify %d, FailCount %d", nCanVerify, g_nTestFail);
+		if(ImGui::Button("Clear Locked"))
+		{
+			g_nTestFail = 0;
+		}
+
 		ImGui::End();
 	}
 
@@ -1844,7 +1977,7 @@ int ProgramMain()
 
 	if(g_KeyboardState.keys[SDL_SCANCODE_SPACE] & BUTTON_RELEASED)
 	{
-		g_LockCamera = (g_LockCamera+1)%4;
+		// g_LockCamera = (g_LockCamera+1)%4;
 		// g_nUseDebugCameraPos = (g_nUseDebugCameraPos+1)%3;
 	}
 	MICROPROFILE_SCOPEGPUI("GPU", "Full Frame", 0x88dd44);
@@ -1863,8 +1996,8 @@ int ProgramMain()
 	glDepthFunc(GL_LEQUAL);
 	CheckGLError();
 
-	m mprj = g_WorldState.Camera.mprj;
-	m mview = g_WorldState.Camera.mview;
+	m mprj = g_WorldState.pActiveCamera->mprj;
+	m mview = g_WorldState.pActiveCamera->mview;
 	m mprjview = mmult(mprj, mview);
 
 
