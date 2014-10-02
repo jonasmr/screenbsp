@@ -121,7 +121,7 @@ struct SWorldState
 	uint32 nNumLights;
 
 
-	SCameraState Camera;
+	SCameraState* pActiveCamera;
 
 
 	v2 vCameraTranslate;
