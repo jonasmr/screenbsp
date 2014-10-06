@@ -81,11 +81,12 @@ void BspGetStats(SOccluderBsp* pBsp, SOccluderBspStats* pStats);
 void BspClearCullStats(SOccluderBsp* pBsp);
 
 //mark occluders that take part in culling pObject
-void BspBuildDebugSearch(SOccluderBsp* pBsp, SOccluderDesc** pPlaneOccluders, uint32 nNumPlaneOccluders,
+uint32_t BspBuildDebugSearch(SOccluderBsp* pBsp, SOccluderDesc** pPlaneOccluders, uint32 nNumPlaneOccluders,
 			  SOccluderDesc** pBoxOccluders, uint32 nNumBoxOccluders,
 			  const SOccluderBspViewDesc& Desc,
 			  SOccluderDesc* pObject,
-			  bool pDebugMask);
+			  bool* pDebugMask,
+			  uint32_t nDebugMaskSize);
 
 void BspDebugPlane(SOccluderBsp* pBsp, int nPlane);
 

@@ -823,7 +823,7 @@ uint32_t BspBuildDebugSearch(SOccluderBsp* pBsp, SOccluderDesc** pPlaneOccluders
 	bool bCulled = BspCullObject(pBsp, pObject);
 	ZASSERT(bCulled);
 	const uint32_t nNumPotential = BspNumPotentialPolys(nNumPlaneOccluders, nNumBoxOccluders);
-	ZASSERT(nDebugMaskSize == nNumPotential);
+	ZASSERT(nDebugMaskSize >= nNumPotential);
 	memset(pDebugMask, 1, nNumPotential);
 	int xx = 0;
 	while(nNumAdded)

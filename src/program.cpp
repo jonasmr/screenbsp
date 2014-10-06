@@ -26,23 +26,31 @@ extern uint32_t g_Width;
 extern uint32_t g_Height;
 
 
+
+
 void WorldDrawObjects(bool* bCulled);
 uint32_t CullObjects(uint32 nNumObjects, bool* bCulled);
 uint32_t CullObjectsFast(uint32 nNumObjects, bool* bCulled, SWorldGrid& Grid);
 void CompareCullResult(uint32_t nNumObjects, bool* bCulled, bool* bCulledFast);
 void SetupCameraState(SCameraState& Camera, v3 vPosition, v3 vDir, v3 vRight);
+void WriteCamera(const SCameraState& Camera);
+void DoBuildBsp(SOccluderBspViewDesc& ViewDesc, int nDebugIndex = -1);
+
+
 
 
 // void CullObjectsVerify(uint32 nNumObjects, bool* bCulled);
 // void CullObjectsVerify2(uint32 nNumObjects);
 
 
+bool g_DebugMask[10<<10];
 uint32 g_nUseOrtho = 0;
 float g_fOrthoScale = 10;
 SOccluderBsp* g_Bsp = 0;
 uint32 g_nDebugCullDraw = 0;
 int g_nDebugDumpIndex = -1;
 
+uint32_t g_nFailedObject = 0;
 
 
 // UI
@@ -63,6 +71,7 @@ int g_CameraSourceBsp = ESOURCE_FREECAM;
 bool g_bCameraVerify = true;
 int g_nTestFrame = 0;
 bool g_nTestAdvance = false;
+bool g_nDebugMode = false;
 
 int32 g_nBspNodeCap = 2048;
 extern int g_UIEnabled;
@@ -312,7 +321,7 @@ void RenderShadowMap(ShadowMap& SM, v3 vEye, v3 vDir, v3* vCorners)
 	glViewport(0, 0, g_Width, g_Height);
 	CheckGLError();
 }
-void DoBuildBsp(SOccluderBspViewDesc& ViewDesc)
+void DoBuildBsp(SOccluderBspViewDesc& ViewDesc, int nDebugIndex)
 {
 	MICROPROFILE_SCOPEI("CullTest", "Build", 0xff00ff00);
 	uint32 nNumPlaneOccluders = 0, nNumBoxOccluders = 0;
@@ -358,11 +367,33 @@ void DoBuildBsp(SOccluderBspViewDesc& ViewDesc)
 		}
 	}
 
+	if(nDebugIndex >= 0)
+	{
+		uprintf("BUILDING DEBUG MASK\n");
+		memset(g_DebugMask, 0, sizeof(g_DebugMask));
+		BspBuildDebugSearch(g_Bsp, pPlaneOccluders, nNumPlaneOccluders, pBoxOccluders, nNumBoxOccluders, ViewDesc,
+			(SOccluderDesc*)&g_WorldState.WorldObjects[nDebugIndex],
+			&g_DebugMask[0],
+			sizeof(g_DebugMask));
 
-	BspBuild(g_Bsp, 
-		pPlaneOccluders, nNumPlaneOccluders,
-		pBoxOccluders, nNumBoxOccluders,
-		ViewDesc);
+		for(int i = 0; i < sizeof(g_DebugMask); ++i)
+		{
+			if(g_DebugMask[i])
+			{
+				uprintf("** DEBUG MASK %d\n", i);
+			}
+		}
+
+	}
+	else
+	{
+		bool* pDebugMask = g_nDebugMode ? g_DebugMask : 0;
+		BspBuild(g_Bsp, 
+			pPlaneOccluders, nNumPlaneOccluders,
+			pBoxOccluders, nNumBoxOccluders,
+			ViewDesc,
+			pDebugMask );
+	}
 }
 void RunPlainTest()
 {
@@ -838,9 +869,6 @@ void WorldRender()
 	{
 		MICROPROFILE_SCOPEI("CullTest", "Build", 0xff00ff00);
 		DoBuildBsp(ViewDesc);
-
-		// BspSave(g_Bsp, "foo.bsp");
-		// BspLoad(g_Bsp, "foo.bsp");
 	}
 	if(nDumpFrame)
 	{
@@ -1254,6 +1282,7 @@ void WorldRender()
 						{
 							++nFailCull;
 							++g_nTestFail;
+							g_nFailedObject = i;
 							uprintf("FAIL CULL %d .. count %d\n", i, nCulledRef[i]);
 							if(nNumFail < MAX_FAIL)
 								pFailObjects[nNumFail++] = pObject;
@@ -1288,9 +1317,6 @@ void WorldRender()
 				uprintf("FAIL %d  FALSE %d AGREE %d\n", nFailCull, nFalsePositives, nAgree);
 				if(g_nRunTest)
 				{
-					uprintf("g_WorldState.Camera.vPosition = v3init(%f,%f,%f);\n", Prev.CameraState.vPosition.x, Prev.CameraState.vPosition.y, Prev.CameraState.vPosition.z);
-					uprintf("g_WorldState.Camera.vDir = v3init(%f,%f,%f);\n", Prev.CameraState.vDir.x, Prev.CameraState.vDir.y, Prev.CameraState.vDir.z);
-					uprintf("g_WorldState.Camera.vRight = v3init(%f,%f,%f)\n;", Prev.CameraState.vRight.x, Prev.CameraState.vRight.y, Prev.CameraState.vRight.z);
 					fprintf(g_TestFailOut, "g_WorldState.Camera.vPosition = v3init(%f,%f,%f);\n", Prev.CameraState.vPosition.x, Prev.CameraState.vPosition.y, Prev.CameraState.vPosition.z);
 					fprintf(g_TestFailOut, "g_WorldState.Camera.vDir = v3init(%f,%f,%f);\n", Prev.CameraState.vDir.x, Prev.CameraState.vDir.y, Prev.CameraState.vDir.z);
 					fprintf(g_TestFailOut, "g_WorldState.Camera.vRight = v3init(%f,%f,%f)\n;", Prev.CameraState.vRight.x, Prev.CameraState.vRight.y, Prev.CameraState.vRight.z);
@@ -1305,6 +1331,22 @@ void WorldRender()
 					g_LockedCamera = Camera;
 
 				}
+				DoBuildBsp(ViewDesc, g_nFailedObject);
+// uint32_t BspBuildDebugSearch(SOccluderBsp* pBsp, SOccluderDesc** pPlaneOccluders, uint32 nNumPlaneOccluders,
+// 			  SOccluderDesc** pBoxOccluders, uint32 nNumBoxOccluders,
+// 			  const SOccluderBspViewDesc& Desc,
+// 			  SOccluderDesc* pObject,
+// 			  bool* pDebugMask,
+// 			  uint32_t nDebugMaskSize)
+
+
+
+
+
+				WriteCamera(Camera);
+
+
+
 			}
 		}}
 	}
@@ -1794,45 +1836,65 @@ void foo()
 }
 
 
+void WriteCamera(const SCameraState& Camera)
+{
+	uint32_t* pData = (uint32_t*)&Camera;
+	ZASSERT((sizeof(Camera)%4) == 0);
+	uint32 nSize = sizeof(Camera)/4;
+	uprintf("\tuint32_t nCameraData[] = {\n\t\t");
+	for(uint32_t i = 0; i < nSize; ++i)
+	{
+		uprintf("0x%08x,", pData[i]);
+		if(0 == ((i+1)%10))
+		{
+			uprintf("\n\t\t");
+		}
+	}
+	uprintf("\n\t};\n");
+
+}
+
 void InitLocked()
 {
-	uint32_t nData[] = {
-		0xefefefef, 0xefefefef, 0xefefefef, 0xefefefef,
-		0xefefefef, 0xefefefef, 0xefefefef, 0xefefefef,
-		0xefefefef, 0xefefefef, 0xefefefef, 0xefefefef,
-		0xefefefef, 0xefefefef, 0xefefefef, 0xefefefef,
-		0xefefefef, 0xefefefef, 0xefefefef, 0xefefefef,
-		0xefefefef, 0xefefefef, 0xefefefef, 0xefefefef,
-		0x3f6d96ed, 0xbeb7861a, 0x3dce96af, 0xbddd4aae,
-		0x00000000, 0x3f7e803e, 0xc3947989, 0x414cfdae,
-		0xc2f04a0d, 0xbddd4aae, 0x3eb67311, 0xbf6d96ed,
-		0x00000000, 0x00000000, 0x3f6efd2f, 0x3eb7861a,
-		0x00000000, 0x3f7e803e, 0x3d1ea45f, 0xbdce96af,
-		0x00000000, 0x42aeb5ba, 0x42c504f6, 0xc3922727,
-		0x3f800000, 0xbddd4aae, 0x00000000, 0x3f7e803e,
-		0x00000000, 0x3eb67311, 0x3f6efd2f, 0x3d1ea45f,
-		0x00000000, 0xbf6d96ed, 0x3eb7861a, 0xbdce96af,
-		0x00000000, 0xc394797d, 0x414cfd08, 0xc2f04a11,
-		0x3f800000, 0x3fe7c3b6, 0x00000000, 0x00000000,
-		0x00000000, 0x00000000, 0x401a8279, 0x00000000,
-		0x00000000, 0x00000000, 0x00000000, 0xbf800347,
-		0xbf800000, 0x00000000, 0x00000000, 0xbe4ccf6c,
-		0x00000000, 0x3f0d6289, 0x00000000, 0x00000000,
-		0x00000000, 0x00000000, 0x3ed413ce, 0x00000000,
-		0x00000000, 0x80000000, 0x80000000, 0x00000000,
-		0xc09ffdf3, 0x00000000, 0x00000000, 0xbf800000,
-		0x40a0020c, 0x43c80000, 0x00000000, 0x00000000,
-		0x00000000, 0x00000000, 0x43960000, 0x00000000,
-		0x00000000, 0x00000000, 0x00000000, 0x3f800000,
-		0x00000000, 0x43c80000, 0x43960000, 0x00000000,
-		0x3f800000, 0x3b23d70a, 0x00000000, 0x00000000,
-		0x00000000, 0x00000000, 0x3b5a740e, 0x00000000,
-		0x00000000, 0x00000000, 0x00000000, 0x3f800000,
-		0x00000000, 0xbf800000, 0xbf800000, 0x00000000,
-		0x3f800000, 0x3dcccccd, 0xefefefef, 0x42340000,
+	uint32_t nCameraData[] = {
+		0xefefefef,0xefefefef,0xefefefef,0xefefefef,
+		0xefefefef,0xefefefef,0xefefefef,0xefefefef,
+		0xefefefef,0xefefefef,0xefefefef,0xefefefef,
+		0xefefefef,0xefefefef,0xefefefef,0xefefefef,
+		0xefefefef,0xefefefef,0xefefefef,0xefefefef,
+		0xefefefef,0xefefefef,0xefefefef,0xefefefef,
+		0x3f6d96ed,0xbeb7861a,0x3dce96af,0xbddd4aae,
+		0x00000000,0x3f7e803e,0xc3947989,0x414cfdae,
+		0xc2f04a0d,0xbddd4aae,0x3eb67311,0xbf6d96ed,
+		0x00000000,0x00000000,0x3f6efd2f,0x3eb7861a,
+		0x00000000,0x3f7e803e,0x3d1ea45f,0xbdce96af,
+		0x00000000,0x42aeb5ba,0x42c504f6,0xc3922727,
+		0x3f800000,0xbddd4aae,0x00000000,0x3f7e803e,
+		0x00000000,0x3eb67311,0x3f6efd2f,0x3d1ea45f,
+		0x00000000,0xbf6d96ed,0x3eb7861a,0xbdce96af,
+		0x00000000,0xc394797d,0x414cfd08,0xc2f04a11,
+		0x3f800000,0x3fe7c3b6,0x00000000,0x00000000,
+		0x00000000,0x00000000,0x401a8279,0x00000000,
+		0x00000000,0x00000000,0x00000000,0xbf800347,
+		0xbf800000,0x00000000,0x00000000,0xbe4ccf6c,
+		0x00000000,0x3f0d6289,0x00000000,0x00000000,
+		0x00000000,0x00000000,0x3ed413ce,0x00000000,
+		0x00000000,0x80000000,0x80000000,0x00000000,
+		0xc09ffdf3,0x00000000,0x00000000,0xbf800000,
+		0x40a0020c,0x43c80000,0x00000000,0x00000000,
+		0x00000000,0x00000000,0x43960000,0x00000000,
+		0x00000000,0x00000000,0x00000000,0x3f800000,
+		0x00000000,0x43c80000,0x43960000,0x00000000,
+		0x3f800000,0x3b23d70a,0x00000000,0x00000000,
+		0x00000000,0x00000000,0x3b5a740e,0x00000000,
+		0x00000000,0x00000000,0x00000000,0x3f800000,
+		0x00000000,0xbf800000,0xbf800000,0x00000000,
+		0x3f800000,0x3dcccccd,0xefefefef,0x42340000,
+		
 	};
-	ZASSERT(sizeof(nData) == sizeof(g_LockedCamera));
-	memcpy(&g_LockedCamera, &nData[0], sizeof(g_LockedCamera));
+
+	ZASSERT(sizeof(nCameraData) == sizeof(g_LockedCamera));
+	memcpy(&g_LockedCamera, &nCameraData[0], sizeof(g_LockedCamera));
 
 
 }
@@ -1874,6 +1936,11 @@ void DisplayUI()
 	static bool Test = true;
 	ImGui::Begin("Controls", &Controls, ImVec2(200,100));
 	Test ^= ImGui::Button("Test");
+	if(ImGui::Button("Locked"))
+	{
+		g_CameraSource = ESOURCE_LOCKED;
+		g_CameraSourceBsp = ESOURCE_LOCKED;
+	}
 	ImGui::Combo("Camera Source", &g_CameraSource, &g_CameraSourceStrings[0], sizeof(g_CameraSourceStrings) / sizeof(g_CameraSourceStrings[0]), 10);
 	ImGui::Combo("Bsp Source", &g_CameraSourceBsp, &g_CameraSourceStrings[0], sizeof(g_CameraSourceStrings) / sizeof(g_CameraSourceStrings[0]));
 	ImGui::End();
@@ -1902,7 +1969,8 @@ void DisplayUI()
 		ImGui::Checkbox("Advance", &g_nTestAdvance);
 		ImGui::SliderInt("NodeCap", &g_nBspNodeCap, 10, 2048);
 		const int nCanVerify = g_CameraSourceBsp == g_CameraSource && 0 == g_nTestFail;
-		ImGui::Text("Verify %d, FailCount %d", nCanVerify, g_nTestFail);
+		ImGui::Text("Verify %d, FailCount %d, Failed %d", nCanVerify, g_nTestFail, g_nFailedObject);
+		ImGui::Checkbox("DebugMode", &g_nDebugMode);
 		if(ImGui::Button("Clear Locked"))
 		{
 			g_nTestFail = 0;
