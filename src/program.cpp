@@ -2120,7 +2120,8 @@ uint32_t CullObjects(uint32 nNumObjects, bool* bCulled)
 		SWorldObject* pObject = &g_WorldState.WorldObjects[i];
 		if(0 != (pObject->nFlags & SObject::OCCLUSION_TEST))
 		{
-			if(BspCullObject(g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[i].mObjectToWorld))
+			uint32 nDebug = g_nFailedObject == i;
+			if(BspCullObject(g_Bsp, (SOccluderDesc*)&g_WorldState.WorldObjects[i].mObjectToWorld, 0, nDebug))
 			{
 				bCulled[i] = true;
 				nNumCulled++;

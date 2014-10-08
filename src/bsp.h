@@ -76,7 +76,7 @@ void BspBuild(SOccluderBsp* pBsp,
 			  const SOccluderBspViewDesc& Desc,
 			  const bool* pDebugMask = 0);
 
-bool BspCullObject(SOccluderBsp* pBsp, SOccluderDesc* pObject, SOccluderBspNodes* pSubBsp = 0);
+bool BspCullObject(SOccluderBsp* pBsp, SOccluderDesc* pObject, SOccluderBspNodes* pSubBsp = 0, uint32 nDebug = 0);
 void BspGetStats(SOccluderBsp* pBsp, SOccluderBspStats* pStats);
 void BspClearCullStats(SOccluderBsp* pBsp);
 
