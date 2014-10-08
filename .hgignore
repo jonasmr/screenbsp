@@ -8,3 +8,4 @@ sdl/
 sdl2/
 SDL2.dll
 txt-res/
+src/imgui
